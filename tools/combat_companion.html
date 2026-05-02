@@ -1,0 +1,1669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Combat Assistant — DM Tool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #111318;
+    --card: #1c2028;
+    --card-hover: #222736;
+    --border: #2a2f3d;
+    --border-bright: #3a4255;
+    --gold: #c9a84c;
+    --gold-dim: #8a7035;
+    --gold-glow: rgba(201,168,76,0.15);
+    --text: #dde3f0;
+    --text-dim: #8a93a8;
+    --text-faint: #4e566a;
+    --blue: #4a78c4;
+    --red: #c44a4a;
+    --teal: #3da894;
+    --green: #5aab6a;
+    --yellow: #c9a84c;
+    --poison: #6db55e;
+    --font-head: 'Cinzel', serif;
+    --font-body: 'Crimson Pro', Georgia, serif;
+  }
+
+  html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); }
+
+  #root { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--gold-dim); }
+
+  /* Global typography */
+  body { font-family: var(--font-body); font-size: 16px; line-height: 1.5; }
+
+  input, select, textarea, button { font-family: var(--font-body); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel">
+
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ─── DATA ───────────────────────────────────────────────────────────────────
+
+const INITIAL_COMBATANTS = [
+  { id: 1, name: "Thorin Ironfist",    type: "PC",      hp: 28, maxHp: 34, conditions: [],                 initiative: 22 },
+  { id: 2, name: "Lyra Swiftarrow",    type: "PC",      hp: 19, maxHp: 26, conditions: ["Concentrating"], initiative: 18 },
+  { id: 3, name: "HOBGOBLIN CAPTAIN",  type: "Monster", hp: 14, maxHp: 52, conditions: [],                 initiative: 15, _monsterName: "Hobgoblin Captain" },
+  { id: 4, name: "Goblin 1",           type: "Monster", hp: 0,  maxHp: 7,  conditions: ["Unconscious"],   initiative: 12, _monsterName: "Goblin" },
+  { id: 5, name: "Goblin 2",           type: "Monster", hp: 3,  maxHp: 7,  conditions: ["Frightened"],    initiative: 9,  _monsterName: "Goblin" },
+  { id: 6, name: "Bramble",            type: "PC",      hp: 22, maxHp: 22, conditions: ["Poisoned"],       initiative: 6  },
+];
+
+const CONDITION_COLORS = {
+  "Concentrating": { bg: "rgba(61,168,148,0.25)", border: "#3da894", text: "#3da894" },
+  "Unconscious":   { bg: "rgba(140,140,140,0.2)", border: "#666",    text: "#999"    },
+  "Frightened":    { bg: "rgba(180,80,80,0.25)",  border: "#c44a4a", text: "#e06868" },
+  "Poisoned":      { bg: "rgba(109,181,94,0.25)", border: "#6db55e", text: "#6db55e" },
+  "Stunned":       { bg: "rgba(150,100,200,0.25)",border: "#9b6ac8", text: "#b48de0" },
+  "Prone":         { bg: "rgba(180,120,40,0.25)", border: "#c9843c", text: "#e0a060" },
+};
+
+const HOBGOBLIN_STAT_BLOCK = {
+  name: "Hobgoblin Captain",
+  size: "Medium",
+  type: "Humanoid (Goblinoid)",
+  alignment: "Lawful Evil",
+  cr: "3",
+  xp: "450",
+  ac: "17 (half plate)",
+  hp: "52 (8d8+16)",
+  speed: "30 ft.",
+  stats: { STR: [15,"+2"], DEX: [14,"+2"], CON: [14,"+2"], INT: [12,"+1"], WIS: [10,"+0"], CHA: [13,"+1"] },
+  savingThrows: "Int +3, Wis +2",
+  skills: "Perception +2, Stealth +4",
+  senses: "Darkvision 60 ft., Passive Perception 12",
+  languages: "Common, Goblin",
+  traits: [
+    { name: "Martial Advantage", desc: "Once per turn, the hobgoblin can deal an extra 7 (2d6) damage to a creature it hits with a weapon attack if that creature is within 5 ft. of an ally." }
+  ],
+  actions: [
+    { name: "Multiattack", desc: "The captain makes two longsword attacks. If it has a spear drawn, it can replace one longsword attack with a spear attack." },
+    { name: "Longsword", desc: "+4 to hit, reach 5 ft., one target. Hit: 6 (1d8+2) slashing damage, or 7 (1d10+2) if wielded two-handed." },
+    { name: "Spear", desc: "+4 to hit, reach 5 ft. or range 20/60 ft., one target. Hit: 5 (1d6+2) piercing." },
+    { name: "Leadership (Recharges 5–6)", desc: "For 1 minute, the captain can utter a special command or warning. Each non-hobgoblin creature within 30 ft. that can hear the captain adds a d4 to its next attack roll or saving throw." },
+  ],
+  reactions: [
+    { name: "Parry", desc: "The captain adds +2 to its AC against one melee attack that would hit it, if it can see the attacker and is wielding a melee weapon." }
+  ],
+  tactics: [
+    "Opens with Leadership if 3+ allies visible — the +1d4 bonus action die ripples through the whole fight.",
+    "Uses Multiattack on the most wounded target. Martial Advantage requires an ally adjacent — position deliberately.",
+    "At 30% HP with no allies standing, offers surrender or attempts to flee — hobgoblins are disciplined, not suicidal.",
+  ]
+};
+
+const AI_PROMPTS = {
+  "Describe This Hit": {
+    icon: "⚡",
+    subtitle: "Narrate a strike cinematically",
+    fields: [
+      { key: "damage", label: "Damage dealt", type: "text", placeholder: "14", defaultValue: "14" },
+      { key: "hpState", label: "Target HP state", type: "select", options: ["Fresh (75-100%)", "Injured (50-75%)", "Bloodied (25-50%)", "Critical (<25%)"], defaultValue: "Bloodied (25-50%)" },
+    ],
+    buildPrompt: (vals, combatants, activeIdx) => {
+      const active = combatants[activeIdx];
+      return `You are narrating a D&D 5e combat encounter. The ${active.name} just hit Thorin Ironfist for ${vals.damage || "14"} damage. Thorin is ${vals.hpState || "Bloodied (25-50%)"}. Write a single cinematic paragraph (3-4 sentences) describing the hit — visceral, dramatic, in present tense. No dialogue. Focus on body language, momentum, and the physical impact.`;
+    },
+    defaultResponse: `The Hobgoblin Captain's longsword bites deep into Thorin's shoulder, grinding against armor. He barely staggers — jaw set, eyes cold. The Captain pulls the blade free with a sharp twist and steps back into a fighting stance, clearly reading the dwarf as the bigger threat.`
+  },
+  "Flee or Fight?": {
+    icon: "🏃",
+    subtitle: "Would this monster retreat?",
+    fields: [
+      { key: "hpPercent", label: "Monster HP %", type: "text", placeholder: "27", defaultValue: "27" },
+      { key: "situation", label: "Situation", type: "select", options: ["Allies present", "Allies fallen", "Cornered", "Open path to flee"], defaultValue: "Allies fallen" },
+    ],
+    buildPrompt: (vals, combatants, activeIdx) => {
+      const active = combatants[activeIdx];
+      return `You are advising a D&D 5e Dungeon Master. The ${active.name} is at ${vals.hpPercent || "27"}% HP. Situation: ${vals.situation || "Allies fallen"}. Based on the monster's personality, tactics, and CR, give a short 2-sentence ruling: does it flee, fight on, or something else? Be direct and practical.`;
+    },
+    defaultResponse: ``
+  },
+  "Smart Move": {
+    icon: "🎯",
+    subtitle: "What's the tactical play?",
+    fields: [
+      { key: "context", label: "Situation note", type: "text", placeholder: "PCs spread out, two flanking", defaultValue: "" },
+    ],
+    buildPrompt: (vals, combatants, activeIdx) => {
+      const active = combatants[activeIdx];
+      return `You are advising a D&D 5e Dungeon Master on tactics for the ${active.name}. Context: ${vals.context || "standard combat positioning"}. Give the single best tactical move this monster should make on its turn. 2-3 sentences max. Be specific about action/bonus action/movement.`;
+    },
+    defaultResponse: ``
+  },
+};
+
+// ─── UTILITY ────────────────────────────────────────────────────────────────
+
+function hpColor(hp, maxHp) {
+  const pct = hp / maxHp;
+  if (hp === 0) return "#666";
+  if (pct > 0.5) return "#5aab6a";
+  if (pct > 0.25) return "#c9a84c";
+  return "#c44a4a";
+}
+
+function hpPct(hp, maxHp) {
+  return Math.max(0, Math.min(100, (hp / maxHp) * 100));
+}
+
+// ─── LEFT PANEL ─────────────────────────────────────────────────────────────
+
+function CombatantRow({ combatant, isActive, onClick, onHpChange, onDelete }) {
+  const { name, type, hp, maxHp, conditions } = combatant;
+  const pct = hpPct(hp, maxHp);
+  const color = hpColor(hp, maxHp);
+  const [editingHp, setEditingHp] = useState(false);
+  const [hpInput, setHpInput] = useState("");
+  const [hovered, setHovered] = useState(false);
+
+  function startHpEdit(e) {
+    e.stopPropagation();
+    setHpInput(String(hp));
+    setEditingHp(true);
+  }
+
+  function commitHpEdit() {
+    const val = parseInt(hpInput);
+    if (!isNaN(val)) onHpChange(combatant.id, val);
+    setEditingHp(false);
+  }
+
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: "relative",
+        background: isActive ? "#21283a" : "var(--card)",
+        border: `1px solid ${isActive ? "var(--gold)" : "var(--border)"}`,
+        borderLeft: `3px solid ${isActive ? "var(--gold)" : "transparent"}`,
+        borderRadius: 6,
+        padding: "8px 10px",
+        cursor: "pointer",
+        transition: "all 0.15s ease",
+        boxShadow: isActive ? "0 0 16px rgba(201,168,76,0.12)" : "none",
+      }}
+    >
+      {/* Name + badges row */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5, flexWrap: "wrap" }}>
+        <span style={{
+          fontFamily: "var(--font-head)",
+          fontSize: type === "Monster" ? 13 : 14,
+          fontWeight: 600,
+          color: isActive ? "var(--gold)" : "var(--text)",
+          flex: 1,
+          letterSpacing: type === "Monster" ? "0.04em" : "0.01em",
+          lineHeight: 1.3,
+        }}>
+          {name}
+        </span>
+        <span style={{
+          fontSize: 9,
+          fontWeight: 600,
+          padding: "1px 7px",
+          borderRadius: 20,
+          background: type === "PC" ? "rgba(74,120,196,0.25)" : "rgba(196,74,74,0.25)",
+          border: `1px solid ${type === "PC" ? "var(--blue)" : "var(--red)"}`,
+          color: type === "PC" ? "#6a9de8" : "#e06868",
+          letterSpacing: "0.04em",
+          whiteSpace: "nowrap",
+          fontFamily: "var(--font-head)",
+        }}>
+          {type === "PC" ? "PC" : "MON"}
+        </span>
+      </div>
+
+      {/* HP bar */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: conditions.length ? 5 : 0 }}>
+        <div style={{ flex: 1, height: 5, background: "var(--border)", borderRadius: 3, overflow: "hidden" }}>
+          <div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: 3, transition: "width 0.3s ease" }} />
+        </div>
+        {editingHp ? (
+          <input
+            autoFocus
+            value={hpInput}
+            onChange={e => setHpInput(e.target.value)}
+            onBlur={commitHpEdit}
+            onKeyDown={e => { if (e.key === "Enter") commitHpEdit(); if (e.key === "Escape") setEditingHp(false); }}
+            onClick={e => e.stopPropagation()}
+            style={{ width: 52, fontSize: 13, background: "#0d1017", border: "1px solid var(--gold-dim)", borderRadius: 3, color: "var(--text)", padding: "1px 4px", textAlign: "right", outline: "none" }}
+          />
+        ) : (
+          <span
+            onClick={startHpEdit}
+            title="Click to edit HP"
+            style={{ fontSize: 13, color: hp === 0 ? "#666" : "var(--text-dim)", whiteSpace: "nowrap", minWidth: 40, textAlign: "right", cursor: "text" }}
+          >
+            {hp}/{maxHp}
+          </span>
+        )}
+      </div>
+
+      {/* Conditions */}
+      {conditions.length > 0 && (
+        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+          {conditions.map(c => {
+            const style = CONDITION_COLORS[c] || { bg: "rgba(150,150,150,0.2)", border: "#888", text: "#aaa" };
+            return (
+              <span key={c} style={{
+                fontSize: 9,
+                padding: "1px 6px",
+                borderRadius: 20,
+                background: style.bg,
+                border: `1px solid ${style.border}`,
+                color: style.text,
+                fontFamily: "var(--font-head)",
+                letterSpacing: "0.03em",
+              }}>
+                {c}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Active turn pulse dot */}
+      {isActive && (
+        <div style={{
+          position: "absolute", top: 8, right: 8,
+          width: 7, height: 7, borderRadius: "50%",
+          background: "var(--gold)", boxShadow: "0 0 6px var(--gold)",
+          animation: "pulse 1.6s ease-in-out infinite",
+        }} />
+      )}
+
+      {/* Delete button — appears on hover, bottom-right */}
+      {hovered && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 5 }}>
+          <button
+            onClick={e => { e.stopPropagation(); onDelete(combatant.id); }}
+            title="Remove from combat"
+            style={{
+              background: "rgba(196,74,74,0.12)", border: "1px solid rgba(196,74,74,0.35)",
+              borderRadius: 4, color: "#e06868", cursor: "pointer",
+              fontSize: 10, fontFamily: "var(--font-head)", letterSpacing: "0.06em",
+              padding: "2px 8px", lineHeight: 1.4,
+            }}
+          >✕ REMOVE</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks, onOpenAdd }) {
+  const [encName, setEncName] = useState("New Encounter");
+  const [encNote, setEncNote] = useState("Add a note about conditions, terrain...");
+  const [editingEnc, setEditingEnc] = useState(null); // "name" | "note" | null
+  const [roundNumber, setRoundNumber] = useState(1);
+
+  function nextTurn() {
+    setActiveIdx(prev => {
+      const next = (prev + 1) % combatants.length;
+      if (next === 0) setRoundNumber(r => r + 1);
+      return next;
+    });
+  }
+
+  function hpChange(id, newHp) {
+    setCombatants(prev => prev.map(c => c.id === id ? { ...c, hp: Math.max(0, Math.min(c.maxHp, newHp)) } : c));
+  }
+
+  function deleteCombatant(id) {
+    setCombatants(prev => {
+      const next = prev.filter(c => c.id !== id);
+      setActiveIdx(ai => Math.min(ai, Math.max(0, next.length - 1)));
+      return next;
+    });
+  }
+
+  return (
+    <div style={{
+      width: tweaks.leftPanelWidth || 240,
+      minWidth: tweaks.leftPanelWidth || 240,
+      borderRight: "1px solid var(--border)",
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden",
+    }}>
+      {/* Header */}
+      <div style={{ padding: "14px 14px 10px", borderBottom: "1px solid var(--border)" }}>
+        <div style={{ fontFamily: "var(--font-head)", fontSize: 11, color: "var(--gold)", letterSpacing: "0.1em", marginBottom: 4 }}>
+          ACTIVE ENCOUNTER
+        </div>
+        {editingEnc === "name" ? (
+          <input
+            autoFocus
+            value={encName}
+            onChange={e => setEncName(e.target.value)}
+            onBlur={() => setEditingEnc(null)}
+            onKeyDown={e => { if (e.key === "Enter" || e.key === "Escape") setEditingEnc(null); }}
+            style={{ ...inputStyle, width: "100%", fontSize: 13, fontWeight: 600, marginBottom: 3 }}
+          />
+        ) : (
+          <div
+            onClick={() => setEditingEnc("name")}
+            title="Click to edit"
+            style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", lineHeight: 1.3, marginBottom: 3, cursor: "text" }}
+          >
+            {encName}
+          </div>
+        )}
+        {editingEnc === "note" ? (
+          <input
+            autoFocus
+            value={encNote}
+            onChange={e => setEncNote(e.target.value)}
+            onBlur={() => setEditingEnc(null)}
+            onKeyDown={e => { if (e.key === "Enter" || e.key === "Escape") setEditingEnc(null); }}
+            style={{ ...inputStyle, width: "100%", fontSize: 11 }}
+          />
+        ) : (
+          <div
+            onClick={() => setEditingEnc("note")}
+            title="Click to edit"
+            style={{ fontSize: 11, color: "var(--text-dim)", fontStyle: "italic", cursor: "text" }}
+          >
+            {encNote}
+          </div>
+        )}
+      </div>
+
+      {/* Round counter */}
+      <div style={{ padding: "6px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontSize: 11, color: "var(--text-dim)", fontFamily: "var(--font-head)", letterSpacing: "0.05em" }}>ROUND</span>
+        <span style={{ fontSize: 13, color: "var(--gold)", fontFamily: "var(--font-head)", fontWeight: 600 }}>{roundNumber}</span>
+        <span style={{ fontSize: 10, color: "var(--text-faint)" }}>Initiative Order</span>
+      </div>
+
+      {/* Combatant list */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "10px 10px 0" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {combatants.map((c, i) => (
+            <CombatantRow
+              key={c.id}
+              combatant={c}
+              isActive={i === activeIdx}
+              onClick={() => setActiveIdx(i)}
+              onHpChange={hpChange}
+              onDelete={deleteCombatant}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Next Turn button */}
+      <div style={{ padding: "12px 10px 8px" }}>
+        <button
+          onClick={nextTurn}
+          style={{
+            width: "100%",
+            padding: "11px 0",
+            background: "linear-gradient(135deg, #c9a84c 0%, #a8873a 100%)",
+            border: "none",
+            borderRadius: 6,
+            color: "#111318",
+            fontFamily: "var(--font-head)",
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: "0.12em",
+            cursor: "pointer",
+            transition: "opacity 0.15s",
+          }}
+          onMouseEnter={e => e.currentTarget.style.opacity = "0.85"}
+          onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+        >
+          NEXT TURN →
+        </button>
+      </div>
+
+      {/* Add / Remove combatant */}
+      <div style={{ padding: "0 10px 14px", display: "flex", gap: 6 }}>
+        <button
+          onClick={() => onOpenAdd()}
+          style={{
+            flex: 1, background: "none", border: "none",
+            color: "var(--text-faint)", fontSize: 11,
+            fontFamily: "var(--font-head)", letterSpacing: "0.08em",
+            cursor: "pointer", textAlign: "center",
+            padding: "4px 0", transition: "color 0.15s",
+          }}
+          onMouseEnter={e => e.currentTarget.style.color = "var(--gold)"}
+          onMouseLeave={e => e.currentTarget.style.color = "var(--text-faint)"}
+        >
+          + ADD
+        </button>
+        <div style={{ width: 1, background: "var(--border)", margin: "4px 0" }} />
+        <button
+          onClick={() => combatants.length > 0 && deleteCombatant(combatants[activeIdx].id)}
+          style={{
+            flex: 1, background: "none", border: "none",
+            color: "var(--text-faint)", fontSize: 11,
+            fontFamily: "var(--font-head)", letterSpacing: "0.08em",
+            cursor: "pointer", textAlign: "center",
+            padding: "4px 0", transition: "color 0.15s",
+          }}
+          onMouseEnter={e => e.currentTarget.style.color = "#e06868"}
+          onMouseLeave={e => e.currentTarget.style.color = "var(--text-faint)"}
+        >
+          − REMOVE
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Dropdown rendered into document.body via portal so overflow:hidden on panels never clips it
+function FloatingDropdown({ inputRef, show, children, maxHeight = 240 }) {
+  const [pos, setPos] = React.useState({ top: 0, left: 0, width: 0 });
+  React.useLayoutEffect(() => {
+    if (!show || !inputRef.current) return;
+    const r = inputRef.current.getBoundingClientRect();
+    setPos({ top: r.bottom, left: r.left, width: r.width });
+  }, [show]);
+  if (!show) return null;
+  return ReactDOM.createPortal(
+    <div style={{
+      position: "fixed", top: pos.top, left: pos.left, width: pos.width,
+      zIndex: 9999, background: "var(--card)", border: "1px solid var(--border)",
+      borderTop: "none", borderRadius: "0 0 6px 6px",
+      maxHeight, overflowY: "auto", boxShadow: "0 6px 20px rgba(0,0,0,0.6)",
+    }}>
+      {children}
+    </div>,
+    document.body
+  );
+}
+
+// ─── CENTER PANEL ────────────────────────────────────────────────────────────
+
+const CR_XP = {"0":10,"1/8":25,"1/4":50,"1/2":100,"1":200,"2":450,"3":700,"4":1100,"5":1800,"6":2300,"7":2900,"8":3900,"9":5000,"10":5900,"11":7200,"12":8400,"13":10000,"14":11500,"15":13000,"16":15000,"17":18000,"18":20000,"19":22000,"20":25000,"21":33000,"22":41000,"23":50000,"24":62000};
+function modStr(s) { const m = Math.floor((s - 10) / 2); return (m >= 0 ? "+" : "") + m; }
+
+function normalizeMonster(m) {
+  if (!m) return HOBGOBLIN_STAT_BLOCK;
+  if (m.stats) return m; // already in local format
+  const crStr = m.challenge_rating != null ? String(m.challenge_rating) : (m.cr != null ? String(m.cr) : "?");
+  const speedStr = m.speed
+    ? Object.entries(m.speed).map(([k,v]) => k === "walk" ? v + " ft." : k + " " + v + " ft.").join(", ")
+    : "—";
+  const saves = [["strength_save","Str"],["dexterity_save","Dex"],["constitution_save","Con"],["intelligence_save","Int"],["wisdom_save","Wis"],["charisma_save","Cha"]];
+  const savingThrows = saves.filter(([k]) => m[k] != null).map(([k,l]) => `${l} ${m[k]>=0?"+":""}${m[k]}`).join(", ") || "—";
+  const skillsStr = m.skills && Object.keys(m.skills).length
+    ? Object.entries(m.skills).map(([k,v]) => `${k[0].toUpperCase()+k.slice(1)} ${v>=0?"+":""}${v}`).join(", ")
+    : "—";
+  return {
+    name: m.name,
+    size: m.size,
+    type: m.subtype ? `${m.type} (${m.subtype})` : m.type,
+    alignment: m.alignment,
+    cr: crStr,
+    xp: String(CR_XP[crStr] || "?"),
+    ac: m.armor_desc ? `${m.armor_class} (${m.armor_desc})` : String(m.armor_class || "—"),
+    hp: m.hit_dice ? `${m.hit_points} (${m.hit_dice})` : String(m.hit_points || "—"),
+    speed: speedStr,
+    stats: {
+      STR: [m.strength, modStr(m.strength)],
+      DEX: [m.dexterity, modStr(m.dexterity)],
+      CON: [m.constitution, modStr(m.constitution)],
+      INT: [m.intelligence, modStr(m.intelligence)],
+      WIS: [m.wisdom, modStr(m.wisdom)],
+      CHA: [m.charisma, modStr(m.charisma)],
+    },
+    savingThrows,
+    skills: skillsStr,
+    senses: m.senses || "—",
+    languages: m.languages || "—",
+    traits: (m.special_abilities || []).map(a => ({ name: a.name, desc: a.desc })),
+    actions: (m.actions || []).map(a => ({ name: a.name, desc: a.desc })),
+    reactions: (m.reactions || []).map(r => ({ name: r.name, desc: r.desc })),
+    tactics: m.tactics || [],
+    _raw: m,
+  };
+}
+
+function StatValue({ label, val }) {
+  return (
+    <div style={{ textAlign: "center" }}>
+      <div style={{ fontSize: 10, color: "var(--text-faint)", fontFamily: "var(--font-head)", letterSpacing: "0.08em", marginBottom: 2 }}>{label}</div>
+      <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text)" }}>{val[0]}</div>
+      <div style={{ fontSize: 12, color: "var(--gold)" }}>{val[1]}</div>
+    </div>
+  );
+}
+
+function AbilityGrid({ stats }) {
+  return (
+    <div style={{
+      display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 4,
+      background: "rgba(0,0,0,0.2)", borderRadius: 6, padding: "10px 8px",
+      border: "1px solid var(--border)",
+    }}>
+      {Object.entries(stats).map(([k,v]) => <StatValue key={k} label={k} val={v} />)}
+    </div>
+  );
+}
+
+function StatSection({ title, children }) {
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <div style={{
+        fontFamily: "var(--font-head)", fontSize: 12,
+        color: "var(--gold)", letterSpacing: "0.1em",
+        borderBottom: "1px solid var(--border)", paddingBottom: 3, marginBottom: 6,
+      }}>
+        {title}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function ActionEntry({ action }) {
+  return (
+    <div style={{ marginBottom: 7 }}>
+      <span style={{ fontWeight: 600, color: "var(--text)", fontSize: 14, fontStyle: "italic" }}>
+        {action.name}.{" "}
+      </span>
+      <span style={{ color: "var(--text-dim)", fontSize: 14 }}>
+        {action.desc}
+      </span>
+    </div>
+  );
+}
+
+function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpenAdd }) {
+  const [search, setSearch] = useState("");
+  const [showResults, setShowResults] = useState(false);
+  const [activeTab, setActiveTab] = useState("statblock");
+  const [currentMonster, setCurrentMonster] = useState(HOBGOBLIN_STAT_BLOCK);
+  const [hpDelta, setHpDelta] = useState("");
+  const searchInputRef = useRef(null);
+  const sb = currentMonster;
+
+  const activeCombatant = combatants[activeIdx] || null;
+
+  // Sync center panel when active combatant changes in left panel
+  useEffect(() => {
+    if (!combatants.length || activeIdx >= combatants.length || !allMonsters.length) return;
+    const active = combatants[activeIdx];
+    if (active.type !== "Monster") return;
+    const nameLower = active.name.toLowerCase();
+    const origLower = active._monsterName ? active._monsterName.toLowerCase() : null;
+    const found =
+      (origLower && allMonsters.find(m => m.name.toLowerCase() === origLower)) ||
+      allMonsters.find(m => m.name.toLowerCase() === nameLower) ||
+      allMonsters.find(m => nameLower.startsWith(m.name.toLowerCase())) ||
+      allMonsters.find(m => m.name.toLowerCase().startsWith(nameLower));
+    if (found) { setCurrentMonster(normalizeMonster(found)); setSearch(found.name); setActiveTab("statblock"); }
+  }, [activeIdx, combatants, allMonsters]);
+
+  const searchResults = search.trim().length >= 2 && allMonsters.length > 0
+    ? allMonsters.filter(m => m.name.toLowerCase().includes(search.toLowerCase())).slice(0, 8)
+    : [];
+
+  function selectMonster(m) {
+    setCurrentMonster(normalizeMonster(m));
+    setSearch(m.name);
+    setShowResults(false);
+    setActiveTab("statblock");
+  }
+
+  function applyDamage() {
+    const n = parseInt(hpDelta); if (isNaN(n) || !activeCombatant) return;
+    setCombatants(prev => prev.map(c => c.id === activeCombatant.id
+      ? { ...c, hp: Math.max(0, Math.min(c.maxHp, c.hp - n)) } : c));
+    setHpDelta("");
+  }
+  function applyHeal() {
+    const n = parseInt(hpDelta); if (isNaN(n) || !activeCombatant) return;
+    setCombatants(prev => prev.map(c => c.id === activeCombatant.id
+      ? { ...c, hp: Math.max(0, Math.min(c.maxHp, c.hp + n)) } : c));
+    setHpDelta("");
+  }
+
+  const tabs = [
+    { id: "statblock", label: "STAT BLOCK" },
+    { id: "hp",        label: "HP" },
+    { id: "tactics",   label: "TACTICS" },
+  ];
+
+  return (
+    <div style={{
+      flex: 1,
+      borderRight: "1px solid var(--border)",
+      display: "flex",
+      flexDirection: "column",
+      minHeight: 0,
+    }}>
+      {/* Search bar — overflow visible so dropdown isn't clipped */}
+      <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", overflow: "visible", position: "relative", zIndex: 20 }}>
+        <div style={{ position: "relative" }}>
+          <span style={{
+            position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
+            color: "var(--text-faint)", fontSize: 15, pointerEvents: "none",
+          }}>⌕</span>
+          <input
+            ref={searchInputRef}
+            value={search}
+            onChange={e => { setSearch(e.target.value); setShowResults(true); }}
+            onFocus={() => setShowResults(true)}
+            onBlur={() => setTimeout(() => setShowResults(false), 150)}
+            placeholder="Search monster..."
+            style={{ ...inputStyle, paddingLeft: 30, width: "100%", fontSize: 14 }}
+          />
+          <FloatingDropdown inputRef={searchInputRef} show={showResults && searchResults.length > 0}>
+            {searchResults.map((m, i) => (
+              <div key={i} onMouseDown={() => selectMonster(m)} style={{
+                padding: "9px 12px", cursor: "pointer",
+                display: "flex", justifyContent: "space-between",
+                borderBottom: "1px solid var(--border)", fontSize: 14,
+              }}
+                onMouseEnter={e => e.currentTarget.style.background = "var(--card-hover)"}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+              >
+                <span style={{ color: "var(--text)" }}>{m.name}</span>
+                <span style={{ color: "var(--gold-dim)", fontFamily: "var(--font-head)", fontSize: 12 }}>CR {m.cr || m.challenge_rating}</span>
+              </div>
+            ))}
+          </FloatingDropdown>
+        </div>
+      </div>
+
+      {/* Scroll area */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 0" }}>
+
+        {/* Monster name */}
+        <div style={{ marginBottom: 10 }}>
+          <h2 style={{
+            fontFamily: "var(--font-head)",
+            fontSize: 24, fontWeight: 700,
+            color: "var(--gold)",
+            letterSpacing: "0.02em", lineHeight: 1.2, marginBottom: 4,
+          }}>
+            {sb.name}
+          </h2>
+          <div style={{ color: "var(--text-dim)", fontSize: 14, fontStyle: "italic", marginBottom: 8 }}>
+            {sb.size} {sb.type}, {sb.alignment}
+          </div>
+          <button
+            onClick={() => onOpenAdd(currentMonster)}
+            style={{
+              padding: "6px 16px",
+              background: "rgba(201,168,76,0.1)", border: "1px solid rgba(201,168,76,0.3)",
+              borderRadius: 5, color: "var(--gold)", fontFamily: "var(--font-head)",
+              fontSize: 12, letterSpacing: "0.08em", cursor: "pointer",
+              transition: "background 0.15s",
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = "rgba(201,168,76,0.2)"}
+            onMouseLeave={e => e.currentTarget.style.background = "rgba(201,168,76,0.1)"}
+          >
+            + ADD TO COMBAT
+          </button>
+        </div>
+
+        {/* Tag row */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+          {[
+            { label: sb.size + " Humanoid", color: "#4a78c4" },
+            { label: "CR " + sb.cr, color: "var(--gold)" },
+            { label: sb.xp + " XP", color: "var(--text-dim)" },
+          ].map(t => (
+            <span key={t.label} style={{
+              fontSize: 13, padding: "3px 10px",
+              border: `1px solid ${t.color}`, borderRadius: 20,
+              color: t.color, fontFamily: "var(--font-head)",
+              letterSpacing: "0.04em", background: "rgba(0,0,0,0.3)",
+            }}>{t.label}</span>
+          ))}
+        </div>
+
+        {/* Tabs */}
+        <div style={{
+          display: "flex", gap: 0,
+          borderBottom: "1px solid var(--border)",
+          marginBottom: 16,
+        }}>
+          {tabs.map(tab => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  background: "none", border: "none",
+                  padding: "8px 16px 9px",
+                  fontFamily: "var(--font-head)",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  letterSpacing: "0.1em",
+                  color: isActive ? "var(--gold)" : "var(--text-faint)",
+                  cursor: "pointer",
+                  position: "relative",
+                  transition: "color 0.15s",
+                  borderBottom: isActive ? "2px solid var(--gold)" : "2px solid transparent",
+                  marginBottom: -1,
+                }}
+                onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = "var(--text-dim)"; }}
+                onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = "var(--text-faint)"; }}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Tab: STAT BLOCK */}
+        {activeTab === "statblock" && (
+          <div style={{ paddingBottom: 20 }}>
+            {/* Quick stats */}
+            <div style={{
+              display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap",
+              padding: "10px 12px",
+              background: "rgba(201,168,76,0.07)",
+              border: "1px solid rgba(201,168,76,0.2)",
+              borderRadius: 6,
+            }}>
+              {[["AC", sb.ac], ["HP", sb.hp], ["Speed", sb.speed]].map(([k, v]) => (
+                <div key={k} style={{ display: "flex", gap: 5, alignItems: "baseline" }}>
+                  <span style={{ fontFamily: "var(--font-head)", fontSize: 12, color: "var(--gold)", letterSpacing: "0.08em" }}>{k}</span>
+                  <span style={{ fontSize: 15, color: "var(--text)" }}>{v}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Ability scores */}
+            <div style={{ marginBottom: 14 }}>
+              <AbilityGrid stats={sb.stats} />
+            </div>
+
+            {/* Proficiencies block */}
+            <div style={{
+              background: "var(--card)", border: "1px solid var(--border)",
+              borderRadius: 6, padding: "10px 12px", marginBottom: 14, fontSize: 14,
+            }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px" }}>
+                {[
+                  ["Saving Throws", sb.savingThrows],
+                  ["Skills", sb.skills],
+                  ["Senses", sb.senses],
+                  ["Languages", sb.languages],
+                ].map(([k, v]) => (
+                  <React.Fragment key={k}>
+                    <span style={{ color: "var(--gold)", fontFamily: "var(--font-head)", fontSize: 12, letterSpacing: "0.06em", alignSelf: "start", paddingTop: 2 }}>{k}</span>
+                    <span style={{ color: "var(--text-dim)" }}>{v}</span>
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+
+            {(sb.traits||[]).length > 0 && <StatSection title="TRAITS">
+              {(sb.traits||[]).map(t => <ActionEntry key={t.name} action={t} />)}
+            </StatSection>}
+            {(sb.actions||[]).length > 0 && <StatSection title="ACTIONS">
+              {(sb.actions||[]).map(a => <ActionEntry key={a.name} action={a} />)}
+            </StatSection>}
+            {(sb.reactions||[]).length > 0 && <StatSection title="REACTIONS">
+              {(sb.reactions||[]).map(r => <ActionEntry key={r.name} action={r} />)}
+            </StatSection>}
+          </div>
+        )}
+
+        {/* Tab: HP */}
+        {activeTab === "hp" && activeCombatant && (
+          <div style={{ paddingBottom: 24 }}>
+            {/* Big HP display */}
+            <div style={{ textAlign: "center", marginBottom: 20 }}>
+              <div style={{ fontFamily: "var(--font-head)", fontSize: 12, color: "var(--gold)", letterSpacing: "0.1em", marginBottom: 8 }}>
+                {activeCombatant.name.toUpperCase()}
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 6 }}>
+                <span style={{ fontFamily: "var(--font-head)", fontSize: 52, fontWeight: 700, color: activeCombatant.hp === 0 ? "var(--red)" : activeCombatant.hp < activeCombatant.maxHp * 0.25 ? "#e06868" : "var(--text)", lineHeight: 1 }}>
+                  {activeCombatant.hp}
+                </span>
+                <span style={{ fontSize: 24, color: "var(--text-faint)" }}>/ {activeCombatant.maxHp}</span>
+              </div>
+              <div style={{ marginTop: 10, height: 8, background: "var(--border)", borderRadius: 4, overflow: "hidden" }}>
+                <div style={{ height: "100%", borderRadius: 4, transition: "width 0.3s, background 0.3s",
+                  width: `${Math.round((activeCombatant.hp / activeCombatant.maxHp) * 100)}%`,
+                  background: activeCombatant.hp < activeCombatant.maxHp * 0.25 ? "var(--red)" : activeCombatant.hp < activeCombatant.maxHp * 0.5 ? "#c4844a" : "var(--green)",
+                }} />
+              </div>
+            </div>
+
+            {/* Damage / Heal controls */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+              <input
+                value={hpDelta}
+                onChange={e => setHpDelta(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") applyDamage(); }}
+                placeholder="Amount..."
+                type="number" min="0"
+                style={{ ...inputStyle, flex: 1, fontSize: 16, textAlign: "center" }}
+              />
+              <button onClick={applyDamage} style={{
+                padding: "8px 16px", background: "rgba(196,74,74,0.15)",
+                border: "1px solid rgba(196,74,74,0.4)", borderRadius: 5,
+                color: "#e06868", fontFamily: "var(--font-head)", fontSize: 12,
+                letterSpacing: "0.06em", cursor: "pointer",
+              }}>DAMAGE</button>
+              <button onClick={applyHeal} style={{
+                padding: "8px 16px", background: "rgba(90,171,106,0.15)",
+                border: "1px solid rgba(90,171,106,0.4)", borderRadius: 5,
+                color: "var(--green)", fontFamily: "var(--font-head)", fontSize: 12,
+                letterSpacing: "0.06em", cursor: "pointer",
+              }}>HEAL</button>
+            </div>
+
+            {/* Conditions */}
+            {activeCombatant.conditions && activeCombatant.conditions.length > 0 && (
+              <div>
+                <div style={{ fontFamily: "var(--font-head)", fontSize: 12, color: "var(--gold)", letterSpacing: "0.08em", marginBottom: 8 }}>CONDITIONS</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {activeCombatant.conditions.map(cond => {
+                    const col = CONDITION_COLORS[cond] || { bg: "rgba(100,100,100,0.2)", border: "#666", text: "#999" };
+                    return <span key={cond} style={{ background: col.bg, border: `1px solid ${col.border}`, color: col.text, borderRadius: 12, padding: "3px 12px", fontSize: 13 }}>{cond}</span>;
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        {activeTab === "hp" && !activeCombatant && (
+          <div style={{ color: "var(--text-faint)", fontSize: 14, fontStyle: "italic", padding: "20px 0" }}>
+            No combatant selected.
+          </div>
+        )}
+
+        {/* Tab: TACTICS */}
+        {activeTab === "tactics" && (
+          <div style={{ paddingBottom: 24 }}>
+            <div style={{
+              fontFamily: "var(--font-head)", fontSize: 12, color: "var(--gold)",
+              letterSpacing: "0.1em", marginBottom: 14,
+            }}>
+              ⚔ HOW TO PLAY THIS MONSTER
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 24 }}>
+              {(sb.tactics||[]).length === 0 && (
+                <div style={{ color: "var(--text-faint)", fontSize: 14, fontStyle: "italic" }}>
+                  No tactics loaded. Use the Tactics Generator in the right panel to generate AI tactics for this monster.
+                </div>
+              )}
+              {(sb.tactics||[]).map((t, i) => (
+                <div key={i} style={{
+                  display: "flex", gap: 14, alignItems: "flex-start",
+                  background: "rgba(201,168,76,0.04)",
+                  border: "1px solid rgba(201,168,76,0.12)",
+                  borderRadius: 6, padding: "12px 14px",
+                }}>
+                  <span style={{
+                    color: "var(--gold)", fontSize: 15, lineHeight: 1,
+                    flexShrink: 0, marginTop: 2,
+                    fontFamily: "var(--font-head)",
+                  }}>•</span>
+                  <span style={{ fontSize: 14, color: "var(--text-dim)", lineHeight: 1.7 }}>{t}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Flee / Surrender callout */}
+            <div style={{
+              display: "flex", gap: 12, alignItems: "flex-start",
+              background: "rgba(196,74,74,0.08)",
+              border: "1px solid rgba(196,74,74,0.25)",
+              borderLeft: "3px solid #c44a4a",
+              borderRadius: 6, padding: "12px 14px",
+            }}>
+              <span style={{ fontSize: 16, flexShrink: 0, lineHeight: 1, marginTop: 1 }}>🏃</span>
+              <div>
+                <div style={{
+                  fontFamily: "var(--font-head)", fontSize: 12, color: "#e06868",
+                  letterSpacing: "0.08em", marginBottom: 4,
+                }}>
+                  FLEE / SURRENDER THRESHOLD
+                </div>
+                <div style={{ fontSize: 14, color: "var(--text-dim)", lineHeight: 1.6 }}>
+                  Flees at ~30% HP if allies are dead — hobgoblins are disciplined, not suicidal.
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+// ─── RIGHT PANEL ─────────────────────────────────────────────────────────────
+
+function QuickActionBtn({ id, icon, label, subtitle, isActive, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        width: "100%",
+        background: isActive ? "rgba(201,168,76,0.1)" : "var(--card)",
+        border: `1px solid ${isActive ? "var(--gold)" : "var(--border)"}`,
+        borderRadius: 6,
+        padding: "9px 12px",
+        cursor: "pointer",
+        textAlign: "left",
+        transition: "all 0.15s ease",
+        display: "flex",
+        flexDirection: "column",
+        gap: 2,
+      }}
+      onMouseEnter={e => { if (!isActive) e.currentTarget.style.borderColor = "var(--gold-dim)"; }}
+      onMouseLeave={e => { if (!isActive) e.currentTarget.style.borderColor = "var(--border)"; }}
+    >
+      <div style={{
+        display: "flex", alignItems: "center", gap: 7,
+      }}>
+        <span style={{ fontSize: 14 }}>{icon}</span>
+        <span style={{
+          fontFamily: "var(--font-head)",
+          fontSize: 11,
+          fontWeight: 600,
+          color: isActive ? "var(--gold)" : "var(--text)",
+          letterSpacing: "0.04em",
+        }}>{label}</span>
+      </div>
+      <div style={{ fontSize: 11, color: "var(--text-dim)", paddingLeft: 21 }}>{subtitle}</div>
+    </button>
+  );
+}
+
+function RightPanel({ combatants, activeIdx, tweaks, aiProvider }) {
+  const [activePrompt, setActivePrompt] = useState("Describe This Hit");
+  const [fieldValues, setFieldValues] = useState({
+    "Describe This Hit": { damage: "14", hpState: "Bloodied (25-50%)" },
+    "Flee or Fight?": { hpPercent: "27", situation: "Allies fallen" },
+    "Smart Move": { context: "" },
+  });
+  const [aiResponse, setAiResponse] = useState(AI_PROMPTS["Describe This Hit"].defaultResponse);
+  const [loading, setLoading] = useState(false);
+  const [freeform, setFreeform] = useState("");
+  const [freeformLoading, setFreeformLoading] = useState(false);
+  const [freeformResponse, setFreeformResponse] = useState("");
+
+  const prompt = AI_PROMPTS[activePrompt];
+
+  function setField(key, val) {
+    setFieldValues(prev => ({
+      ...prev,
+      [activePrompt]: { ...prev[activePrompt], [key]: val }
+    }));
+  }
+
+  async function generate() {
+    setLoading(true);
+    setAiResponse("");
+    const vals = fieldValues[activePrompt] || {};
+    const promptText = prompt.buildPrompt(vals, combatants, activeIdx);
+    try {
+      const res = await fetch("/api/ai/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: promptText, max_tokens: 200, provider: aiProvider || "claude" }),
+      });
+      const data = await res.json();
+      setAiResponse(data.content);
+    } catch(e) {
+      setAiResponse("Could not reach AI — check connection.");
+    }
+    setLoading(false);
+  }
+
+  async function sendFreeform() {
+    if (!freeform.trim()) return;
+    setFreeformLoading(true);
+    setFreeformResponse("");
+    const active = combatants[activeIdx];
+    const contextPrompt = `You are a D&D 5e assistant for a DM. Current combat: ${combatants.map(c => `${c.name} (${c.type}, ${c.hp}/${c.maxHp} HP)`).join(", ")}. Active combatant: ${active.name}.\n\n${freeform}`;
+    try {
+      const res = await fetch("/api/ai/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: contextPrompt, max_tokens: 200, provider: aiProvider || "claude" }),
+      });
+      const data = await res.json();
+      setFreeformResponse(data.content);
+    } catch(e) {
+      setFreeformResponse("Could not reach AI — check connection.");
+    }
+    setFreeformLoading(false);
+  }
+
+  return (
+    <div style={{
+      width: tweaks.rightPanelWidth || 280,
+      minWidth: tweaks.rightPanelWidth || 280,
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden",
+    }}>
+      {/* Header */}
+      <div style={{ padding: "14px 14px 10px", borderBottom: "1px solid var(--border)" }}>
+        <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 700, color: "var(--gold)", letterSpacing: "0.06em" }}>
+          AI Assist
+        </div>
+        <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 2 }}>
+          {tweaks.aiProvider === "gemini" ? "Gemini 1.5 Flash · Free Tier · 15 req/min" : "Claude Haiku · ~$0.001 per query · ~1000 per dollar"}
+        </div>
+      </div>
+
+      <div style={{ flex: 1, overflowY: "auto", padding: "12px" }}>
+        {/* Quick action buttons */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+          {Object.entries(AI_PROMPTS).map(([key, p]) => (
+            <QuickActionBtn
+              key={key}
+              id={key}
+              icon={p.icon}
+              label={key}
+              subtitle={p.subtitle}
+              isActive={activePrompt === key}
+              onClick={() => {
+                setActivePrompt(key);
+                setAiResponse(p.defaultResponse || "");
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Expanded prompt form */}
+        <div style={{
+          background: "rgba(0,0,0,0.2)",
+          border: "1px solid var(--border)",
+          borderRadius: 6,
+          padding: "12px",
+          marginBottom: 12,
+        }}>
+          <div style={{
+            fontFamily: "var(--font-head)",
+            fontSize: 10,
+            color: "var(--gold)",
+            letterSpacing: "0.1em",
+            marginBottom: 10,
+          }}>
+            {prompt.icon} {activePrompt.toUpperCase()}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
+            {prompt.fields.map(f => (
+              <div key={f.key}>
+                <label style={{ display: "block", fontSize: 11, color: "var(--text-dim)", marginBottom: 4, fontFamily: "var(--font-head)", letterSpacing: "0.04em" }}>
+                  {f.label}
+                </label>
+                {f.type === "select" ? (
+                  <select
+                    value={fieldValues[activePrompt]?.[f.key] ?? f.defaultValue}
+                    onChange={e => setField(f.key, e.target.value)}
+                    style={{ ...inputStyle, width: "100%" }}
+                  >
+                    {f.options.map(o => <option key={o}>{o}</option>)}
+                  </select>
+                ) : (
+                  <input
+                    value={fieldValues[activePrompt]?.[f.key] ?? f.defaultValue}
+                    onChange={e => setField(f.key, e.target.value)}
+                    placeholder={f.placeholder}
+                    style={{ ...inputStyle, width: "100%" }}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={generate}
+            disabled={loading}
+            style={{
+              width: "100%",
+              padding: "9px 0",
+              background: loading ? "var(--gold-dim)" : "linear-gradient(135deg, #c9a84c 0%, #a8873a 100%)",
+              border: "none",
+              borderRadius: 5,
+              color: "#111318",
+              fontFamily: "var(--font-head)",
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.12em",
+              cursor: loading ? "not-allowed" : "pointer",
+              transition: "opacity 0.15s",
+            }}
+          >
+            {loading ? "GENERATING..." : "GENERATE"}
+          </button>
+        </div>
+
+        {/* AI Response */}
+        {(aiResponse || loading) && (
+          <div style={{
+            background: "#141820",
+            border: "1px solid var(--border)",
+            borderLeft: "3px solid var(--gold-dim)",
+            borderRadius: 6,
+            padding: "12px",
+            marginBottom: 14,
+          }}>
+            <div style={{ fontSize: 9, color: "var(--gold-dim)", fontFamily: "var(--font-head)", letterSpacing: "0.1em", marginBottom: 8 }}>
+              AI RESPONSE
+            </div>
+            {loading ? (
+              <div style={{ color: "var(--text-faint)", fontSize: 12, fontStyle: "italic" }}>
+                Consulting the arcane...
+              </div>
+            ) : (
+              <p style={{ fontSize: 13, color: "var(--text-dim)", lineHeight: 1.7, fontStyle: "italic" }}>
+                "{aiResponse}"
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Freeform response */}
+        {freeformResponse && (
+          <div style={{
+            background: "#141820",
+            border: "1px solid var(--border)",
+            borderLeft: "3px solid var(--teal)",
+            borderRadius: 6,
+            padding: "12px",
+            marginBottom: 14,
+          }}>
+            <div style={{ fontSize: 9, color: "var(--teal)", fontFamily: "var(--font-head)", letterSpacing: "0.1em", marginBottom: 8 }}>
+              ANSWER
+            </div>
+            <p style={{ fontSize: 13, color: "var(--text-dim)", lineHeight: 1.7 }}>
+              {freeformLoading ? "Consulting the arcane..." : freeformResponse}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Freeform input - pinned to bottom */}
+      <div style={{
+        padding: "10px 12px",
+        borderTop: "1px solid var(--border)",
+        display: "flex",
+        gap: 6,
+      }}>
+        <input
+          value={freeform}
+          onChange={e => setFreeform(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && sendFreeform()}
+          placeholder="Ask anything..."
+          style={{ ...inputStyle, flex: 1, fontSize: 12 }}
+        />
+        <button
+          onClick={sendFreeform}
+          disabled={freeformLoading}
+          style={{
+            background: freeformLoading ? "var(--card)" : "rgba(201,168,76,0.15)",
+            border: "1px solid var(--gold-dim)",
+            borderRadius: 5,
+            color: "var(--gold)",
+            padding: "0 10px",
+            fontSize: 14,
+            cursor: "pointer",
+            transition: "background 0.15s",
+          }}
+          onMouseEnter={e => { if(!freeformLoading) e.currentTarget.style.background = "rgba(201,168,76,0.25)"; }}
+          onMouseLeave={e => { if(!freeformLoading) e.currentTarget.style.background = "rgba(201,168,76,0.15)"; }}
+        >
+          →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── SHARED STYLES ───────────────────────────────────────────────────────────
+
+const inputStyle = {
+  background: "#0d1017",
+  border: "1px solid var(--border)",
+  borderRadius: 5,
+  color: "var(--text)",
+  padding: "6px 10px",
+  fontSize: 12,
+  outline: "none",
+  fontFamily: "var(--font-body)",
+  transition: "border-color 0.15s",
+};
+
+const smallBtnStyle = {
+  flex: 1,
+  padding: "6px 0",
+  background: "linear-gradient(135deg, #c9a84c 0%, #a8873a 100%)",
+  border: "none",
+  borderRadius: 5,
+  color: "#111318",
+  fontFamily: "var(--font-head)",
+  fontSize: 10,
+  fontWeight: 700,
+  letterSpacing: "0.08em",
+  cursor: "pointer",
+};
+
+// ─── ADD COMBATANT MODAL ─────────────────────────────────────────────────────
+
+function AddCombatantModal({ onClose, onAdd, prefill, allMonsters }) {
+  const initialTab = prefill ? "monster" : "custom";
+  const [tab, setTab] = useState(initialTab);
+  const [players, setPlayers] = useState([]);
+
+  const [monsterSearch, setMonsterSearch] = useState(prefill ? (prefill.name || "") : "");
+  const [showMonsterResults, setShowMonsterResults] = useState(false);
+  const [selectedMonsterData, setSelectedMonsterData] = useState(prefill || null);
+
+  // Monster tab entry fields (separate from custom tab)
+  const [monsterName, setMonsterName] = useState(prefill ? (prefill.name || "") : "");
+  const [monsterHp, setMonsterHp] = useState(() => {
+    if (!prefill) return "";
+    const hpVal = prefill.hit_points || prefill.maxHp || prefill.hp;
+    if (typeof hpVal === "number") return String(hpVal);
+    if (typeof hpVal === "string") { const m = hpVal.match(/\d+/); return m ? m[0] : ""; }
+    return "";
+  });
+  const [monsterInitiative, setMonsterInitiative] = useState("");
+  const modalSearchRef = useRef(null);
+
+  // Custom tab fields
+  const [name, setName] = useState("");
+  const [hp, setHp] = useState("");
+  const [initiative, setInitiative] = useState("");
+  const [type, setType] = useState("Monster");
+
+  useEffect(() => {
+    fetch("/api/players").then(r => r.json()).then(d => setPlayers(d.players || [])).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const handler = e => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  const monsterResults = monsterSearch.trim().length >= 2 && allMonsters.length > 0
+    ? allMonsters.filter(m => m.name.toLowerCase().includes(monsterSearch.toLowerCase())).slice(0, 8)
+    : [];
+
+  function selectMonster(m) {
+    setSelectedMonsterData(m);
+    setMonsterSearch(m.name);
+    setMonsterName(m.name);
+    const hpVal = m.hit_points || m.hp;
+    const hpNum = typeof hpVal === "number" ? hpVal : (String(hpVal || "").match(/\d+/) || [])[0];
+    setMonsterHp(hpNum ? String(hpNum) : "10");
+    setShowMonsterResults(false);
+    // Stay on Monster tab — user sees the stat preview + can adjust before adding
+  }
+
+  function selectPlayer(p) {
+    setName(p.name);
+    setHp(p.hp ? String(p.hp) : "");
+    setInitiative(p.initiativeBonus != null ? String(p.initiativeBonus) : "");
+    setType("PC");
+    setTab("custom");
+  }
+
+  function submitMonster() {
+    if (!monsterName.trim()) return;
+    const hpVal = parseInt(monsterHp) || 10;
+    onAdd({
+      id: Date.now(),
+      name: monsterName.trim(),
+      _monsterName: selectedMonsterData ? selectedMonsterData.name : monsterName.trim(),
+      type: "Monster",
+      hp: hpVal, maxHp: hpVal,
+      conditions: [],
+      initiative: parseInt(monsterInitiative) || 0,
+    });
+    onClose();
+  }
+
+  function submit() {
+    if (!name.trim()) return;
+    const hpVal = parseInt(hp) || 10;
+    onAdd({
+      id: Date.now(),
+      name: name.trim(),
+      type,
+      hp: hpVal, maxHp: hpVal,
+      conditions: [],
+      initiative: parseInt(initiative) || 0,
+    });
+    onClose();
+  }
+
+  function handleBackdrop(e) { if (e.target === e.currentTarget) onClose(); }
+
+  const tabBtnStyle = (active) => ({
+    flex: 1, padding: "8px 0", background: "none", border: "none",
+    borderBottom: `2px solid ${active ? "var(--gold)" : "transparent"}`,
+    color: active ? "var(--gold)" : "var(--text-dim)",
+    fontFamily: "var(--font-head)", fontSize: 10, letterSpacing: "0.08em",
+    cursor: "pointer", transition: "all 0.15s", marginBottom: -1,
+  });
+
+  return (
+    <div onClick={handleBackdrop} style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)",
+      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+    }}>
+      <div style={{
+        background: "var(--card)", border: "1px solid var(--border)",
+        borderRadius: 8, width: 380, maxWidth: "90vw",
+        boxShadow: "0 8px 40px rgba(0,0,0,0.6)", overflow: "hidden",
+      }}>
+        {/* Header */}
+        <div style={{ padding: "14px 16px 0", borderBottom: "1px solid var(--border)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <div style={{ fontFamily: "var(--font-head)", fontSize: 12, color: "var(--gold)", letterSpacing: "0.1em" }}>ADD COMBATANT</div>
+            <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-faint)", cursor: "pointer", fontSize: 16, padding: "0 2px" }}>✕</button>
+          </div>
+          <div style={{ display: "flex", borderBottom: "1px solid var(--border)" }}>
+            {[["players","PLAYERS"],["monster","MONSTER"],["custom","CUSTOM"]].map(([id, label]) => (
+              <button key={id} style={tabBtnStyle(tab === id)} onClick={() => setTab(id)}>{label}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: 16, maxHeight: 420, overflowY: "auto" }}>
+
+          {/* Players tab */}
+          {tab === "players" && (
+            players.length === 0 ? (
+              <div style={{ color: "var(--text-faint)", fontSize: 12, fontStyle: "italic", textAlign: "center", padding: "24px 0" }}>
+                No campaign players found.<br />Add PC files to campaign/[name]/pcs/
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {players.map((p, i) => (
+                  <button key={i} onClick={() => selectPlayer(p)} style={{
+                    background: "var(--bg)", border: "1px solid var(--border)",
+                    borderRadius: 6, padding: "10px 12px", cursor: "pointer",
+                    textAlign: "left", transition: "border-color 0.15s",
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = "var(--gold-dim)"}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border)"}
+                  >
+                    <div style={{ fontFamily: "var(--font-head)", fontSize: 11, color: "var(--text)", letterSpacing: "0.04em" }}>{p.name}</div>
+                    <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 2 }}>
+                      {[p.charClass, p.race].filter(Boolean).join(" · ")}
+                      {p.hp ? ` · ${p.hp} HP` : ""}
+                      {p.level ? ` · Level ${p.level}` : ""}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )
+          )}
+
+          {/* Monster tab */}
+          {tab === "monster" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div>
+                    <input
+                      ref={modalSearchRef}
+                      value={monsterSearch}
+                      onChange={e => { setMonsterSearch(e.target.value); setShowMonsterResults(true); setSelectedMonsterData(null); }}
+                      onFocus={() => setShowMonsterResults(true)}
+                      onBlur={() => setTimeout(() => setShowMonsterResults(false), 150)}
+                      placeholder="Search monsters..."
+                      autoFocus={!prefill}
+                      style={{ ...inputStyle, width: "100%", fontSize: 15 }}
+                    />
+                    <FloatingDropdown inputRef={modalSearchRef} show={showMonsterResults && monsterResults.length > 0}>
+                      {monsterResults.map((m, i) => (
+                        <div key={i} onMouseDown={() => selectMonster(m)} style={{
+                          padding: "9px 12px", cursor: "pointer",
+                          display: "flex", justifyContent: "space-between",
+                          borderBottom: "1px solid var(--border)", fontSize: 14,
+                        }}
+                          onMouseEnter={e => e.currentTarget.style.background = "var(--card-hover)"}
+                          onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                        >
+                          <span style={{ color: "var(--text)" }}>{m.name}</span>
+                          <span style={{ color: "var(--gold-dim)", fontFamily: "var(--font-head)", fontSize: 12 }}>CR {m.cr || m.challenge_rating}</span>
+                        </div>
+                      ))}
+                    </FloatingDropdown>
+                  </div>
+
+              {selectedMonsterData ? (
+                <>
+                  {/* Monster stat preview */}
+                  <div style={{ background: "rgba(201,168,76,0.05)", border: "1px solid rgba(201,168,76,0.2)", borderRadius: 6, padding: "10px 12px", fontSize: 14 }}>
+                    <div style={{ fontFamily: "var(--font-head)", fontSize: 13, color: "var(--gold)", marginBottom: 4 }}>{selectedMonsterData.name}</div>
+                    <div style={{ color: "var(--text-faint)", display: "flex", gap: 12 }}>
+                      <span>CR {selectedMonsterData.cr || selectedMonsterData.challenge_rating}</span>
+                      <span>HP {selectedMonsterData.hit_points || selectedMonsterData.hp}</span>
+                      <span>AC {selectedMonsterData.armor_class || selectedMonsterData.ac}</span>
+                    </div>
+                  </div>
+                  {/* Editable entry fields */}
+                  <div>
+                    <label style={{ display: "block", fontSize: 11, color: "var(--text-dim)", marginBottom: 4, fontFamily: "var(--font-head)", letterSpacing: "0.04em" }}>NAME (optional rename)</label>
+                    <input value={monsterName} onChange={e => setMonsterName(e.target.value)}
+                      style={{ ...inputStyle, width: "100%" }} />
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: "block", fontSize: 11, color: "var(--text-dim)", marginBottom: 4, fontFamily: "var(--font-head)", letterSpacing: "0.04em" }}>HP</label>
+                      <input value={monsterHp} onChange={e => setMonsterHp(e.target.value)} type="number"
+                        style={{ ...inputStyle, width: "100%" }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: "block", fontSize: 11, color: "var(--text-dim)", marginBottom: 4, fontFamily: "var(--font-head)", letterSpacing: "0.04em" }}>INITIATIVE</label>
+                      <input value={monsterInitiative} onChange={e => setMonsterInitiative(e.target.value)}
+                        placeholder="Roll result" type="number" style={{ ...inputStyle, width: "100%" }}
+                        onKeyDown={e => e.key === "Enter" && submitMonster()} />
+                    </div>
+                  </div>
+                  <button onClick={submitMonster} style={{
+                    width: "100%", padding: "11px 0",
+                    background: "linear-gradient(135deg, #c9a84c 0%, #a8873a 100%)",
+                    border: "none", borderRadius: 6, color: "#111318",
+                    fontFamily: "var(--font-head)", fontSize: 11, fontWeight: 700,
+                    letterSpacing: "0.1em", cursor: "pointer",
+                  }}>
+                    ADD TO COMBAT
+                  </button>
+                </>
+              ) : (
+                allMonsters.length === 0 && (
+                  <div style={{ color: "var(--text-faint)", fontSize: 12, fontStyle: "italic", textAlign: "center" }}>Loading monster list...</div>
+                )
+              )}
+            </div>
+          )}
+
+          {/* Custom tab */}
+          {tab === "custom" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 11, color: "var(--text-dim)", marginBottom: 4, fontFamily: "var(--font-head)", letterSpacing: "0.04em" }}>NAME</label>
+                <input value={name} onChange={e => setName(e.target.value)} placeholder="Combatant name..."
+                  style={{ ...inputStyle, width: "100%" }} autoFocus={!prefill}
+                  onKeyDown={e => e.key === "Enter" && submit()} />
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: "block", fontSize: 11, color: "var(--text-dim)", marginBottom: 4, fontFamily: "var(--font-head)", letterSpacing: "0.04em" }}>HP</label>
+                  <input value={hp} onChange={e => setHp(e.target.value)} placeholder="e.g. 28" type="number"
+                    style={{ ...inputStyle, width: "100%" }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: "block", fontSize: 11, color: "var(--text-dim)", marginBottom: 4, fontFamily: "var(--font-head)", letterSpacing: "0.04em" }}>INITIATIVE</label>
+                  <input value={initiative} onChange={e => setInitiative(e.target.value)} placeholder="Roll result" type="number"
+                    style={{ ...inputStyle, width: "100%" }} />
+                </div>
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 11, color: "var(--text-dim)", marginBottom: 4, fontFamily: "var(--font-head)", letterSpacing: "0.04em" }}>TYPE</label>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {["PC","Monster"].map(t => (
+                    <button key={t} onClick={() => setType(t)} style={{
+                      flex: 1, padding: "7px 0",
+                      background: type === t ? (t === "PC" ? "rgba(74,120,196,0.2)" : "rgba(196,74,74,0.2)") : "var(--bg)",
+                      border: `1px solid ${type === t ? (t === "PC" ? "var(--blue)" : "var(--red)") : "var(--border)"}`,
+                      borderRadius: 5,
+                      color: type === t ? (t === "PC" ? "#6a9de8" : "#e06868") : "var(--text-dim)",
+                      fontFamily: "var(--font-head)", fontSize: 10, letterSpacing: "0.06em", cursor: "pointer",
+                    }}>{t}</button>
+                  ))}
+                </div>
+              </div>
+              <button onClick={submit} style={{
+                width: "100%", padding: "11px 0",
+                background: name.trim() ? "linear-gradient(135deg, #c9a84c 0%, #a8873a 100%)" : "var(--border)",
+                border: "none", borderRadius: 6,
+                color: name.trim() ? "#111318" : "var(--text-faint)",
+                fontFamily: "var(--font-head)", fontSize: 11, fontWeight: 700,
+                letterSpacing: "0.1em", cursor: name.trim() ? "pointer" : "not-allowed",
+                transition: "background 0.15s", marginTop: 4,
+              }}>
+                ADD TO COMBAT
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── TWEAKS ──────────────────────────────────────────────────────────────────
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "leftPanelWidth": 290,
+  "rightPanelWidth": 340,
+  "showInitiativeNumbers": true,
+  "compactMode": false,
+  "showRoundCounter": true,
+  "aiProvider": "claude"
+}/*EDITMODE-END*/;
+
+// ─── ROOT APP ────────────────────────────────────────────────────────────────
+
+function App() {
+  const [tweaks, setTweak] = window.useTweaks(TWEAK_DEFAULTS);
+  const [combatants, setCombatants] = useState(INITIAL_COMBATANTS);
+  const [activeIdx, setActiveIdx] = useState(2); // Hobgoblin Captain starts active
+  const [allMonsters, setAllMonsters] = useState([]);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addModalPrefill, setAddModalPrefill] = useState(null);
+
+  useEffect(() => {
+    fetch("/tools/monsters.json")
+      .then(r => r.json())
+      .then(data => setAllMonsters(Array.isArray(data) ? data : Object.values(data)))
+      .catch(() => {});
+  }, []);
+
+  function handleOpenAdd(prefill = null) {
+    setAddModalPrefill(prefill || null);
+    setShowAddModal(true);
+  }
+
+  return (
+    <>
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.5; transform: scale(1.4); }
+        }
+        input:focus, select:focus {
+          border-color: var(--gold-dim) !important;
+          outline: none;
+        }
+      `}</style>
+
+      <div style={{
+        display: "flex",
+        height: "100vh",
+        overflow: "hidden",
+        background: "var(--bg)",
+      }}>
+        <LeftPanel
+          combatants={combatants}
+          setCombatants={setCombatants}
+          activeIdx={activeIdx}
+          setActiveIdx={setActiveIdx}
+          tweaks={tweaks}
+          onOpenAdd={handleOpenAdd}
+        />
+        <CenterPanel
+          combatants={combatants}
+          activeIdx={activeIdx}
+          setCombatants={setCombatants}
+          allMonsters={allMonsters}
+          onOpenAdd={handleOpenAdd}
+        />
+        <RightPanel
+          combatants={combatants}
+          activeIdx={activeIdx}
+          tweaks={tweaks}
+          aiProvider={tweaks.aiProvider}
+        />
+      </div>
+
+      {showAddModal && (
+        <AddCombatantModal
+          onClose={() => { setShowAddModal(false); setAddModalPrefill(null); }}
+          onAdd={c => setCombatants(prev => [...prev, c])}
+          prefill={addModalPrefill}
+          allMonsters={allMonsters}
+        />
+      )}
+
+      <window.TweaksPanel>
+        <window.TweakSection label="AI Settings" />
+        <window.TweakRadio label="AI Provider" value={tweaks.aiProvider}
+          options={[{value:'claude',label:'Claude'},{value:'gemini',label:'Gemini'}]}
+          onChange={v => setTweak("aiProvider", v)} />
+        <window.TweakSection label="Layout" />
+        <window.TweakSlider label="Left Panel Width" value={tweaks.leftPanelWidth} min={180} max={320} unit="px"
+          onChange={v => setTweak("leftPanelWidth", v)} />
+        <window.TweakSlider label="Right Panel Width" value={tweaks.rightPanelWidth} min={220} max={380} unit="px"
+          onChange={v => setTweak("rightPanelWidth", v)} />
+        <window.TweakSection label="Display" />
+        <window.TweakToggle label="Show Round Counter" value={tweaks.showRoundCounter}
+          onChange={v => setTweak("showRoundCounter", v)} />
+        <window.TweakToggle label="Compact Mode" value={tweaks.compactMode}
+          onChange={v => setTweak("compactMode", v)} />
+      </window.TweaksPanel>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

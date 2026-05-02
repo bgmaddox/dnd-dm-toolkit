@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Combat Assistant — DM Tool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #111318;
+    --card: #1c2028;
+    --card-hover: #222736;
+    --border: #2a2f3d;
+    --border-bright: #3a4255;
+    --gold: #c9a84c;
+    --gold-dim: #8a7035;
+    --gold-glow: rgba(201,168,76,0.15);
+    --text: #dde3f0;
+    --text-dim: #8a93a8;
+    --text-faint: #4e566a;
+    --blue: #4a78c4;
+    --red: #c44a4a;
+    --teal: #3da894;
+    --green: #5aab6a;
+    --yellow: #c9a84c;
+    --poison: #6db55e;
+    --font-head: 'Cinzel', serif;
+    --font-body: 'Crimson Pro', Georgia, serif;
+  }
+
+  html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); }
+
+  #root { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--gold-dim); }
+
+  /* Global typography */
+  body { font-family: var(--font-body); font-size: 14px; line-height: 1.5; }
+
+  input, select, textarea, button { font-family: var(--font-body); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel">
+
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ─── DATA ───────────────────────────────────────────────────────────────────
+
+const INITIAL_COMBATANTS = [
+  { id: 1, name: "Thorin Ironfist",    type: "PC",      hp: 28, maxHp: 34, conditions: [],                 initiative: 22 },
+  { id: 2, name: "Lyra Swiftarrow",    type: "PC",      hp: 19, maxHp: 26, conditions: ["Concentrating"], initiative: 18 },
+  { id: 3, name: "HOBGOBLIN CAPTAIN",  type: "Monster", hp: 14, maxHp: 52, conditions: [],                 initiative: 15 },
+  { id: 4, name: "Goblin 1",           type: "Monster", hp: 0,  maxHp: 7,  conditions: ["Unconscious"],   initiative: 12 },
+  { id: 5, name: "Goblin 2",           type: "Monster", hp: 3,  maxHp: 7,  conditions: ["Frightened"],    initiative: 9  },
+  { id: 6, name: "Bramble",            type: "PC",      hp: 22, maxHp: 22, conditions: ["Poisoned"],       initiative: 6  },
+];
+
+const CONDITION_COLORS = {
+  "Concentrating": { bg: "rgba(61,168,148,0.25)", border: "#3da894", text: "#3da894" },
+  "Unconscious":   { bg: "rgba(140,140,140,0.2)", border: "#666",    text: "#999"    },
+  "Frightened":    { bg: "rgba(180,80,80,0.25)",  border: "#c44a4a", text: "#e06868" },
+  "Poisoned":      { bg: "rgba(109,181,94,0.25)", border: "#6db55e", text: "#6db55e" },
+  "Stunned":       { bg: "rgba(150,100,200,0.25)",border: "#9b6ac8", text: "#b48de0" },
+  "Prone":         { bg: "rgba(180,120,40,0.25)", border: "#c9843c", text: "#e0a060" },
+};
+
+const HOBGOBLIN_STAT_BLOCK = {
+  name: "Hobgoblin Captain",
+  size: "Medium",
+  type: "Humanoid (Goblinoid)",
+  alignment: "Lawful Evil",
+  cr: "3",
+  xp: "450",
+  ac: "17 (half plate)",
+  hp: "52 (8d8+16)",
+  speed: "30 ft.",
+  stats: { STR: [15,"+2"], DEX: [14,"+2"], CON: [14,"+2"], INT: [12,"+1"], WIS: [10,"+0"], CHA: [13,"+1"] },
+  savingThrows: "Int +3, Wis +2",
+  skills: "Perception +2, Stealth +4",
+  senses: "Darkvision 60 ft., Passive Perception 12",
+  languages: "Common, Goblin",
+  traits: [
+    { name: "Martial Advantage", desc: "Once per turn, the hobgoblin can deal an extra 7 (2d6) damage to a creature it hits with a weapon attack if that creature is within 5 ft. of an ally." }
+  ],
+  actions: [
+    { name: "Multiattack", desc: "The captain makes two longsword attacks. If it has a spear drawn, it can replace one longsword attack with a spear attack." },
+    { name: "Longsword", desc: "+4 to hit, reach 5 ft., one target. Hit: 6 (1d8+2) slashing damage, or 7 (1d10+2) if wielded two-handed." },
+    { name: "Spear", desc: "+4 to hit, reach 5 ft. or range 20/60 ft., one target. Hit: 5 (1d6+2) piercing." },
+    { name: "Leadership (Recharges 5–6)", desc: "For 1 minute, the captain can utter a special command or warning. Each non-hobgoblin creature within 30 ft. that can hear the captain adds a d4 to its next attack roll or saving throw." },
+  ],
+  reactions: [
+    { name: "Parry", desc: "The captain adds +2 to its AC against one melee attack that would hit it, if it can see the attacker and is wielding a melee weapon." }
+  ],
+  tactics: [
+    "Opens with Leadership if 3+ allies visible — the +1d4 bonus action die ripples through the whole fight.",
+    "Uses Multiattack on the most wounded target. Martial Advantage requires an ally adjacent — position deliberately.",
+    "At 30% HP with no allies standing, offers surrender or attempts to flee — hobgoblins are disciplined, not suicidal.",
+  ]
+};
+
+const AI_PROMPTS = {
+  "Describe This Hit": {
+    icon: "⚡",
+    subtitle: "Narrate a strike cinematically",
+    fields: [
+      { key: "damage", label: "Damage dealt", type: "text", placeholder: "14", defaultValue: "14" },
+      { key: "hpState", label: "Target HP state", type: "select", options: ["Fresh (75-100%)", "Injured (50-75%)", "Bloodied (25-50%)", "Critical (<25%)"], defaultValue: "Bloodied (25-50%)" },
+    ],
+    buildPrompt: (vals, combatants, activeIdx) => {
+      const active = combatants[activeIdx];
+      return `You are narrating a D&D 5e combat encounter. The ${active.name} just hit Thorin Ironfist for ${vals.damage || "14"} damage. Thorin is ${vals.hpState || "Bloodied (25-50%)"}. Write a single cinematic paragraph (3-4 sentences) describing the hit — visceral, dramatic, in present tense. No dialogue. Focus on body language, momentum, and the physical impact.`;
+    },
+    defaultResponse: `The Hobgoblin Captain's longsword bites deep into Thorin's shoulder, grinding against armor. He barely staggers — jaw set, eyes cold. The Captain pulls the blade free with a sharp twist and steps back into a fighting stance, clearly reading the dwarf as the bigger threat.`
+  },
+  "Flee or Fight?": {
+    icon: "🏃",
+    subtitle: "Would this monster retreat?",
+    fields: [
+      { key: "hpPercent", label: "Monster HP %", type: "text", placeholder: "27", defaultValue: "27" },
+      { key: "situation", label: "Situation", type: "select", options: ["Allies present", "Allies fallen", "Cornered", "Open path to flee"], defaultValue: "Allies fallen" },
+    ],
+    buildPrompt: (vals, combatants, activeIdx) => {
+      const active = combatants[activeIdx];
+      return `You are advising a D&D 5e Dungeon Master. The ${active.name} is at ${vals.hpPercent || "27"}% HP. Situation: ${vals.situation || "Allies fallen"}. Based on the monster's personality, tactics, and CR, give a short 2-sentence ruling: does it flee, fight on, or something else? Be direct and practical.`;
+    },
+    defaultResponse: ``
+  },
+  "Smart Move": {
+    icon: "🎯",
+    subtitle: "What's the tactical play?",
+    fields: [
+      { key: "context", label: "Situation note", type: "text", placeholder: "PCs spread out, two flanking", defaultValue: "" },
+    ],
+    buildPrompt: (vals, combatants, activeIdx) => {
+      const active = combatants[activeIdx];
+      return `You are advising a D&D 5e Dungeon Master on tactics for the ${active.name}. Context: ${vals.context || "standard combat positioning"}. Give the single best tactical move this monster should make on its turn. 2-3 sentences max. Be specific about action/bonus action/movement.`;
+    },
+    defaultResponse: ``
+  },
+};
+
+// ─── UTILITY ────────────────────────────────────────────────────────────────
+
+function hpColor(hp, maxHp) {
+  const pct = hp / maxHp;
+  if (hp === 0) return "#666";
+  if (pct > 0.5) return "#5aab6a";
+  if (pct > 0.25) return "#c9a84c";
+  return "#c44a4a";
+}
+
+function hpPct(hp, maxHp) {
+  return Math.max(0, Math.min(100, (hp / maxHp) * 100));
+}
+
+// ─── LEFT PANEL ─────────────────────────────────────────────────────────────
+
+function CombatantRow({ combatant, isActive, onClick }) {
+  const { name, type, hp, maxHp, conditions } = combatant;
+  const pct = hpPct(hp, maxHp);
+  const color = hpColor(hp, maxHp);
+
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        position: "relative",
+        background: isActive ? "#21283a" : "var(--card)",
+        border: `1px solid ${isActive ? "var(--gold)" : "var(--border)"}`,
+        borderLeft: `3px solid ${isActive ? "var(--gold)" : "transparent"}`,
+        borderRadius: 6,
+        padding: "8px 10px",
+        cursor: "pointer",
+        transition: "all 0.15s ease",
+        boxShadow: isActive ? "0 0 16px rgba(201,168,76,0.12)" : "none",
+      }}
+    >
+      {/* Name + badges row */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5, flexWrap: "wrap" }}>
+        <span style={{
+          fontFamily: "var(--font-head)",
+          fontSize: type === "Monster" ? 11 : 12,
+          fontWeight: 600,
+          color: isActive ? "var(--gold)" : "var(--text)",
+          flex: 1,
+          letterSpacing: type === "Monster" ? "0.04em" : "0.01em",
+          lineHeight: 1.3,
+        }}>
+          {name}
+        </span>
+        <span style={{
+          fontSize: 9,
+          fontWeight: 600,
+          padding: "1px 7px",
+          borderRadius: 20,
+          background: type === "PC" ? "rgba(74,120,196,0.25)" : "rgba(196,74,74,0.25)",
+          border: `1px solid ${type === "PC" ? "var(--blue)" : "var(--red)"}`,
+          color: type === "PC" ? "#6a9de8" : "#e06868",
+          letterSpacing: "0.04em",
+          whiteSpace: "nowrap",
+          fontFamily: "var(--font-head)",
+        }}>
+          {type === "PC" ? "PC" : "MON"}
+        </span>
+      </div>
+
+      {/* HP bar */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: conditions.length ? 5 : 0 }}>
+        <div style={{
+          flex: 1,
+          height: 5,
+          background: "var(--border)",
+          borderRadius: 3,
+          overflow: "hidden",
+        }}>
+          <div style={{
+            width: `${pct}%`,
+            height: "100%",
+            background: color,
+            borderRadius: 3,
+            transition: "width 0.3s ease",
+          }} />
+        </div>
+        <span style={{ fontSize: 11, color: hp === 0 ? "#666" : "var(--text-dim)", whiteSpace: "nowrap", minWidth: 34, textAlign: "right" }}>
+          {hp}/{maxHp}
+        </span>
+      </div>
+
+      {/* Conditions */}
+      {conditions.length > 0 && (
+        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+          {conditions.map(c => {
+            const style = CONDITION_COLORS[c] || { bg: "rgba(150,150,150,0.2)", border: "#888", text: "#aaa" };
+            return (
+              <span key={c} style={{
+                fontSize: 9,
+                padding: "1px 6px",
+                borderRadius: 20,
+                background: style.bg,
+                border: `1px solid ${style.border}`,
+                color: style.text,
+                fontFamily: "var(--font-head)",
+                letterSpacing: "0.03em",
+              }}>
+                {c}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Active turn pulse dot */}
+      {isActive && (
+        <div style={{
+          position: "absolute",
+          top: 8, right: 8,
+          width: 7, height: 7,
+          borderRadius: "50%",
+          background: "var(--gold)",
+          boxShadow: "0 0 6px var(--gold)",
+          animation: "pulse 1.6s ease-in-out infinite",
+        }} />
+      )}
+    </div>
+  );
+}
+
+function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks }) {
+  const [showAdd, setShowAdd] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newType, setNewType] = useState("Monster");
+  const [newHp, setNewHp] = useState("");
+
+  function nextTurn() {
+    setActiveIdx(prev => (prev + 1) % combatants.length);
+  }
+
+  function addCombatant() {
+    if (!newName.trim() || !newHp) return;
+    const hp = parseInt(newHp) || 10;
+    setCombatants(prev => [...prev, {
+      id: Date.now(),
+      name: newName.trim(),
+      type: newType,
+      hp, maxHp: hp,
+      conditions: [],
+      initiative: 0,
+    }]);
+    setNewName(""); setNewHp(""); setShowAdd(false);
+  }
+
+  return (
+    <div style={{
+      width: tweaks.leftPanelWidth || 240,
+      minWidth: tweaks.leftPanelWidth || 240,
+      borderRight: "1px solid var(--border)",
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden",
+    }}>
+      {/* Header */}
+      <div style={{ padding: "14px 14px 10px", borderBottom: "1px solid var(--border)" }}>
+        <div style={{ fontFamily: "var(--font-head)", fontSize: 11, color: "var(--gold)", letterSpacing: "0.1em", marginBottom: 4 }}>
+          ACTIVE ENCOUNTER
+        </div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", lineHeight: 1.3, marginBottom: 3 }}>
+          Ambush at Cragmaw Bridge
+        </div>
+        <div style={{ fontSize: 11, color: "var(--text-dim)", fontStyle: "italic" }}>
+          🌫 Dense fog — 10 ft. visibility
+        </div>
+      </div>
+
+      {/* Round counter */}
+      <div style={{ padding: "6px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontSize: 11, color: "var(--text-dim)", fontFamily: "var(--font-head)", letterSpacing: "0.05em" }}>ROUND</span>
+        <span style={{ fontSize: 13, color: "var(--gold)", fontFamily: "var(--font-head)", fontWeight: 600 }}>1</span>
+        <span style={{ fontSize: 10, color: "var(--text-faint)" }}>Initiative Order</span>
+      </div>
+
+      {/* Combatant list */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "10px 10px 0" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {combatants.map((c, i) => (
+            <CombatantRow
+              key={c.id}
+              combatant={c}
+              isActive={i === activeIdx}
+              onClick={() => setActiveIdx(i)}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Next Turn button */}
+      <div style={{ padding: "12px 10px 8px" }}>
+        <button
+          onClick={nextTurn}
+          style={{
+            width: "100%",
+            padding: "11px 0",
+            background: "linear-gradient(135deg, #c9a84c 0%, #a8873a 100%)",
+            border: "none",
+            borderRadius: 6,
+            color: "#111318",
+            fontFamily: "var(--font-head)",
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: "0.12em",
+            cursor: "pointer",
+            transition: "opacity 0.15s",
+          }}
+          onMouseEnter={e => e.currentTarget.style.opacity = "0.85"}
+          onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+        >
+          NEXT TURN →
+        </button>
+      </div>
+
+      {/* Add combatant */}
+      <div style={{ padding: "0 10px 14px" }}>
+        {!showAdd ? (
+          <button
+            onClick={() => setShowAdd(true)}
+            style={{
+              background: "none", border: "none",
+              color: "var(--text-faint)", fontSize: 11,
+              fontFamily: "var(--font-head)", letterSpacing: "0.08em",
+              cursor: "pointer", width: "100%", textAlign: "center",
+              padding: "4px 0",
+              transition: "color 0.15s",
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = "var(--gold)"}
+            onMouseLeave={e => e.currentTarget.style.color = "var(--text-faint)"}
+          >
+            + ADD COMBATANT
+          </button>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            <input
+              value={newName} onChange={e => setNewName(e.target.value)}
+              placeholder="Name..."
+              style={inputStyle}
+              onKeyDown={e => e.key === "Enter" && addCombatant()}
+            />
+            <div style={{ display: "flex", gap: 5 }}>
+              <input
+                value={newHp} onChange={e => setNewHp(e.target.value)}
+                placeholder="HP"
+                type="number"
+                style={{ ...inputStyle, flex: 1 }}
+              />
+              <select value={newType} onChange={e => setNewType(e.target.value)} style={{ ...inputStyle, flex: 1 }}>
+                <option>PC</option>
+                <option>Monster</option>
+              </select>
+            </div>
+            <div style={{ display: "flex", gap: 5 }}>
+              <button onClick={addCombatant} style={smallBtnStyle}>Add</button>
+              <button onClick={() => setShowAdd(false)} style={{ ...smallBtnStyle, background: "var(--card)", color: "var(--text-dim)", border: "1px solid var(--border)" }}>Cancel</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── CENTER PANEL ────────────────────────────────────────────────────────────
+
+function StatValue({ label, val }) {
+  return (
+    <div style={{ textAlign: "center" }}>
+      <div style={{ fontSize: 10, color: "var(--text-faint)", fontFamily: "var(--font-head)", letterSpacing: "0.08em", marginBottom: 2 }}>{label}</div>
+      <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text)" }}>{val[0]}</div>
+      <div style={{ fontSize: 12, color: "var(--gold)" }}>{val[1]}</div>
+    </div>
+  );
+}
+
+function AbilityGrid({ stats }) {
+  return (
+    <div style={{
+      display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 4,
+      background: "rgba(0,0,0,0.2)", borderRadius: 6, padding: "10px 8px",
+      border: "1px solid var(--border)",
+    }}>
+      {Object.entries(stats).map(([k,v]) => <StatValue key={k} label={k} val={v} />)}
+    </div>
+  );
+}
+
+function StatSection({ title, children }) {
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <div style={{
+        fontFamily: "var(--font-head)",
+        fontSize: 10,
+        color: "var(--gold)",
+        letterSpacing: "0.1em",
+        borderBottom: "1px solid var(--border)",
+        paddingBottom: 3,
+        marginBottom: 6,
+      }}>
+        {title}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function ActionEntry({ action }) {
+  return (
+    <div style={{ marginBottom: 7 }}>
+      <span style={{ fontWeight: 600, color: "var(--text)", fontSize: 13, fontStyle: "italic" }}>
+        {action.name}.{" "}
+      </span>
+      <span style={{ color: "var(--text-dim)", fontSize: 13 }}>
+        {action.desc}
+      </span>
+    </div>
+  );
+}
+
+function CenterPanel({ combatants, activeIdx }) {
+  const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState("statblock");
+  const [currentMonster] = useState(HOBGOBLIN_STAT_BLOCK);
+  const sb = currentMonster;
+
+  const tabs = [
+    { id: "statblock", label: "STAT BLOCK" },
+    { id: "tactics",   label: "TACTICS" },
+  ];
+
+  return (
+    <div style={{
+      flex: 1,
+      borderRight: "1px solid var(--border)",
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden",
+    }}>
+      {/* Search bar */}
+      <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)" }}>
+        <div style={{ position: "relative" }}>
+          <span style={{
+            position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
+            color: "var(--text-faint)", fontSize: 13, pointerEvents: "none",
+          }}>⌕</span>
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search monster..."
+            style={{ ...inputStyle, paddingLeft: 30, width: "100%", fontSize: 13 }}
+          />
+        </div>
+      </div>
+
+      {/* Scroll area */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 0" }}>
+
+        {/* Monster name */}
+        <div style={{ marginBottom: 10 }}>
+          <h2 style={{
+            fontFamily: "var(--font-head)",
+            fontSize: 22, fontWeight: 700,
+            color: "var(--gold)",
+            letterSpacing: "0.02em", lineHeight: 1.2, marginBottom: 4,
+          }}>
+            {sb.name}
+          </h2>
+          <div style={{ color: "var(--text-dim)", fontSize: 13, fontStyle: "italic" }}>
+            {sb.size} {sb.type}, {sb.alignment}
+          </div>
+        </div>
+
+        {/* Tag row */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+          {[
+            { label: sb.size + " Humanoid", color: "#4a78c4" },
+            { label: "CR " + sb.cr, color: "var(--gold)" },
+            { label: sb.xp + " XP", color: "var(--text-dim)" },
+          ].map(t => (
+            <span key={t.label} style={{
+              fontSize: 11, padding: "2px 10px",
+              border: `1px solid ${t.color}`, borderRadius: 20,
+              color: t.color, fontFamily: "var(--font-head)",
+              letterSpacing: "0.04em", background: "rgba(0,0,0,0.3)",
+            }}>{t.label}</span>
+          ))}
+        </div>
+
+        {/* Tabs */}
+        <div style={{
+          display: "flex", gap: 0,
+          borderBottom: "1px solid var(--border)",
+          marginBottom: 16,
+        }}>
+          {tabs.map(tab => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  background: "none", border: "none",
+                  padding: "8px 16px 9px",
+                  fontFamily: "var(--font-head)",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  letterSpacing: "0.1em",
+                  color: isActive ? "var(--gold)" : "var(--text-faint)",
+                  cursor: "pointer",
+                  position: "relative",
+                  transition: "color 0.15s",
+                  borderBottom: isActive ? "2px solid var(--gold)" : "2px solid transparent",
+                  marginBottom: -1,
+                }}
+                onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = "var(--text-dim)"; }}
+                onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = "var(--text-faint)"; }}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Tab: STAT BLOCK */}
+        {activeTab === "statblock" && (
+          <div style={{ paddingBottom: 20 }}>
+            {/* Quick stats */}
+            <div style={{
+              display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap",
+              padding: "10px 12px",
+              background: "rgba(201,168,76,0.07)",
+              border: "1px solid rgba(201,168,76,0.2)",
+              borderRadius: 6,
+            }}>
+              {[["AC", sb.ac], ["HP", sb.hp], ["Speed", sb.speed]].map(([k, v]) => (
+                <div key={k} style={{ display: "flex", gap: 5, alignItems: "baseline" }}>
+                  <span style={{ fontFamily: "var(--font-head)", fontSize: 10, color: "var(--gold)", letterSpacing: "0.08em" }}>{k}</span>
+                  <span style={{ fontSize: 13, color: "var(--text)" }}>{v}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Ability scores */}
+            <div style={{ marginBottom: 14 }}>
+              <AbilityGrid stats={sb.stats} />
+            </div>
+
+            {/* Proficiencies block */}
+            <div style={{
+              background: "var(--card)", border: "1px solid var(--border)",
+              borderRadius: 6, padding: "10px 12px", marginBottom: 14, fontSize: 12,
+            }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px" }}>
+                {[
+                  ["Saving Throws", sb.savingThrows],
+                  ["Skills", sb.skills],
+                  ["Senses", sb.senses],
+                  ["Languages", sb.languages],
+                ].map(([k, v]) => (
+                  <React.Fragment key={k}>
+                    <span style={{ color: "var(--gold)", fontFamily: "var(--font-head)", fontSize: 10, letterSpacing: "0.06em", alignSelf: "start", paddingTop: 2 }}>{k}</span>
+                    <span style={{ color: "var(--text-dim)" }}>{v}</span>
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+
+            <StatSection title="TRAITS">
+              {sb.traits.map(t => <ActionEntry key={t.name} action={t} />)}
+            </StatSection>
+            <StatSection title="ACTIONS">
+              {sb.actions.map(a => <ActionEntry key={a.name} action={a} />)}
+            </StatSection>
+            <StatSection title="REACTIONS">
+              {sb.reactions.map(r => <ActionEntry key={r.name} action={r} />)}
+            </StatSection>
+          </div>
+        )}
+
+        {/* Tab: TACTICS */}
+        {activeTab === "tactics" && (
+          <div style={{ paddingBottom: 24 }}>
+            <div style={{
+              fontFamily: "var(--font-head)", fontSize: 10, color: "var(--gold)",
+              letterSpacing: "0.1em", marginBottom: 14,
+            }}>
+              ⚔ HOW TO PLAY THIS MONSTER
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 24 }}>
+              {sb.tactics.map((t, i) => (
+                <div key={i} style={{
+                  display: "flex", gap: 14, alignItems: "flex-start",
+                  background: "rgba(201,168,76,0.04)",
+                  border: "1px solid rgba(201,168,76,0.12)",
+                  borderRadius: 6, padding: "12px 14px",
+                }}>
+                  <span style={{
+                    color: "var(--gold)", fontSize: 15, lineHeight: 1,
+                    flexShrink: 0, marginTop: 2,
+                    fontFamily: "var(--font-head)",
+                  }}>•</span>
+                  <span style={{ fontSize: 14, color: "var(--text-dim)", lineHeight: 1.7 }}>{t}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Flee / Surrender callout */}
+            <div style={{
+              display: "flex", gap: 12, alignItems: "flex-start",
+              background: "rgba(196,74,74,0.08)",
+              border: "1px solid rgba(196,74,74,0.25)",
+              borderLeft: "3px solid #c44a4a",
+              borderRadius: 6, padding: "12px 14px",
+            }}>
+              <span style={{ fontSize: 16, flexShrink: 0, lineHeight: 1, marginTop: 1 }}>🏃</span>
+              <div>
+                <div style={{
+                  fontFamily: "var(--font-head)", fontSize: 10, color: "#e06868",
+                  letterSpacing: "0.08em", marginBottom: 4,
+                }}>
+                  FLEE / SURRENDER THRESHOLD
+                </div>
+                <div style={{ fontSize: 13, color: "var(--text-dim)", lineHeight: 1.6 }}>
+                  Flees at ~30% HP if allies are dead — hobgoblins are disciplined, not suicidal.
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+// ─── RIGHT PANEL ─────────────────────────────────────────────────────────────
+
+function QuickActionBtn({ id, icon, label, subtitle, isActive, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        width: "100%",
+        background: isActive ? "rgba(201,168,76,0.1)" : "var(--card)",
+        border: `1px solid ${isActive ? "var(--gold)" : "var(--border)"}`,
+        borderRadius: 6,
+        padding: "9px 12px",
+        cursor: "pointer",
+        textAlign: "left",
+        transition: "all 0.15s ease",
+        display: "flex",
+        flexDirection: "column",
+        gap: 2,
+      }}
+      onMouseEnter={e => { if (!isActive) e.currentTarget.style.borderColor = "var(--gold-dim)"; }}
+      onMouseLeave={e => { if (!isActive) e.currentTarget.style.borderColor = "var(--border)"; }}
+    >
+      <div style={{
+        display: "flex", alignItems: "center", gap: 7,
+      }}>
+        <span style={{ fontSize: 14 }}>{icon}</span>
+        <span style={{
+          fontFamily: "var(--font-head)",
+          fontSize: 11,
+          fontWeight: 600,
+          color: isActive ? "var(--gold)" : "var(--text)",
+          letterSpacing: "0.04em",
+        }}>{label}</span>
+      </div>
+      <div style={{ fontSize: 11, color: "var(--text-dim)", paddingLeft: 21 }}>{subtitle}</div>
+    </button>
+  );
+}
+
+function RightPanel({ combatants, activeIdx, tweaks }) {
+  const [activePrompt, setActivePrompt] = useState("Describe This Hit");
+  const [fieldValues, setFieldValues] = useState({
+    "Describe This Hit": { damage: "14", hpState: "Bloodied (25-50%)" },
+    "Flee or Fight?": { hpPercent: "27", situation: "Allies fallen" },
+    "Smart Move": { context: "" },
+  });
+  const [aiResponse, setAiResponse] = useState(AI_PROMPTS["Describe This Hit"].defaultResponse);
+  const [loading, setLoading] = useState(false);
+  const [freeform, setFreeform] = useState("");
+  const [freeformLoading, setFreeformLoading] = useState(false);
+  const [freeformResponse, setFreeformResponse] = useState("");
+
+  const prompt = AI_PROMPTS[activePrompt];
+
+  function setField(key, val) {
+    setFieldValues(prev => ({
+      ...prev,
+      [activePrompt]: { ...prev[activePrompt], [key]: val }
+    }));
+  }
+
+  async function generate() {
+    setLoading(true);
+    setAiResponse("");
+    const vals = fieldValues[activePrompt] || {};
+    const promptText = prompt.buildPrompt(vals, combatants, activeIdx);
+    try {
+      const result = await window.claude.complete(promptText);
+      setAiResponse(result);
+    } catch(e) {
+      setAiResponse("Could not reach AI — check connection.");
+    }
+    setLoading(false);
+  }
+
+  async function sendFreeform() {
+    if (!freeform.trim()) return;
+    setFreeformLoading(true);
+    setFreeformResponse("");
+    const active = combatants[activeIdx];
+    try {
+      const result = await window.claude.complete({
+        messages: [
+          { role: "user", content: `You are a D&D 5e assistant for a DM. Current combat: ${combatants.map(c => `${c.name} (${c.type}, ${c.hp}/${c.maxHp} HP)`).join(", ")}. Active combatant: ${active.name}.\n\n${freeform}` }
+        ]
+      });
+      setFreeformResponse(result);
+    } catch(e) {
+      setFreeformResponse("Could not reach AI — check connection.");
+    }
+    setFreeformLoading(false);
+  }
+
+  return (
+    <div style={{
+      width: tweaks.rightPanelWidth || 280,
+      minWidth: tweaks.rightPanelWidth || 280,
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden",
+    }}>
+      {/* Header */}
+      <div style={{ padding: "14px 14px 10px", borderBottom: "1px solid var(--border)" }}>
+        <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 700, color: "var(--gold)", letterSpacing: "0.06em" }}>
+          AI Assist
+        </div>
+        <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 2 }}>
+          Powered by Claude
+        </div>
+      </div>
+
+      <div style={{ flex: 1, overflowY: "auto", padding: "12px" }}>
+        {/* Quick action buttons */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+          {Object.entries(AI_PROMPTS).map(([key, p]) => (
+            <QuickActionBtn
+              key={key}
+              id={key}
+              icon={p.icon}
+              label={key}
+              subtitle={p.subtitle}
+              isActive={activePrompt === key}
+              onClick={() => {
+                setActivePrompt(key);
+                setAiResponse(p.defaultResponse || "");
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Expanded prompt form */}
+        <div style={{
+          background: "rgba(0,0,0,0.2)",
+          border: "1px solid var(--border)",
+          borderRadius: 6,
+          padding: "12px",
+          marginBottom: 12,
+        }}>
+          <div style={{
+            fontFamily: "var(--font-head)",
+            fontSize: 10,
+            color: "var(--gold)",
+            letterSpacing: "0.1em",
+            marginBottom: 10,
+          }}>
+            {prompt.icon} {activePrompt.toUpperCase()}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
+            {prompt.fields.map(f => (
+              <div key={f.key}>
+                <label style={{ display: "block", fontSize: 11, color: "var(--text-dim)", marginBottom: 4, fontFamily: "var(--font-head)", letterSpacing: "0.04em" }}>
+                  {f.label}
+                </label>
+                {f.type === "select" ? (
+                  <select
+                    value={fieldValues[activePrompt]?.[f.key] ?? f.defaultValue}
+                    onChange={e => setField(f.key, e.target.value)}
+                    style={{ ...inputStyle, width: "100%" }}
+                  >
+                    {f.options.map(o => <option key={o}>{o}</option>)}
+                  </select>
+                ) : (
+                  <input
+                    value={fieldValues[activePrompt]?.[f.key] ?? f.defaultValue}
+                    onChange={e => setField(f.key, e.target.value)}
+                    placeholder={f.placeholder}
+                    style={{ ...inputStyle, width: "100%" }}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={generate}
+            disabled={loading}
+            style={{
+              width: "100%",
+              padding: "9px 0",
+              background: loading ? "var(--gold-dim)" : "linear-gradient(135deg, #c9a84c 0%, #a8873a 100%)",
+              border: "none",
+              borderRadius: 5,
+              color: "#111318",
+              fontFamily: "var(--font-head)",
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.12em",
+              cursor: loading ? "not-allowed" : "pointer",
+              transition: "opacity 0.15s",
+            }}
+          >
+            {loading ? "GENERATING..." : "GENERATE"}
+          </button>
+        </div>
+
+        {/* AI Response */}
+        {(aiResponse || loading) && (
+          <div style={{
+            background: "#141820",
+            border: "1px solid var(--border)",
+            borderLeft: "3px solid var(--gold-dim)",
+            borderRadius: 6,
+            padding: "12px",
+            marginBottom: 14,
+          }}>
+            <div style={{ fontSize: 9, color: "var(--gold-dim)", fontFamily: "var(--font-head)", letterSpacing: "0.1em", marginBottom: 8 }}>
+              AI RESPONSE
+            </div>
+            {loading ? (
+              <div style={{ color: "var(--text-faint)", fontSize: 12, fontStyle: "italic" }}>
+                Consulting the arcane...
+              </div>
+            ) : (
+              <p style={{ fontSize: 13, color: "var(--text-dim)", lineHeight: 1.7, fontStyle: "italic" }}>
+                "{aiResponse}"
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Freeform response */}
+        {freeformResponse && (
+          <div style={{
+            background: "#141820",
+            border: "1px solid var(--border)",
+            borderLeft: "3px solid var(--teal)",
+            borderRadius: 6,
+            padding: "12px",
+            marginBottom: 14,
+          }}>
+            <div style={{ fontSize: 9, color: "var(--teal)", fontFamily: "var(--font-head)", letterSpacing: "0.1em", marginBottom: 8 }}>
+              ANSWER
+            </div>
+            <p style={{ fontSize: 13, color: "var(--text-dim)", lineHeight: 1.7 }}>
+              {freeformLoading ? "Consulting the arcane..." : freeformResponse}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Freeform input - pinned to bottom */}
+      <div style={{
+        padding: "10px 12px",
+        borderTop: "1px solid var(--border)",
+        display: "flex",
+        gap: 6,
+      }}>
+        <input
+          value={freeform}
+          onChange={e => setFreeform(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && sendFreeform()}
+          placeholder="Ask anything..."
+          style={{ ...inputStyle, flex: 1, fontSize: 12 }}
+        />
+        <button
+          onClick={sendFreeform}
+          disabled={freeformLoading}
+          style={{
+            background: freeformLoading ? "var(--card)" : "rgba(201,168,76,0.15)",
+            border: "1px solid var(--gold-dim)",
+            borderRadius: 5,
+            color: "var(--gold)",
+            padding: "0 10px",
+            fontSize: 14,
+            cursor: "pointer",
+            transition: "background 0.15s",
+          }}
+          onMouseEnter={e => { if(!freeformLoading) e.currentTarget.style.background = "rgba(201,168,76,0.25)"; }}
+          onMouseLeave={e => { if(!freeformLoading) e.currentTarget.style.background = "rgba(201,168,76,0.15)"; }}
+        >
+          →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── SHARED STYLES ───────────────────────────────────────────────────────────
+
+const inputStyle = {
+  background: "#0d1017",
+  border: "1px solid var(--border)",
+  borderRadius: 5,
+  color: "var(--text)",
+  padding: "6px 10px",
+  fontSize: 12,
+  outline: "none",
+  fontFamily: "var(--font-body)",
+  transition: "border-color 0.15s",
+};
+
+const smallBtnStyle = {
+  flex: 1,
+  padding: "6px 0",
+  background: "linear-gradient(135deg, #c9a84c 0%, #a8873a 100%)",
+  border: "none",
+  borderRadius: 5,
+  color: "#111318",
+  fontFamily: "var(--font-head)",
+  fontSize: 10,
+  fontWeight: 700,
+  letterSpacing: "0.08em",
+  cursor: "pointer",
+};
+
+// ─── TWEAKS ──────────────────────────────────────────────────────────────────
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "leftPanelWidth": 240,
+  "rightPanelWidth": 280,
+  "showInitiativeNumbers": true,
+  "compactMode": false,
+  "showRoundCounter": true
+}/*EDITMODE-END*/;
+
+// ─── ROOT APP ────────────────────────────────────────────────────────────────
+
+function App() {
+  const [tweaks, setTweak] = window.useTweaks(TWEAK_DEFAULTS);
+  const [combatants, setCombatants] = useState(INITIAL_COMBATANTS);
+  const [activeIdx, setActiveIdx] = useState(2); // Hobgoblin Captain starts active
+
+  return (
+    <>
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.5; transform: scale(1.4); }
+        }
+        input:focus, select:focus {
+          border-color: var(--gold-dim) !important;
+          outline: none;
+        }
+      `}</style>
+
+      <div style={{
+        display: "flex",
+        height: "100vh",
+        overflow: "hidden",
+        background: "var(--bg)",
+      }}>
+        <LeftPanel
+          combatants={combatants}
+          setCombatants={setCombatants}
+          activeIdx={activeIdx}
+          setActiveIdx={setActiveIdx}
+          tweaks={tweaks}
+        />
+        <CenterPanel
+          combatants={combatants}
+          activeIdx={activeIdx}
+        />
+        <RightPanel
+          combatants={combatants}
+          activeIdx={activeIdx}
+          tweaks={tweaks}
+        />
+      </div>
+
+      <window.TweaksPanel>
+        <window.TweakSection label="Layout" />
+        <window.TweakSlider label="Left Panel Width" value={tweaks.leftPanelWidth} min={180} max={320} unit="px"
+          onChange={v => setTweak("leftPanelWidth", v)} />
+        <window.TweakSlider label="Right Panel Width" value={tweaks.rightPanelWidth} min={220} max={380} unit="px"
+          onChange={v => setTweak("rightPanelWidth", v)} />
+        <window.TweakSection label="Display" />
+        <window.TweakToggle label="Show Round Counter" value={tweaks.showRoundCounter}
+          onChange={v => setTweak("showRoundCounter", v)} />
+        <window.TweakToggle label="Compact Mode" value={tweaks.compactMode}
+          onChange={v => setTweak("compactMode", v)} />
+      </window.TweaksPanel>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

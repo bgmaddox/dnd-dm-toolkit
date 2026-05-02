@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The DM's Tome — Learning Guide</title>
+<style>
+  :root {
+    --bg: #111318;
+    --surface: #1c2030;
+    --surface2: #252a3a;
+    --gold: #c9a84c;
+    --gold-light: #e2c875;
+    --gold-dim: #8a6f2e;
+    --text: #dde3f0;
+    --text-muted: #8a92a8;
+    --text-dim: #5a6278;
+    --red: #c94c4c;
+    --green: #4caf7d;
+    --blue: #4c7fc9;
+    --border: #2e3450;
+    --border-gold: #3a3010;
+    --sidebar-w: 260px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: Georgia, 'Times New Roman', serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    min-height: 100vh;
+    line-height: 1.7;
+  }
+
+  /* ── SIDEBAR ── */
+  #sidebar {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    overflow-y: auto;
+    padding: 24px 0 40px;
+    z-index: 100;
+  }
+
+  #sidebar .logo {
+    padding: 0 20px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+
+  #sidebar .logo h1 {
+    font-size: 1.1rem;
+    color: var(--gold);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  #sidebar .logo p {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+    font-family: 'Segoe UI', sans-serif;
+  }
+
+  #sidebar nav a {
+    display: block;
+    padding: 7px 20px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 0.82rem;
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+  }
+
+  #sidebar nav a:hover,
+  #sidebar nav a.active {
+    color: var(--gold-light);
+    border-left-color: var(--gold);
+    background: rgba(201,168,76,0.06);
+    padding-left: 24px;
+  }
+
+  #sidebar nav .section-label {
+    padding: 14px 20px 4px;
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    font-family: 'Segoe UI', sans-serif;
+  }
+
+  /* ── MAIN CONTENT ── */
+  #main {
+    margin-left: var(--sidebar-w);
+    flex: 1;
+    max-width: 860px;
+    padding: 48px 56px 80px;
+  }
+
+  .page-header {
+    margin-bottom: 48px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .page-header h1 {
+    font-size: 2rem;
+    color: var(--gold-light);
+    letter-spacing: 0.03em;
+  }
+
+  .page-header p {
+    color: var(--text-muted);
+    margin-top: 8px;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 0.95rem;
+  }
+
+  /* ── SECTIONS ── */
+  .section {
+    margin-bottom: 56px;
+    scroll-margin-top: 32px;
+  }
+
+  .section h2 {
+    font-size: 1.35rem;
+    color: var(--gold);
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section h2 .icon {
+    font-size: 1.1rem;
+    opacity: 0.8;
+  }
+
+  .section-rule {
+    height: 1px;
+    background: linear-gradient(to right, var(--gold-dim), transparent);
+    margin-bottom: 20px;
+  }
+
+  .section h3 {
+    font-size: 1rem;
+    color: var(--gold-light);
+    margin: 24px 0 8px;
+    font-style: italic;
+  }
+
+  .section p {
+    font-size: 0.95rem;
+    margin-bottom: 12px;
+    color: var(--text);
+  }
+
+  .section p + p {
+    margin-top: 4px;
+  }
+
+  /* ── CARDS & CALLOUTS ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 20px;
+    margin: 16px 0;
+  }
+
+  .card.gold {
+    border-color: var(--gold-dim);
+    background: rgba(201,168,76,0.05);
+  }
+
+  .card.tip {
+    border-left: 3px solid var(--green);
+    border-top: none; border-right: none; border-bottom: none;
+    background: rgba(76,175,125,0.05);
+    border-radius: 0 4px 4px 0;
+    padding: 12px 16px;
+  }
+
+  .card.warning {
+    border-left: 3px solid var(--gold);
+    border-top: none; border-right: none; border-bottom: none;
+    background: rgba(201,168,76,0.06);
+    border-radius: 0 4px 4px 0;
+    padding: 12px 16px;
+  }
+
+  .card.danger {
+    border-left: 3px solid var(--red);
+    border-top: none; border-right: none; border-bottom: none;
+    background: rgba(201,76,76,0.05);
+    border-radius: 0 4px 4px 0;
+    padding: 12px 16px;
+  }
+
+  .card-title {
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-family: 'Segoe UI', sans-serif;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .card.tip .card-title { color: var(--green); }
+  .card.warning .card-title { color: var(--gold); }
+  .card.danger .card-title { color: var(--red); }
+
+  /* ── LISTS ── */
+  ul, ol {
+    padding-left: 20px;
+    margin: 10px 0;
+  }
+
+  li {
+    font-size: 0.93rem;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+
+  li strong {
+    color: var(--gold-light);
+  }
+
+  /* ── TABLES ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 0.85rem;
+    margin: 16px 0;
+  }
+
+  th {
+    background: var(--surface2);
+    color: var(--gold);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    letter-spacing: 0.03em;
+  }
+
+  td {
+    padding: 9px 14px;
+    border: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: top;
+  }
+
+  tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+
+  /* ── RESOURCE GRID ── */
+  .resource-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+  }
+
+  .resource-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 16px;
+    transition: border-color 0.15s;
+  }
+
+  .resource-card:hover {
+    border-color: var(--gold-dim);
+  }
+
+  .resource-card .res-type {
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+
+  .resource-card .res-name {
+    font-size: 0.9rem;
+    color: var(--gold-light);
+    margin-bottom: 4px;
+  }
+
+  .resource-card .res-desc {
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  .resource-card a {
+    color: var(--blue);
+    text-decoration: none;
+    font-size: 0.75rem;
+    font-family: 'Segoe UI', sans-serif;
+    display: inline-block;
+    margin-top: 6px;
+  }
+
+  .resource-card a:hover { text-decoration: underline; }
+
+  /* ── CHECKLIST ── */
+  .checklist {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0;
+  }
+
+  .checklist li {
+    padding: 6px 0 6px 28px;
+    position: relative;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 0.88rem;
+  }
+
+  .checklist li:last-child { border-bottom: none; }
+
+  .checklist li::before {
+    content: '☐';
+    position: absolute;
+    left: 4px;
+    color: var(--gold-dim);
+    font-size: 0.9rem;
+  }
+
+  /* ── QUOTE ── */
+  blockquote {
+    border-left: 3px solid var(--gold-dim);
+    margin: 16px 0;
+    padding: 10px 16px;
+    font-style: italic;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+  }
+
+  blockquote cite {
+    display: block;
+    font-style: normal;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-top: 6px;
+    font-family: 'Segoe UI', sans-serif;
+  }
+
+  /* ── PILLAR CARDS ── */
+  .pillar-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+  }
+
+  .pillar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--gold-dim);
+    border-radius: 0 0 6px 6px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .pillar .pillar-icon {
+    font-size: 1.6rem;
+    margin-bottom: 8px;
+  }
+
+  .pillar .pillar-name {
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-family: 'Segoe UI', sans-serif;
+    margin-bottom: 6px;
+  }
+
+  .pillar p {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-family: 'Segoe UI', sans-serif;
+    line-height: 1.4;
+  }
+
+  /* ── VOICE EXAMPLE ── */
+  .voice-example {
+    background: var(--surface2);
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin: 8px 0;
+    font-size: 0.88rem;
+    border-left: 2px solid var(--gold-dim);
+  }
+
+  .voice-example .speaker {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--gold-dim);
+    font-family: 'Segoe UI', sans-serif;
+    margin-bottom: 4px;
+  }
+
+  /* ── SCROLL BEHAVIOR ── */
+  html { scroll-behavior: smooth; }
+
+  /* ── BACK TO TOP ── */
+  .back-top {
+    display: inline-block;
+    margin-top: 24px;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    text-decoration: none;
+  }
+
+  .back-top:hover { color: var(--gold); }
+
+  /* ── BADGE ── */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    background: rgba(201,168,76,0.12);
+    color: var(--gold);
+    border: 1px solid var(--gold-dim);
+    margin-left: 6px;
+  }
+
+  .badge.free { background: rgba(76,175,125,0.1); color: var(--green); border-color: #2e6b4f; }
+  .badge.paid { background: rgba(201,76,76,0.1); color: #e27070; border-color: #6b2e2e; }
+  .badge.virtual { background: rgba(76,127,201,0.1); color: #7aadee; border-color: #2e4a6b; }
+</style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <div class="logo">
+    <h1>The DM's Tome</h1>
+    <p>Learning Guide — D&D 5e 2024</p>
+  </div>
+  <nav>
+    <div class="section-label">Foundations</div>
+    <a href="#mindset">The DM Mindset</a>
+    <a href="#pillars">The Three Pillars</a>
+    <a href="#first-session">Your First Session</a>
+
+    <div class="section-label">Core Skills</div>
+    <a href="#scene-setting">Scene Setting</a>
+    <a href="#npc-craft">NPC Craft</a>
+    <a href="#combat">Running Combat</a>
+    <a href="#improv">Improv & "Yes, And"</a>
+    <a href="#pacing">Pacing & Tension</a>
+
+    <div class="section-label">Campaign & Story</div>
+    <a href="#story-structure">Story Structure</a>
+    <a href="#player-agency">Player Agency</a>
+    <a href="#published-adventures">Published Adventures</a>
+    <a href="#session-prep">Session Prep</a>
+
+    <div class="section-label">Resources</div>
+    <a href="#vtt-tools">VTT & Digital Tools</a>
+    <a href="#maps-audio">Maps & Audio</a>
+    <a href="#learn-more">Learn More</a>
+    <a href="#session-checklist">Session Checklist</a>
+  </nav>
+</nav>
+
+<main id="main">
+
+  <div class="page-header">
+    <h1>The Dungeon Master's Learning Guide</h1>
+    <p>A curated reference for new DMs — from mindset to mechanics, improv to prep. D&D 5e 2024 rules.</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- SECTION: MINDSET                        -->
+  <!-- ═══════════════════════════════════════ -->
+  <section class="section" id="mindset">
+    <h2><span class="icon">🧠</span> The DM Mindset</h2>
+    <div class="section-rule"></div>
+
+    <blockquote>
+      "The DM is not the players' adversary. The DM is the world."
+      <cite>— Matt Colville, Running the Game</cite>
+    </blockquote>
+
+    <p>The single biggest shift from player to DM is this: <strong>you are not playing against the players, you are playing with them.</strong> Your job is not to challenge them — it's to create a world that responds to their choices in ways that feel real and consequential.</p>
+
+    <h3>What the DM Actually Does</h3>
+    <ul>
+      <li><strong>Describes the world.</strong> What the players see, hear, feel, and smell.</li>
+      <li><strong>Voices everyone who isn't a player character.</strong> NPCs, monsters, gods.</li>
+      <li><strong>Referees the rules.</strong> Consistently and fairly, not perfectly.</li>
+      <li><strong>Drives the narrative forward.</strong> Introduces problems and complications.</li>
+      <li><strong>Responds to the players.</strong> The world reacts to what they do.</li>
+    </ul>
+
+    <div class="card gold">
+      <div class="card-title">The Most Important Rule</div>
+      <p style="margin:0; font-size: 0.92rem;">You are allowed to make rulings on the fly and look up the exact rule later. Consistent + fast beats correct + slow. A wrong ruling delivered confidently keeps the game moving. Correct it after the session.</p>
+    </div>
+
+    <h3>Managing Expectations</h3>
+    <p>Before your first session, have a brief conversation with your players — called a <em>Session Zero</em> — to align on tone, content comfort, and expectations. This prevents awkward moments mid-campaign and is especially important with groups that include first-timers.</p>
+
+    <ul>
+      <li>What tone are we going for? (Heroic adventure? Gritty survival? Comedic?)</li>
+      <li>Are there any topics we want to avoid or handle carefully?</li>
+      <li>How do we handle character death — is permadeath on the table?</li>
+      <li>How important is rule accuracy vs narrative fun?</li>
+    </ul>
+
+    <div class="card tip">
+      <div class="card-title">Tip for New DMs</div>
+      <p style="margin:0; font-size: 0.88rem;">Don't try to be a perfect DM on your first session. Aim to be a <em>present</em> DM. Players remember how the session felt, not whether you got the flanking rules right.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- SECTION: THREE PILLARS                  -->
+  <!-- ═══════════════════════════════════════ -->
+  <section class="section" id="pillars">
+    <h2><span class="icon">⚖️</span> The Three Pillars</h2>
+    <div class="section-rule"></div>
+
+    <p>D&D 5e is built around three modes of play. Memorable sessions usually include all three. New DMs tend to over-index on Combat because it's the most rules-defined — but social encounters and exploration are where characters reveal themselves.</p>
+
+    <div class="pillar-row">
+      <div class="pillar">
+        <div class="pillar-icon">🗺️</div>
+        <div class="pillar-name">Exploration</div>
+        <p>Discovering the world. Travel, dungeon crawls, puzzles, traps, searching for information.</p>
+      </div>
+      <div class="pillar">
+        <div class="pillar-icon">💬</div>
+        <div class="pillar-name">Social Interaction</div>
+        <p>Talking to NPCs. Negotiation, deception, persuasion, relationship building, role-playing.</p>
+      </div>
+      <div class="pillar">
+        <div class="pillar-icon">⚔️</div>
+        <div class="pillar-name">Combat</div>
+        <p>Fighting. Initiative, attack rolls, spells, terrain, tactics, and dramatic finales.</p>
+      </div>
+    </div>
+
+    <h3>Balance in Practice</h3>
+    <p>A good session might look like: party explores a ruined keep (exploration), interrogates a captured bandit (social), then fights the bandit leader in a climactic encounter (combat). The ratio matters less than variety — if three sessions in a row are pure combat, players disengage from the story.</p>
+
+    <div class="card warning">
+      <div class="card-title">Common Mistake</div>
+      <p style="margin:0; font-size: 0.88rem;">Treating every disagreement as combat. If bandits can be bribed, if the goblin tribe can be talked down, let those options exist. Players who <em>choose</em> to fight feel more agency than players who are forced to.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- SECTION: FIRST SESSION                  -->
+  <!-- ═══════════════════════════════════════ -->
+  <section class="section" id="first-session">
+    <h2><span class="icon">🕯️</span> Your First Session</h2>
+    <div class="section-rule"></div>
+
+    <p>The first session has one job: make the players want to come back. That means giving them something to care about, something to do, and ending on a hook.</p>
+
+    <h3>The Opening Scene</h3>
+    <p>Don't start with a monologue. Start with a situation. Drop the players into the middle of something happening and let them react. A classic opener: a problem arrives while they're in a tavern, on a road, or at a job. Let them respond immediately.</p>
+
+    <div class="card">
+      <div class="card-title">Strong First-Session Template</div>
+      <ol style="margin:8px 0 0; padding-left: 20px;">
+        <li>Open in media res — something is happening right now</li>
+        <li>Introduce an immediate, low-stakes problem they can solve quickly (builds confidence)</li>
+        <li>Introduce one NPC the players can form an opinion about</li>
+        <li>End session with a hook that makes them want to know what happens next</li>
+      </ol>
+    </div>
+
+    <h3>Handling First-Timers</h3>
+    <p>With newer players, slow down the action economy explanation on their first combat turn. Have them read their character sheet out loud if needed. The awkwardness of learning rules is temporary; getting them invested in the story is what keeps them coming back.</p>
+
+    <ul>
+      <li>Prompt shy players: "What does <em>[character name]</em> do?" not "What do you do?"</li>
+      <li>Let them try anything — if it fails, fail interestingly</li>
+      <li>Don't correct misremembered lore mid-scene — handle it after the session</li>
+    </ul>
+  </section>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- SECTION: SCENE SETTING                  -->
+  <!-- ═══════════════════════════════════════ -->
+  <section class="section" id="scene-setting">
+    <h2><span class="icon">🏰</span> Scene Setting & Atmosphere</h2>
+    <div class="section-rule"></div>
+
+    <p>Great scene descriptions are short, specific, and sensory. Three to five sentences. End on something that invites action. Players will interrupt — that's the goal.</p>
+
+    <h3>The Description Formula</h3>
+    <div class="card gold">
+      <ol style="margin: 0; padding-left: 20px;">
+        <li style="margin-bottom: 8px;"><strong>First impression</strong> — what hits them the moment they arrive? (sight, smell, temperature)</li>
+        <li style="margin-bottom: 8px;"><strong>One unexpected detail</strong> — something specific that makes this place feel <em>real</em>, not generic</li>
+        <li><strong>An invitation</strong> — a detail that implies there's something to do, find, or interact with</li>
+      </ol>
+    </div>
+
+    <h3>Examples</h3>
+
+    <div class="voice-example">
+      <div class="speaker">Weak (generic)</div>
+      "You enter a tavern. There are tables, a bar, and some people inside. It smells like food."
+    </div>
+
+    <div class="voice-example">
+      <div class="speaker">Strong (specific)</div>
+      "The common room is half-empty and too warm — a log fire has been burning all day. Two farmers drink in silence near the hearth. Behind the bar, a heavyset woman with ink-stained fingers is writing something she quickly folds away when she notices you. The smell of roasting pork hangs in the air."
+    </div>
+
+    <p>Notice: same amount of information, but the second gives players three things to be curious about (the farmers, the woman hiding something, the food). Let them choose what they care about.</p>
+
+    <h3>The Senses</h3>
+    <table>
+      <tr><th>Sense</th><th>Use it for</th><th>Example</th></tr>
+      <tr><td>Sight</td><td>Everything — your default</td><td>"Torchlight catches the gold inlay on the door"</td></tr>
+      <tr><td>Sound</td><td>Hidden things, approaching threats, atmosphere</td><td>"Distant dripping echoes up from below"</td></tr>
+      <tr><td>Smell</td><td>Age, death, magic, cooking, nature</td><td>"The air tastes of old copper and wet stone"</td></tr>
+      <tr><td>Temperature</td><td>Danger (cold = death, heat = fire), mood</td><td>"The room is ten degrees warmer than the hall"</td></tr>
+      <tr><td>Texture</td><td>Ground underfoot, surfaces, unease</td><td>"The floor shifts slightly — hollow beneath the stone"</td></tr>
+    </table>
+
+    <div class="card tip">
+      <div class="card-title">Tip: Pre-Write Your Descriptions</div>
+      <p style="margin:0; font-size: 0.88rem;">Before the session, write a 3-sentence description for each location the party is likely to visit. Read it once, glance up at your players, then paraphrase the rest. Reading from notes feels natural if you do it with eye contact.</p>
+    </div>
+
+    <h3>Music & Ambiance</h3>
+    <p>Ambient audio is one of the highest-leverage things you can add to a virtual session. Set it before the scene starts, leave it running quietly, and change it when the mood shifts. Players will notice the music changing before a combat and lean in.</p>
+
+    <ul>
+      <li><strong>Tabletop Audio</strong> — free, browser-based, curated D&D soundscapes (taverns, dungeons, forests, storms)</li>
+      <li><strong>Syrinscape</strong> — premium, adaptive audio with reactive soundscapes</li>
+      <li><strong>Spotify</strong> — search "D&D tavern music" or "dungeon ambient" — dozens of community playlists</li>
+      <li><strong>YouTube</strong> — "D&D Forest Ambience 1 hour" — free and easy for VTT streaming</li>
+    </ul>
+  </section>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- SECTION: NPC CRAFT                      -->
+  <!-- ═══════════════════════════════════════ -->
+  <section class="section" id="npc-craft">
+    <h2><span class="icon">🎭</span> NPC Craft</h2>
+    <div class="section-rule"></div>
+
+    <p>New DMs often play all NPCs as themselves with different names. The trick is giving each NPC something specific before they show up — three things are enough.</p>
+
+    <h3>The Three Things Every NPC Needs</h3>
+
+    <div class="card gold">
+      <ol style="margin:0; padding-left: 20px;">
+        <li style="margin-bottom:10px;"><strong>A Want</strong> — what do they want right now, today? (Not a grand goal — an immediate desire)<br>
+          <span style="color: var(--text-muted); font-size: 0.85rem; font-family: 'Segoe UI', sans-serif;">The innkeeper wants to close early tonight. The guard wants to not be in trouble with his sergeant.</span></li>
+        <li style="margin-bottom:10px;"><strong>A Tell</strong> — one specific physical or verbal habit that makes them recognizable<br>
+          <span style="color: var(--text-muted); font-size: 0.85rem; font-family: 'Segoe UI', sans-serif;">Tugs his beard when nervous. Ends every sentence with a question. Never makes eye contact unless lying.</span></li>
+        <li><strong>A Secret</strong> — one thing they're not saying (doesn't have to be sinister)<br>
+          <span style="color: var(--text-muted); font-size: 0.85rem; font-family: 'Segoe UI', sans-serif;">She's been skimming coin from the guild. He's in love with the blacksmith. She knows who really killed the merchant.</span></li>
+      </ol>
+    </div>
+
+    <h3>Voice Differentiation</h3>
+    <p>You don't need to do voices like a voice actor. You need to be <em>slightly different</em> for each NPC. Pick one or two of these:</p>
+
+    <table>
+      <tr><th>Dimension</th><th>Options</th></tr>
+      <tr><td>Vocabulary</td><td>Flowery/formal vs. blunt/crude vs. archaic vs. slang-heavy</td></tr>
+      <tr><td>Speed</td><td>Fast and nervous vs. slow and deliberate</td></tr>
+      <tr><td>Volume</td><td>Loud and confident vs. whispery and careful</td></tr>
+      <tr><td>Topic drift</td><td>What do they mention unprompted? (Their obsession)</td></tr>
+      <tr><td>Evasion</td><td>What do they avoid? (Their wound)</td></tr>
+    </table>
+
+    <h3>Sample NPC Contrast</h3>
+    <div class="voice-example">
+      <div class="speaker">The Nervous Merchant</div>
+      "Yes, yes — the road north, certainly. Perfectly safe, probably. Well. Mostly. There was a — no, you'll be fine. You have swords. Ha. I mean, the wolves haven't been seen in weeks, so — are you sure you want to go tonight?"
+    </div>
+
+    <div class="voice-example">
+      <div class="speaker">The Gruff Guard Captain</div>
+      "North road's closed. Bandits. If you've got a death wish, that's your problem. Otherwise — inn's two blocks east, opens at dawn."
+    </div>
+
+    <p>Same information. Completely different people. The key is <em>what they don't say directly</em> and <em>how they hold themselves</em>.</p>
+
+    <h3>Making NPCs Feel Like Part of a World</h3>
+    <ul>
+      <li>NPCs have <em>opinions about other NPCs</em>. The innkeeper resents the blacksmith. The guard respects the mayor but thinks she's naive. Ask yourself these relationships before the session.</li>
+      <li>NPCs want things <em>from the party</em>, not just the reverse. The stable boy wants to hear about their adventures. The merchant wants them to spread word of his shop.</li>
+      <li>NPCs remember previous encounters. If the party was rude to the blacksmith last session, he's cooler to them this session.</li>
+    </ul>
+
+    <div class="card tip">
+      <div class="card-title">Quick NPC Fix: The Name + One Thing Rule</div>
+      <p style="margin:0; font-size: 0.88rem;">For throwaway NPCs you haven't prepped, give them a name and <em>one specific thing</em> about them the instant they appear. "The guard's name is Aldric and he's eating an apple." That one detail makes him a person, not furniture. Players will remember Aldric.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- SECTION: COMBAT                         -->
+  <!-- ═══════════════════════════════════════ -->
+  <section class="section" id="combat">
+    <h2><span class="icon">⚔️</span> Running Combat</h2>
+    <div class="section-rule"></div>
+
+    <p>Combat is where the most rules live, but the goal isn't to play the rules — it's to narrate a fight. The rules are in service of the story.</p>
+
+    <h3>Keeping Combat Moving</h3>
+    <p>The #1 killer of combat momentum is player analysis paralysis. Use these techniques:</p>
+    <ul>
+      <li><strong>The 30-second rule.</strong> After 30 seconds of a player's turn with no decision, ask "What does [character name] do?" with mild urgency. In a real fight, hesitation has consequences.</li>
+      <li><strong>Tell players what's about to happen.</strong> "The orc charges toward Vaeron — who's next on initiative?" gives everyone time to think ahead.</li>
+      <li><strong>Move your monsters fast.</strong> You control multiple creatures — make decisions quickly. Roll attacks in advance if needed.</li>
+      <li><strong>Keep the initiative order visible.</strong> In Roll20, use the tracker. Everyone knowing what's coming keeps them engaged.</li>
+    </ul>
+
+    <h3>Making Hits Feel Real</h3>
+    <p>Don't just say "you miss" or "you hit for 8 damage." Narrate it.</p>
+
+    <div class="voice-example">
+      <div class="speaker">Mechanical (flat)</div>
+      "You roll 14 to hit. That hits. You deal 7 piercing damage."
+    </div>
+
+    <div class="voice-example">
+      <div class="speaker">Cinematic (the same information)</div>
+      "Your shortsword catches the goblin across the shoulder — he stumbles back with a hiss, favoring that side. Seven damage. He's still standing, but barely."
+    </div>
+
+    <p>Use hit point thresholds to guide descriptions: full HP = unscathed, 75% = bruised, 50% = visibly hurt, 25% = wounded and desperate, near 0 = barely standing.</p>
+
+    <h3>Running Monsters with Intelligence</h3>
+    <p>Different creatures fight differently. A combat where every enemy runs straight at the party and attacks until dead is boring. Play to their intelligence.</p>
+
+    <table>
+      <tr><th>Creature Type</th><th>How They Fight</th></tr>
+      <tr><td>Goblins / Kobolds</td><td>Cowardly — use hit-and-run, hide, flee when losing, prioritize weakest target</td></tr>
+      <tr><td>Bandits</td><td>Mercenary — surrender or flee at 50% if the leader falls or the odds flip</td></tr>
+      <tr><td>Undead (mindless)</td><td>Relentless — no self-preservation, attack nearest target, never retreat</td></tr>
+      <tr><td>Wolves / Beasts</td><td>Tactical pack hunters — gang up, trip targets, disengage if hurt badly</td></tr>
+      <tr><td>Dragons / Intelligent Villains</td><td>Strategic — exploit weaknesses, use terrain, taunt, retreat to fight another day</td></tr>
+    </table>
+
+    <h3>On Fudging Rolls</h3>
+    <p>This is one of the great DM debates. My recommendation: <strong>fudge rarely, and only toward less fun</strong> (i.e., reduce lethality on a kill shot that would feel cheap, never give a player a win they didn't earn). The dice create drama; too much fudging drains the table's investment in outcomes.</p>
+
+    <div class="card danger">
+      <div class="card-title">Avoid</div>
+      <p style="margin:0; font-size: 0.88rem;">Fudging to protect the party from all consequences, or fudging to ensure a planned narrative outcome. Players sense when nothing is real. The risk of real failure is what makes success meaningful.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- SECTION: IMPROV                         -->
+  <!-- ═══════════════════════════════════════ -->
+  <section class="section" id="improv">
+    <h2><span class="icon">🎲</span> Improv &amp; "Yes, And"</h2>
+    <div class="section-rule"></div>
+
+    <p>Players will do things you didn't expect. Every session. Your job is not to prevent this — it's to <em>respond</em> to it in a way that makes the world feel real and their choices meaningful.</p>
+
+    <h3>The "Yes, And" Principle</h3>
+    <p>Borrowed from improv theater: when a player proposes something, accept the premise and build on it.</p>
+
+    <table>
+      <tr><th>Player action</th><th>Hard No (breaks momentum)</th><th>Yes, And (builds momentum)</th></tr>
+      <tr><td>"I want to intimidate the king in front of his court"</td><td>"You can't do that here."</td><td>"Roll Intimidation. On a success — the court goes silent. What does [character] actually say?"</td></tr>
+      <tr><td>"I want to jump across the chasm without a running start"</td><td>"That's impossible."</td><td>"It's a DC 16 Athletics check. On a fail, you grab the edge — but your pack falls in."</td></tr>
+      <tr><td>"I try to pickpocket the informant during the conversation"</td><td>"The other players aren't involved, let's skip it."</td><td>"Roll Sleight of Hand with disadvantage — he's paying close attention to you. What are you trying to steal?"</td></tr>
+    </table>
+
+    <h3>When Players Go Completely Off-Script</h3>
+    <p>They ignored your dungeon entirely and sailed to a continent you haven't designed. This happens. A few techniques:</p>
+
+    <ul>
+      <li><strong>Buy time.</strong> "As your ship approaches the coast, describe to me what your character is thinking about on the voyage." Gives you 5 minutes to think.</li>
+      <li><strong>Recycle and rename.</strong> That bandit camp you designed? It's now a smuggler den on this new coast. Same rooms, different fiction.</li>
+      <li><strong>Ask questions.</strong> "What do you know about this place, [character name]?" Player-generated lore is immediately valid and offloads the invention to them.</li>
+      <li><strong>Delay resolution.</strong> End the session there and prep properly for next time. "You arrive as the sun sets. Let's pick up next session with what you find when you go ashore." Always valid.</li>
+    </ul>
+
+    <div class="card tip">
+      <div class="card-title">The Emergency Improv Kit</div>
+      <p style="margin:0; font-size: 0.88rem; margin-bottom: 8px;">Before every session, bank these in your notes:</p>
+      <ul style="margin:0; font-size: 0.85rem; font-family: 'Segoe UI', sans-serif; padding-left: 18px;">
+        <li>5 NPC names (any gender, any role)</li>
+        <li>3 location descriptions (a building interior, an outdoor space, a street/path)</li>
+        <li>2 complications ("the contact doesn't show up," "they're being followed")</li>
+        <li>1 rumor that could send them somewhere new</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- SECTION: PACING                         -->
+  <!-- ═══════════════════════════════════════ -->
+  <section class="section" id="pacing">
+    <h2><span class="icon">⏳</span> Pacing &amp; Tension</h2>
+    <div class="section-rule"></div>
+
+    <p>Pacing is the rhythm of a session — when things feel fast or slow, urgent or calm. Bad pacing is one of the most common reasons sessions feel flat even when the content is good.</p>
+
+    <h3>The Three-Beat Session</h3>
+    <p>A well-paced 3-4 hour session usually has three movements:</p>
+    <div class="card">
+      <ol style="margin:0; padding-left: 20px;">
+        <li style="margin-bottom:8px;"><strong>Opening (15-20 min):</strong> Reconnect with the story. Resolve any hanging threads from last session. Orient players in the world.</li>
+        <li style="margin-bottom:8px;"><strong>Middle (90-120 min):</strong> The meat. Exploration, social encounters, combat. At least two escalations.</li>
+        <li><strong>Climax + Hook (20-30 min):</strong> The session's biggest moment, then a cliffhanger or reward that makes them want to return.</li>
+      </ol>
+    </div>
+
+    <h3>Reading the Table</h3>
+    <p>Watch your players. If they're leaning forward, engaged, laughing, debating — stay in the scene. If people are checking phones, conversations are trailing off, or the same player has been quiet for 20 minutes — it's time to introduce something that changes the energy.</p>
+
+    <ul>
+      <li><strong>Energy is low?</strong> Introduce an immediate threat or surprise. A knock at the door. A scream outside. A message arrives.</li>
+      <li><strong>Scene is running too long?</strong> Have an NPC give the players an ultimatum or deadline. "You have until midnight."</li>
+      <li><strong>One player is dominating?</strong> Address a question or opportunity directly to a quieter player. "Mira — while this argument continues, you notice something the others don't. What is it?"</li>
+    </ul>
+
+    <h3>The Spotlight</h3>
+    <p>After each session, mentally review: did every player get a moment where their character mattered? If someone went quiet, find a hook for next session that speaks specifically to their character — their backstory, their class abilities, their relationships. It doesn't have to be big. It has to be <em>theirs</em>.</p>
+  </section>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- SECTION: STORY STRUCTURE                -->
+  <!-- ═══════════════════════════════════════ -->
+  <section class="section" id="story-structure">
+    <h2><span class="icon">📖</span> Story Structure</h2>
+    <div class="section-rule"></div>
+
+    <p>You don't need to plan a complete novel. You need a situation with momentum, characters with desires, and a world that reacts to what the players do.</p>
+
+    <h3>The 5-Room Dungeon</h3>
+    <p>The most useful structure for a single session or standalone encounter. Scales from a literal dungeon to a crime investigation to a social event.</p>
+
+    <div class="card gold">
+      <ol style="margin:0; padding-left: 20px;">
+        <li style="margin-bottom:8px;"><strong>Entrance &amp; Guardian</strong> — obstacle that announces the dungeon's theme. A fight, a trap, a locked door.</li>
+        <li style="margin-bottom:8px;"><strong>Puzzle or Roleplay Challenge</strong> — something that can't be solved with swords. Rewards thinking and character interaction.</li>
+        <li style="margin-bottom:8px;"><strong>Trick or Setback</strong> — a twist. Not what it seemed. A betrayal, a revelation, the terrain changes.</li>
+        <li style="margin-bottom:8px;"><strong>The Big Encounter</strong> — the climax. The boss, the negotiation, the dramatic reveal.</li>
+        <li><strong>Reward &amp; Revelation</strong> — treasure, information, a new hook. The "yes, and" payoff that opens the next adventure.</li>
+      </ol>
+    </div>
+
+    <h3>The Reactive World</h3>
+    <p>The most important thing you can do as a DM is let the world <em>react</em> to the players. If they burned down the bandit camp, every traveler in the region knows. If they made an enemy of the thieves' guild, merchants start giving them odd looks. If they saved the village, there's a tapestry in the inn about it.</p>
+
+    <p>This is the difference between a world that feels alive and a video game where rooms reset. You don't need to plan every consequence — just ask "what would realistically happen next?" after each session and let that shape your next prep.</p>
+
+    <h3>Villain Design</h3>
+    <p>Memorable villains want something understandable, even if their methods are monstrous. Give your villain:</p>
+    <ul>
+      <li><strong>A goal</strong> the players might sympathize with at first glance</li>
+      <li><strong>A method</strong> that makes them a villain</li>
+      <li><strong>A personal connection</strong> to the party, or a reason to notice them</li>
+      <li><strong>A vulnerability</strong> that isn't just "low hit points"</li>
+    </ul>
+  </section>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- SECTION: PLAYER AGENCY                  -->
+  <!-- ═══════════════════════════════════════ -->
+  <section class="section" id="player-agency">
+    <h2><span class="icon">🧭</span> Player Agency</h2>
+    <div class="section-rule"></div>
+
+    <p>Player agency — the sense that their choices matter and change the world — is the thing D&D has that no other storytelling medium has. Protect it fiercely.</p>
+
+    <h3>The Railroading Problem</h3>
+    <p>Railroading is when the DM steers players back onto a pre-planned path regardless of their choices. It kills the game because players stop feeling like they're playing and start feeling like they're watching.</p>
+
+    <div class="card danger">
+      <div class="card-title">Signs You're Railroading</div>
+      <ul style="margin:0; font-size: 0.88rem; font-family: 'Segoe UI', sans-serif; padding-left: 18px;">
+        <li>The NPC the players killed keeps showing up anyway</li>
+        <li>Every path leads to the same location "coincidentally"</li>
+        <li>Player decisions have no lasting consequences</li>
+        <li>You've said "you can't do that" more than twice in a session</li>
+      </ul>
+    </div>
+
+    <p>The fix isn't to abandon your plot — it's to shift from a <em>plot-first</em> to a <em>situation-first</em> mindset. Create a situation with momentum. Let the players navigate it. The story emerges from their choices, not from your outline.</p>
+
+    <h3>Illusionism vs. True Agency</h3>
+    <p>Some DMs use "illusionism" — letting players feel they have choices while subtly steering outcomes. Used sparingly, this is fine (especially in early sessions with new players). Overused, it creates the same flatness as railroading when players catch on.</p>
+
+    <p>True agency means consequences are real. If the players let the villain escape, the villain remembers. If they fail to save the town, the town is gone. The game is richer for it, even when it hurts.</p>
+  </section>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- SECTION: PUBLISHED ADVENTURES           -->
+  <!-- ═══════════════════════════════════════ -->
+  <section class="section" id="published-adventures">
+    <h2><span class="icon">📜</span> Running Published Adventures</h2>
+    <div class="section-rule"></div>
+
+    <p>Published adventures are excellent for new DMs — the encounter design, maps, and core plot are done for you. Your job is to bring it to life, not to run it like a script.</p>
+
+    <h3>Read Ahead, Run Lightly</h3>
+    <p>Read the entire adventure before you start DMing it (or at minimum, two to three sessions ahead). You need to understand where things are going so you can plant foreshadowing. But don't memorize every detail — read enough to improvise intelligently.</p>
+
+    <div class="card warning">
+      <div class="card-title">Important for Your Campaign</div>
+      <p style="margin:0; font-size: 0.88rem;">You're currently playing your campaign as a <em>player</em>. Once you take over as DM, read the full adventure with fresh eyes — as the architect, not as a visitor. Everything you experienced as a player is now backstory you can use to enrich NPCs and locations with personality you've seen firsthand.</p>
+    </div>
+
+    <h3>Adapting vs. Adhering</h3>
+    <p>Published adventures are not sacred texts. Cut encounters that don't serve your group's fun. Add NPCs that connect to player backstories. Change motives that feel thin. The adventure is a scaffold — you're building the actual house.</p>
+
+    <ul>
+      <li><strong>Add personal hooks:</strong> Connect at least one plot element per session to each character's backstory</li>
+      <li><strong>Cut freely:</strong> If an encounter exists just to fill space and your group would find it tedious, cut it</li>
+      <li><strong>Upgrade NPCs:</strong> Give the adventure's flat NPCs your own personality using the NPC Craft framework above</li>
+      <li><strong>Adjust difficulty:</strong> Published adventure CR math is often wrong. Trust the feel of your table over the numbers</li>
+    </ul>
+
+    <h3>Reading After a Session</h3>
+    <p>After each session, read what's coming next and ask: "Given what the players just did, what changes?" That 10-minute adjustment pass between sessions is where the world starts to feel truly reactive.</p>
+  </section>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- SECTION: SESSION PREP                   -->
+  <!-- ═══════════════════════════════════════ -->
+  <section class="section" id="session-prep">
+    <h2><span class="icon">📋</span> Session Prep</h2>
+    <div class="section-rule"></div>
+
+    <p>Over-prepping leads to railroading — you protect your prep by steering players toward it. Under-prepping leads to flat improv. The sweet spot: prep the <em>situation</em>, not the <em>story</em>.</p>
+
+    <h3>The Lazy DM Method</h3>
+    <p>From <em>Return of the Lazy Dungeon Master</em> by Mike Shea — the single most practical DM prep framework:</p>
+
+    <div class="card gold">
+      <ol style="margin:0; padding-left: 20px;">
+        <li style="margin-bottom:6px;"><strong>Review what happened last session</strong> — what did players do, what's unresolved?</li>
+        <li style="margin-bottom:6px;"><strong>Define the strong start</strong> — first 15 minutes, drop them into action</li>
+        <li style="margin-bottom:6px;"><strong>Outline potential scenes</strong> — not a script, just 3-5 likely beats</li>
+        <li style="margin-bottom:6px;"><strong>Define secrets and clues</strong> — 10 short sentences of world lore the party could discover</li>
+        <li style="margin-bottom:6px;"><strong>Develop NPCs</strong> — name, want, secret for any NPC likely to appear</li>
+        <li style="margin-bottom:6px;"><strong>Build locations</strong> — 2-3 sensory details per likely location</li>
+        <li><strong>Outline encounters</strong> — if combat is likely, have monster stats ready and a rough encounter setup</li>
+      </ol>
+    </div>
+
+    <p>This takes 30-60 minutes for most sessions and produces more useful prep than 4 hours of writing full scene scripts.</p>
+
+    <h3>The "Bank" Concept</h3>
+    <p>Before each session, generate content you can deploy instantly if needed — even if you don't use it. Five NPC names, three location descriptions, two twists. This eliminates the panic of improv and makes your improvised content feel prepped.</p>
+  </section>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- SECTION: VTT TOOLS                      -->
+  <!-- ═══════════════════════════════════════ -->
+  <section class="section" id="vtt-tools">
+    <h2><span class="icon">🖥️</span> VTT &amp; Digital Tools</h2>
+    <div class="section-rule"></div>
+
+    <h3>Virtual Tabletops</h3>
+    <div class="resource-grid">
+      <div class="resource-card">
+        <div class="res-type">VTT <span class="badge free">Free / Paid</span></div>
+        <div class="res-name">Roll20</div>
+        <div class="res-desc">The most widely-used VTT. Free tier is functional; premium unlocks dynamic lighting and more. Easy onboarding for new players.</div>
+        <a href="https://roll20.net" target="_blank">roll20.net →</a>
+      </div>
+      <div class="resource-card">
+        <div class="res-type">VTT <span class="badge paid">$50 one-time</span></div>
+        <div class="res-name">Foundry VTT</div>
+        <div class="res-desc">Best-in-class automation, lighting, and module ecosystem. Self-hosted — runs on your machine, players open a browser link. Strong recommendation for when you take over as DM.</div>
+        <a href="https://foundryvtt.com" target="_blank">foundryvtt.com →</a>
+      </div>
+      <div class="resource-card">
+        <div class="res-type">VTT <span class="badge free">Free</span></div>
+        <div class="res-name">Owlbear Rodeo</div>
+        <div class="res-desc">Minimal, fast, browser-based. No account needed. Great for one-shots or groups who want to skip VTT complexity entirely.</div>
+        <a href="https://www.owlbear.rodeo" target="_blank">owlbear.rodeo →</a>
+      </div>
+      <div class="resource-card">
+        <div class="res-type">Character Sheets <span class="badge free">Free / Paid</span></div>
+        <div class="res-name">D&amp;D Beyond</div>
+        <div class="res-desc">Gold standard for character management. Integrates with Roll20 and Foundry. Basic use is free; content purchases unlock full digital rulebooks.</div>
+        <a href="https://www.dndbeyond.com" target="_blank">dndbeyond.com →</a>
+      </div>
+    </div>
+
+    <h3>Rules Reference</h3>
+    <div class="resource-grid">
+      <div class="resource-card">
+        <div class="res-type">Rules <span class="badge free">Free</span></div>
+        <div class="res-name">5etools</div>
+        <div class="res-desc">Complete 5e rules reference, searchable, with all source books. Fast lookup for spells, monsters, conditions. Essential browser bookmark.</div>
+        <a href="https://5e.tools" target="_blank">5e.tools →</a>
+      </div>
+      <div class="resource-card">
+        <div class="res-type">Generators <span class="badge free">Free</span></div>
+        <div class="res-name">Donjon</div>
+        <div class="res-desc">Random generators for dungeons, encounters, treasure, calendars, inns, and more. Excellent for quick inspiration or filling in gaps during prep.</div>
+        <a href="https://donjon.bin.sh" target="_blank">donjon.bin.sh →</a>
+      </div>
+      <div class="resource-card">
+        <div class="res-type">Names <span class="badge free">Free</span></div>
+        <div class="res-name">Fantasy Name Generators</div>
+        <div class="res-desc">Thousands of name generators organized by race, culture, and type. When you need a halfling innkeeper's name in 5 seconds.</div>
+        <a href="https://www.fantasynamegenerators.com" target="_blank">fantasynamegenerators.com →</a>
+      </div>
+      <div class="resource-card">
+        <div class="res-type">Initiative <span class="badge free">Free</span></div>
+        <div class="res-name">Improved Initiative</div>
+        <div class="res-desc">Web-based combat tracker. Import monsters by name, track HP and conditions, shareable with players. Good supplement to Roll20's built-in tracker.</div>
+        <a href="https://www.improved-initiative.com" target="_blank">improved-initiative.com →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- SECTION: MAPS & AUDIO                   -->
+  <!-- ═══════════════════════════════════════ -->
+  <section class="section" id="maps-audio">
+    <h2><span class="icon">🎵</span> Maps &amp; Audio</h2>
+    <div class="section-rule"></div>
+
+    <h3>Mapping Tools</h3>
+    <div class="resource-grid">
+      <div class="resource-card">
+        <div class="res-type">Battle Maps <span class="badge free">Free / Paid</span></div>
+        <div class="res-name">Inkarnate</div>
+        <div class="res-desc">Easiest way to make beautiful world and regional maps. Drag-and-drop interface. Free tier is solid; Pro unlocks more assets and export options.</div>
+        <a href="https://inkarnate.com" target="_blank">inkarnate.com →</a>
+      </div>
+      <div class="resource-card">
+        <div class="res-type">Battle Maps <span class="badge paid">Paid</span></div>
+        <div class="res-name">Dungeondraft</div>
+        <div class="res-desc">One-time purchase (~$20). Best tool for dungeon and tactical maps. Exports directly to Roll20/Foundry format with walls and doors.</div>
+        <a href="https://dungeondraft.net" target="_blank">dungeondraft.net →</a>
+      </div>
+      <div class="resource-card">
+        <div class="res-type">Free Maps <span class="badge free">Free</span></div>
+        <div class="res-name">r/battlemaps</div>
+        <div class="res-desc">Massive community of DMs sharing free, high-quality battle maps. Search by environment type. Thousands of maps available, most free to use.</div>
+        <a href="https://www.reddit.com/r/battlemaps" target="_blank">reddit.com/r/battlemaps →</a>
+      </div>
+      <div class="resource-card">
+        <div class="res-type">Free Maps <span class="badge free">Free</span></div>
+        <div class="res-name">Forgotten Adventures</div>
+        <div class="res-desc">High-quality free and Patreon map assets and full maps. Clean art style that works well on VTTs. Excellent for generic dungeon rooms and building interiors.</div>
+        <a href="https://www.forgotten-adventures.net" target="_blank">forgotten-adventures.net →</a>
+      </div>
+    </div>
+
+    <h3>Ambient Audio & Music</h3>
+    <div class="resource-grid">
+      <div class="resource-card">
+        <div class="res-type">Ambient Audio <span class="badge free">Free</span></div>
+        <div class="res-name">Tabletop Audio</div>
+        <div class="res-desc">Browser-based, purpose-built for TTRPGs. Curated soundscapes: taverns, dungeons, forests, cities, battles. Zero setup. Use in background while running Roll20.</div>
+        <a href="https://tabletopaudio.com" target="_blank">tabletopaudio.com →</a>
+      </div>
+      <div class="resource-card">
+        <div class="res-type">Music <span class="badge free">Free</span></div>
+        <div class="res-name">Syrinscape (Free Tier)</div>
+        <div class="res-desc">More dynamic than Tabletop Audio — layered reactive soundscapes. Free tier limited, but the app can be shared with players so they hear it too.</div>
+        <a href="https://syrinscape.com" target="_blank">syrinscape.com →</a>
+      </div>
+      <div class="resource-card">
+        <div class="res-type">Music <span class="badge free">Free</span></div>
+        <div class="res-name">Spotify / YouTube</div>
+        <div class="res-desc">Search: "D&D tavern music", "dungeon ambient", "epic battle soundtrack", "tense investigation music". Hundreds of community playlists. Free and instant.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- SECTION: LEARN MORE                     -->
+  <!-- ═══════════════════════════════════════ -->
+  <section class="section" id="learn-more">
+    <h2><span class="icon">📚</span> Learn More</h2>
+    <div class="section-rule"></div>
+
+    <h3>YouTube — Start Here</h3>
+    <div class="resource-grid">
+      <div class="resource-card">
+        <div class="res-type">YouTube Series</div>
+        <div class="res-name">Matt Colville — Running the Game</div>
+        <div class="res-desc">The best DM tutorial series ever made. Start with episode 1 and watch chronologically. Colville is a professional game designer and novelist. Foundational.</div>
+        <a href="https://www.youtube.com/playlist?list=PLlUk42GiU2guNzWBzxn7hs8MaV7ELLCP_" target="_blank">Watch the series →</a>
+      </div>
+      <div class="resource-card">
+        <div class="res-type">YouTube Channel</div>
+        <div class="res-name">Dungeon Dudes</div>
+        <div class="res-desc">Two experienced DMs covering rules, adventure design, and DM advice. Clear, practical, 5e-focused. Great for specific topic lookup ("how to run mystery adventures", "NPC design").</div>
+        <a href="https://www.youtube.com/@DungeonDudes" target="_blank">Dungeon Dudes →</a>
+      </div>
+      <div class="resource-card">
+        <div class="res-type">YouTube Channel</div>
+        <div class="res-name">Bob World Builder</div>
+        <div class="res-desc">Focused on worldbuilding, homebrew, and creative DM techniques. Excellent for when you start building original campaigns.</div>
+        <a href="https://www.youtube.com/@BobWorldBuilder" target="_blank">Bob World Builder →</a>
+      </div>
+      <div class="resource-card">
+        <div class="res-type">YouTube Channel</div>
+        <div class="res-name">WebDM</div>
+        <div class="res-desc">Deep dives into lore, monster design, and setting construction. More advanced — better after you have a session or two under your belt.</div>
+        <a href="https://www.youtube.com/@WebDM" target="_blank">WebDM →</a>
+      </div>
+    </div>
+
+    <h3>Books</h3>
+    <div class="resource-grid">
+      <div class="resource-card">
+        <div class="res-type">Book</div>
+        <div class="res-name">Return of the Lazy Dungeon Master</div>
+        <div class="res-desc">Mike Shea. The single most practical DM prep book. Short, actionable, and directly applicable. The "Lazy DM" prep method in this guide comes from here.</div>
+      </div>
+      <div class="resource-card">
+        <div class="res-type">Book</div>
+        <div class="res-name">The Monsters Know What They're Doing</div>
+        <div class="res-desc">Keith Ammann. Monster tactics book — how each creature would intelligently fight based on their stat block and lore. Transforms combat from "monsters walk toward party" to actual strategy.</div>
+      </div>
+      <div class="resource-card">
+        <div class="res-type">Book</div>
+        <div class="res-name">Sly Flourish's Fantastic Adventures</div>
+        <div class="res-desc">Mike Shea. A collection of 10 one-shot adventures built on the Lazy DM framework. Great inspiration for structure and learn by example.</div>
+      </div>
+    </div>
+
+    <h3>Community</h3>
+    <div class="resource-grid">
+      <div class="resource-card">
+        <div class="res-type">Reddit</div>
+        <div class="res-name">r/DMAcademy</div>
+        <div class="res-desc">The best D&D community for new DMs. Supportive, searchable. Before you ask a question, search it — it's been asked well before. Almost every scenario has a thread.</div>
+        <a href="https://www.reddit.com/r/DMAcademy" target="_blank">r/DMAcademy →</a>
+      </div>
+      <div class="resource-card">
+        <div class="res-type">Reddit</div>
+        <div class="res-name">r/DnD</div>
+        <div class="res-desc">General D&D community. Less focused on DM advice but good for inspiration, art, session stories, and what other tables are doing.</div>
+        <a href="https://www.reddit.com/r/DnD" target="_blank">r/DnD →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- SECTION: SESSION CHECKLIST              -->
+  <!-- ═══════════════════════════════════════ -->
+  <section class="section" id="session-checklist">
+    <h2><span class="icon">✅</span> Session Prep Checklist</h2>
+    <div class="section-rule"></div>
+
+    <p>Use this before each session. It doesn't need to be exhaustive — a partial checklist beats no checklist.</p>
+
+    <h3>1-2 Days Before</h3>
+    <ul class="checklist">
+      <li>Review last session notes — what's unresolved, what promises were made?</li>
+      <li>Read the next section of the adventure (if published)</li>
+      <li>Identify 3-5 likely scenes and what each needs</li>
+      <li>Prep all NPCs who will definitely appear (name, want, secret, tell)</li>
+      <li>Write 2-3 sentence descriptions for likely locations</li>
+      <li>Check encounter difficulty (party level 3, 4-5 players)</li>
+      <li>Confirm monster stat blocks are accessible during session</li>
+    </ul>
+
+    <h3>Day Of / 30 Minutes Before</h3>
+    <ul class="checklist">
+      <li>Bank your emergency improv kit (5 names, 3 descriptions, 2 complications)</li>
+      <li>Load Roll20 — maps placed, token HP set, initiative tracker ready</li>
+      <li>Open DM tools on second monitor</li>
+      <li>Queue ambient music for first scene</li>
+      <li>Re-read your strong opening scene — first 15 minutes planned</li>
+      <li>Have a cliffhanger or hook ready for session end</li>
+    </ul>
+
+    <h3>During the Session</h3>
+    <ul class="checklist">
+      <li>Start by recapping last session briefly (or ask a player to do it)</li>
+      <li>Drop them into action — no long monologue openings</li>
+      <li>Note any player decisions that should have lasting consequences</li>
+      <li>Watch for players going quiet — address directly if needed</li>
+      <li>End 15 minutes before your target — don't cut mid-scene</li>
+    </ul>
+
+    <h3>After the Session</h3>
+    <ul class="checklist">
+      <li>Write 3-5 bullet notes while memory is fresh (decisions, new NPCs mentioned, plot threads opened)</li>
+      <li>Ask: did every player get a moment? If not, plan a hook for that character</li>
+      <li>Ask: what should the world do in response to the party's actions?</li>
+      <li>Update campaign notes in the DM Toolkit</li>
+    </ul>
+  </section>
+
+  <a class="back-top" href="#mindset">↑ Back to top</a>
+
+</main>
+
+<script>
+  // Highlight active sidebar link on scroll
+  const sections = document.querySelectorAll('.section');
+  const links = document.querySelectorAll('#sidebar nav a');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const link = document.querySelector(`#sidebar nav a[href="#${entry.target.id}"]`);
+        if (link) link.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-30% 0px -60% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>

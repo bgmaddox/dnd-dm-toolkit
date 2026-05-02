@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Scene Painter — DM Toolkit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --bg:          #111318;
+    --bg-panel:    #16191f;
+    --bg-card:     #1c2028;
+    --bg-input:    #13161c;
+    --border:      #2a2f3d;
+    --border-glow: #c9a84c55;
+    --gold:        #c9a84c;
+    --gold-dim:    #9e7c2e;
+    --gold-bright: #e8c875;
+    --teal:        #3da894;
+    --teal-dim:    #2a7566;
+    --red-dim:     #7a3030;
+    --red-text:    #c47070;
+    --text:        #dde3f0;
+    --text-muted:  #8a92a8;
+    --text-dim:    #555d72;
+    --serif:       'Cinzel', serif;
+    --body:        'Crimson Pro', Georgia, serif;
+    --radius:      6px;
+    --radius-lg:   12px;
+    --shadow-gold: 0 0 24px #c9a84c22, 0 2px 8px #00000080;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 16px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(ellipse 80% 60% at 20% 10%, #c9a84c08 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 90%, #3da89408 0%, transparent 60%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body > * { position: relative; z-index: 1; }
+
+  .header {
+    height: 48px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    flex-shrink: 0;
+  }
+
+  .header-logo {
+    font-family: var(--serif);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .header-logo::before { content: '🎨'; font-size: 14px; }
+
+  .campaign-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+  }
+
+  .campaign-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--gold);
+  }
+
+  /* Main layout */
+  .main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    max-height: calc(100vh - 48px);
+    overflow: hidden;
+  }
+
+  /* Left Panel */
+  .left-panel {
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 28px;
+    gap: 0;
+  }
+
+  .left-panel::-webkit-scrollbar { width: 4px; }
+  .left-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .tool-title { font-family: var(--serif); font-size: 20px; font-weight: 700; color: var(--gold); letter-spacing: 0.06em; margin-bottom: 4px; }
+  .tool-subtitle { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 24px; }
+
+  .field-group { display: flex; flex-direction: column; gap: 18px; margin-bottom: 24px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field-label { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+  .optional-tag { font-size: 9px; font-weight: 400; color: var(--text-dim); text-transform: none; padding: 1px 5px; border: 1px solid var(--border); border-radius: 3px; }
+
+  input[type="text"], select, textarea {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 14px;
+    padding: 9px 12px;
+    outline: none;
+    transition: all 0.2s;
+    width: 100%;
+  }
+
+  input:focus, select:focus, textarea:focus { border-color: var(--gold-dim); box-shadow: 0 0 0 3px #c9a84c12; }
+
+  /* Pill group */
+  .pill-group { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+
+  .btn-paint {
+    width: 100%;
+    padding: 13px;
+    background: linear-gradient(135deg, #c9a84c, #a8841e);
+    border: none;
+    border-radius: var(--radius);
+    color: #1a1508;
+    font-family: var(--serif);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 10px #c9a84c25;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-paint:hover { transform: translateY(-1px); box-shadow: 0 4px 15px #c9a84c40; }
+  .btn-paint:active { transform: translateY(0); }
+  .btn-paint span { position: relative; z-index: 1; }
+  .btn-paint.loading { opacity: 0.8; pointer-events: none; }
+
+  .lore-hint { margin-top: auto; padding-top: 24px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-dim); font-style: italic; line-height: 1.6; text-align: center; }
+
+  /* Right Panel */
+  .right-panel { overflow-y: auto; padding: 32px 40px; display: flex; flex-direction: column; gap: 0; }
+  .right-panel::-webkit-scrollbar { width: 4px; }
+  .right-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Empty State */
+  .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; color: var(--text-dim); text-align: center; }
+  .empty-icon { font-size: 40px; opacity: 0.25; }
+  .empty-title { font-family: var(--serif); font-size: 16px; letter-spacing: 0.05em; }
+
+  /* Output */
+  .scene-output { display: flex; flex-direction: column; gap: 28px; animation: fadeInUp 0.4s ease both; }
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .section-label { font-size: 9px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .read-aloud-block {
+    background: #0e1016;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    position: relative;
+    border-left: 3px solid var(--gold-dim);
+  }
+
+  .read-aloud-block::before {
+    content: '\201C';
+    position: absolute;
+    top: -15px; left: 15px;
+    font-family: Georgia, serif;
+    font-size: 80px;
+    color: var(--gold);
+    opacity: 0.06;
+    pointer-events: none;
+  }
+
+  .output-textarea {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    resize: none;
+    color: var(--text);
+    font-style: italic;
+    line-height: 1.75;
+    font-size: 15px;
+    box-shadow: none;
+  }
+  .output-textarea:focus { border: none; box-shadow: none; }
+
+  /* Details Grid */
+  .details-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  .detail-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    display: flex;
+    gap: 12px;
+    transition: all 0.2s;
+  }
+  .detail-card:hover { border-color: var(--border-glow); box-shadow: 0 4px 12px #00000040; }
+  .detail-bullet { color: var(--teal); font-size: 14px; margin-top: 2px; }
+
+  /* DM Note */
+  .dm-note-block {
+    background: rgba(122, 48, 48, 0.05);
+    border: 1px solid rgba(122, 48, 48, 0.2);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+  }
+  .dm-note-label { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--red-text); margin-bottom: 8px; }
+
+  /* Action row */
+  .action-row { display: flex; gap: 12px; }
+
+  /* Shimmer */
+  .loading-state { display: flex; flex-direction: column; gap: 20px; animation: fadeIn 0.3s ease; }
+  .shimmer { border-radius: var(--radius); background: linear-gradient(90deg, var(--bg-card) 25%, #242835 50%, var(--bg-card) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  /* Copy button */
+  .copy-btn {
+    position: absolute;
+    top: 12px; right: 12px;
+    background: rgba(61, 168, 148, 0.12);
+    border: 1px solid rgba(61, 168, 148, 0.3);
+    border-radius: 4px;
+    color: var(--teal);
+    font-family: var(--serif);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    padding: 3px 9px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .copy-btn:hover { background: rgba(61,168,148,0.22); }
+  .copy-btn.copied { color: var(--gold); border-color: rgba(201,168,76,0.4); background: rgba(201,168,76,0.1); }
+
+  /* Save button */
+  .btn-save {
+    flex: 1;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #c9a84c, #a8841e);
+    border: none;
+    border-radius: var(--radius);
+    color: #1a1508;
+    font-family: var(--serif);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 10px #c9a84c25;
+  }
+
+  .btn-save:hover { box-shadow: 0 4px 18px #c9a84c45; transform: translateY(-1px); }
+  .btn-save.saved { background: linear-gradient(135deg, #4a7c59, #2d5e3e); color: #c8eed8; pointer-events: none; }
+
+  /* Repaint button */
+  .btn-regen {
+    flex: 1;
+    padding: 12px 20px;
+    background: transparent;
+    border: 1px solid var(--teal-dim);
+    border-radius: var(--radius);
+    color: var(--teal);
+    font-family: var(--serif);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-regen:hover { background: rgba(61,168,148,0.08); border-color: var(--teal); }
+  .btn-regen:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Small utility buttons (export/copy) */
+  .btn-util {
+    flex: 1;
+    padding: 7px 10px;
+    background: rgba(61,168,148,0.07);
+    border: 1px solid rgba(61,168,148,0.22);
+    border-radius: var(--radius);
+    color: var(--teal);
+    font-family: var(--body);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-util:hover { background: rgba(61,168,148,0.14); border-color: rgba(61,168,148,0.4); }
+
+  /* Field error */
+  .field-error { font-size: 11px; color: var(--red-text); margin-top: 2px; }
+
+  /* Empty state body */
+  .empty-body { font-size: 14px; color: var(--text-dim); max-width: 260px; line-height: 1.5; }
+
+  /* Saved scenes list */
+  .saved-list { margin-top: 20px; display: flex; flex-direction: column; gap: 4px; }
+  .saved-label { font-size: 10px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; }
+
+  .saved-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background 0.15s;
+    border: 1px solid transparent;
+  }
+
+  .saved-item:hover { background: var(--bg-card); border-color: var(--border); }
+  .saved-item.active { background: #c9a84c10; border-color: #c9a84c30; }
+  .saved-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gold-dim); flex-shrink: 0; }
+  .saved-name { font-size: 13px; color: var(--text-muted); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .saved-item.active .saved-name { color: var(--gold); }
+</style>
+</head>
+<body>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useCallback, useEffect } = React;
+
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+
+const MOODS = [
+  { value: "tense and foreboding",    label: "Tense" },
+  { value: "warm and lively",         label: "Lively" },
+  { value: "eerie and abandoned",     label: "Eerie" },
+  { value: "sacred and ancient",      label: "Sacred" },
+  { value: "chaotic and dangerous",   label: "Chaotic" },
+  { value: "mysterious and dreamlike",label: "Mysterious" },
+];
+
+const SCALES = [
+  { value: "cramped (a closet, alcove, or tight passage)", label: "Cramped" },
+  { value: "small room",                                    label: "Small Room" },
+  { value: "medium hall or chamber",                        label: "Medium Hall" },
+  { value: "large chamber or courtyard",                    label: "Large Chamber" },
+  { value: "vast open space or exterior",                   label: "Vast / Outdoor" },
+];
+
+const EXAMPLE_SCENE = {
+  readAloud: "The torchlight stutters as you push open the door, throwing long shadows across a low stone chamber barely twelve feet across. A smell of mildew and something copper-sharp hangs in the still air. A rusted iron table dominates the center of the room — bolted to the floor, its surface stained dark in ways your torchlight doesn't improve. The only exit is a heavy door on the opposite wall, its hinges slick with moisture. Something dripped from the ceiling and hit the floor behind you, but when you turn, nothing is there.",
+  details: [
+    "The stains on the table are recent — the edges haven't fully dried. A DC 12 Investigation check reveals drag marks leading toward the far door.",
+    "A set of iron shackles hangs from a wall ring, one cuff broken open with considerable force from the inside.",
+    "The dripping sound continues at irregular intervals. There is no water visible on the floor, and no leak on the ceiling above.",
+  ],
+  dmNote: "This was an interrogation room used by the dungeon's previous occupants. A prisoner escaped three days ago — that's the source of the gnoll patrol the party heard about. The far door leads to the cells. The prisoner is still hiding in cell 7, injured and frightened.",
+};
+
+// ─── COMPONENTS ──────────────────────────────────────────────────────────────
+
+function PillSelector({ options, value, onChange }) {
+  const pillStyle = (active) => ({
+    padding: "5px 14px",
+    borderRadius: 20,
+    background: active ? "#c9a84c18" : "transparent",
+    border: `1px solid ${active ? "#c9a84c55" : "var(--border)"}`,
+    color: active ? "var(--gold-bright)" : "var(--text-muted)",
+    fontSize: 13,
+    fontFamily: "var(--body)",
+    cursor: "pointer",
+    transition: "all 0.15s",
+    whiteSpace: "nowrap",
+  });
+
+  return (
+    <div className="pill-group">
+      {options.map(opt => (
+        <button key={opt.value} onClick={() => onChange(opt.value)} style={pillStyle(value === opt.value)}>
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function LoadingState() {
+  return (
+    <div className="loading-state">
+      <div className="shimmer" style={{ height: 130 }} />
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div className="shimmer" style={{ height: 52 }} />
+        <div className="shimmer" style={{ height: 52 }} />
+        <div className="shimmer" style={{ height: 52 }} />
+      </div>
+      <div className="shimmer" style={{ height: 80 }} />
+    </div>
+  );
+}
+
+function SceneOutput({ scene, setScene, onRegen, onSave, isSaved, loading }) {
+  const [copied, setCopied] = useState(false);
+
+  function copyReadAloud() {
+    navigator.clipboard.writeText(scene.readAloud).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
+
+  function updateDetail(i, val) {
+    setScene(s => ({ ...s, details: s.details.map((d, j) => j === i ? val : d) }));
+  }
+
+  return (
+    <div className="scene-output">
+
+      <div>
+        <div className="section-label">Read Aloud</div>
+        <div className="read-aloud-block">
+          <button className={`copy-btn ${copied ? "copied" : ""}`} onClick={copyReadAloud}>
+            {copied ? "✓ Copied" : "Copy"}
+          </button>
+          <textarea
+            className="output-textarea"
+            value={scene.readAloud}
+            onChange={e => setScene(s => ({ ...s, readAloud: e.target.value }))}
+            rows={5}
+          />
+        </div>
+      </div>
+
+      <div>
+        <div className="section-label">What They Might Notice</div>
+        <div className="details-grid">
+          {scene.details.map((d, i) => (
+            <div key={i} className="detail-card">
+              <div className="detail-bullet">▸</div>
+              <textarea
+                className="output-textarea"
+                style={{ fontStyle: "normal", fontSize: 14, lineHeight: 1.6, color: "var(--text-muted)", minHeight: 40 }}
+                value={d}
+                onChange={e => updateDetail(i, e.target.value)}
+                rows={2}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="dm-note-block">
+        <div className="dm-note-label">DM Only</div>
+        <textarea
+          className="output-textarea"
+          style={{ fontSize: 14, lineHeight: 1.65, color: "#a88080", minHeight: 60 }}
+          value={scene.dmNote}
+          onChange={e => setScene(s => ({ ...s, dmNote: e.target.value }))}
+          rows={3}
+        />
+      </div>
+
+      <div className="action-row">
+        <button className={`btn-save ${isSaved ? "saved" : ""}`} onClick={onSave}>
+          {isSaved ? "✓ Saved" : "Save Scene"}
+        </button>
+        <button className="btn-regen" onClick={onRegen} disabled={loading}>
+          {loading ? "Painting…" : "↻ Repaint"}
+        </button>
+      </div>
+
+    </div>
+  );
+}
+
+// ─── APP ─────────────────────────────────────────────────────────────────────
+
+function App() {
+  const [location, setLocation] = useState("");
+  const [mood, setMood] = useState("tense and foreboding");
+  const [lighting, setLighting] = useState("torch / firelight");
+  const [scale, setScale] = useState("small room");
+  const [keyFeature, setKeyFeature] = useState("");
+  const [occupants, setOccupants] = useState("");
+  const [environment, setEnvironment] = useState("");
+
+  const [campaigns, setCampaigns] = useState([]);
+  const [activeCampaign, setActiveCampaign] = useState(() => {
+    try { return localStorage.getItem('scene_painter_campaign') || ""; } catch { return ""; }
+  });
+  const [exportCopied, setExportCopied] = useState(false);
+  const [campaignLocations, setCampaignLocations] = useState([]);
+  const [locExpanded, setLocExpanded] = useState(false);
+
+  const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+    "accentColor": "#c9a84c",
+    "aiProvider": "claude"
+  }/*EDITMODE-END*/;
+  const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+  useEffect(() => {
+    fetch('/api/campaigns').then(r => r.json()).then(d => setCampaigns(d.campaigns || [])).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!activeCampaign) { setCampaignLocations([]); return; }
+    fetch(`/api/campaign/locations?campaign=${encodeURIComponent(activeCampaign)}`)
+      .then(r => r.ok ? r.json() : {}).then(d => setCampaignLocations(d.locations || [])).catch(() => {});
+  }, [activeCampaign]);
+
+  useEffect(() => {
+    localStorage.setItem('scene_painter_campaign', activeCampaign);
+  }, [activeCampaign]);
+
+  const [scene, setScene] = useState(EXAMPLE_SCENE);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [locationError, setLocationError] = useState("");
+  const [savedCurrent, setSavedCurrent] = useState(false);
+  const [savedScenes, setSavedScenes] = useState(() => {
+    try { const s = localStorage.getItem("scene_painter_saved"); return s ? JSON.parse(s) : []; } catch { return []; }
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem("scene_painter_saved", JSON.stringify(savedScenes));
+  }, [savedScenes]);
+
+  function buildPrompt(p) {
+    const optional = [
+      p.keyFeature  && `Key feature: ${p.keyFeature}`,
+      p.occupants   && `Occupants / activity: ${p.occupants}`,
+      p.environment && `Environmental effect: ${p.environment}`,
+    ].filter(Boolean).join("\n");
+
+    return `You are a D&D 5e scene description assistant. Generate a scene for the DM.
+
+Location type: ${p.location}
+Mood / tone: ${p.mood}
+Lighting: ${p.lighting}
+Scale: ${p.scale}${optional ? "\n" + optional : ""}
+
+Respond with ONLY a valid JSON object, no other text:
+{
+  "readAloud": "3-5 sentence read-aloud description. Present tense, sensory and atmospheric. End on a detail or hook that makes players want to look closer.",
+  "details": [
+    "Something players might notice on a Perception or Investigation check (DC 10–14). Specific and actionable.",
+    "A second detail that rewards closer investigation. Could hint at history, danger, or opportunity.",
+    "A third detail — something subtly wrong, useful, or lore-relevant."
+  ],
+  "dmNote": "DM-only. What is actually happening beneath the surface of this scene — a hidden threat, secret, or dynamic the players don't yet see."
+}`;
+  }
+
+  const generate = useCallback(async (params) => {
+    const p = params || {
+      location, mood, lighting, scale, keyFeature, occupants, environment
+    };
+
+    if (!p.location.trim()) {
+      setLocationError("Location type is required.");
+      return;
+    }
+
+    setLocationError("");
+    setError("");
+    setLoading(true);
+    setSavedCurrent(false);
+
+    try {
+      let systemContext = "";
+      if (activeCampaign) {
+        const hints = [p.location, p.keyFeature].filter(Boolean).join(',');
+        const ctxRes = await fetch('/api/campaign/context?campaign=' + encodeURIComponent(activeCampaign) + '&hints=' + encodeURIComponent(hints));
+        const { context } = await ctxRes.json();
+        systemContext = context || "";
+      }
+
+      const res = await fetch("/api/ai/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          prompt: buildPrompt(p), 
+          max_tokens: 450, 
+          system: systemContext,
+          provider: tweaks.aiProvider
+        }),
+      });
+      if (!res.ok) throw new Error(`API error ${res.status}`);
+      const data = await res.json();
+      const match = data.content.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error("No JSON in response");
+      setScene(JSON.parse(match[0]));
+    } catch (e) {
+      setError("The canvas tore. Check your connection and try again.");
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, [location, mood, lighting, scale, keyFeature, occupants, environment, activeCampaign, tweaks.aiProvider]);
+
+  const handlePaint = () => generate(null);
+  const handleRepaint = () => generate(null);
+
+  async function buildExportMarkdown() {
+    const p = { location, mood, lighting, scale, keyFeature, occupants, environment };
+    let campaignCtx = "";
+    if (activeCampaign) {
+      try {
+        const hints = [p.location, p.keyFeature].filter(Boolean).join(',');
+        const ctxRes = await fetch('/api/campaign/context?campaign=' + encodeURIComponent(activeCampaign) + '&hints=' + encodeURIComponent(hints));
+        const { context } = await ctxRes.json();
+        campaignCtx = context || "";
+      } catch {}
+    }
+    const prompt = buildPrompt(p);
+    const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const lines = [
+      `# Scene Painter Prompt`,
+      `_Exported from DM Toolkit · ${date}_`,
+      ``,
+      `## Inputs`,
+      `- **Location:** ${p.location}`,
+      `- **Mood:** ${p.mood}`,
+      `- **Lighting:** ${p.lighting}`,
+      `- **Scale:** ${p.scale}`,
+      p.keyFeature  ? `- **Key Feature:** ${p.keyFeature}`  : null,
+      p.occupants   ? `- **Occupants:** ${p.occupants}`     : null,
+      p.environment ? `- **Environment:** ${p.environment}` : null,
+    ].filter(l => l !== null);
+    if (campaignCtx) {
+      lines.push(``, `## Campaign Context`, ``, campaignCtx);
+    }
+    lines.push(``, `## Full Prompt`, ``, `\`\`\``, prompt, `\`\`\``);
+    return lines.join('\n');
+  }
+
+  async function handleExportDownload() {
+    const md = await buildExportMarkdown();
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `scene-prompt-${Date.now()}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleExportCopy() {
+    const md = await buildExportMarkdown();
+    await navigator.clipboard.writeText(md);
+    setExportCopied(true);
+    setTimeout(() => setExportCopied(false), 2000);
+  }
+
+  function handleSave() {
+    if (!scene || savedCurrent) return;
+    const entry = { inputs: { location, mood, lighting, scale, keyFeature, occupants, environment }, scene };
+    setSavedScenes(prev => [entry, ...prev.slice(0, 19)]);
+    setSavedCurrent(true);
+  }
+
+  function loadScene(entry) {
+    setLocation(entry.inputs.location);
+    setMood(entry.inputs.mood);
+    setLighting(entry.inputs.lighting);
+    setScale(entry.inputs.scale);
+    setKeyFeature(entry.inputs.keyFeature);
+    setOccupants(entry.inputs.occupants);
+    setEnvironment(entry.inputs.environment);
+    setScene(entry.scene);
+    setSavedCurrent(true);
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && e.ctrlKey) handlePaint();
+  };
+
+  return (
+    <>
+      <TweaksPanel title="Painter Settings">
+        <TweakSection label="AI Settings" />
+        <TweakRadio
+          label="AI Provider"
+          value={tweaks.aiProvider}
+          options={[{value: 'claude', label: 'Claude'}, {value: 'gemini', label: 'Gemini'}]}
+          onChange={v => setTweak('aiProvider', v)}
+        />
+      </TweaksPanel>
+
+      <header className="header">
+        <div className="header-logo">Scene Painter</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <select
+            value={activeCampaign}
+            onChange={e => setActiveCampaign(e.target.value)}
+            style={{ background: "#13161c", border: "1px solid #2a2f3d", color: activeCampaign ? "var(--gold)" : "#8a92a8", fontSize: 12, padding: "4px 8px", borderRadius: 4, outline: "none", cursor: "pointer" }}
+          >
+            <option value="">No Campaign</option>
+            {campaigns.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <div className="campaign-indicator">
+            <div className="campaign-dot" style={{ background: activeCampaign ? "var(--gold)" : "#555d72", boxShadow: activeCampaign ? "0 0 6px var(--gold)" : "none" }}></div>
+            <span>{activeCampaign ? `Campaign: ${activeCampaign}` : "DM Toolkit"}</span>
+          </div>
+        </div>
+      </header>
+
+      <div className="main">
+
+        {/* LEFT: Inputs */}
+        <div className="left-panel">
+          <div className="tool-title">Scene Painter</div>
+          <div className="tool-subtitle">Describe a location and get a read-aloud description, investigation details, and a DM note.</div>
+
+          <div className="field-group" onKeyDown={handleKeyDown}>
+
+            <div className="field">
+              <label className="field-label">Location Type</label>
+              <input
+                type="text"
+                value={location}
+                onChange={e => { setLocation(e.target.value); setLocationError(""); }}
+                placeholder="e.g. dungeon corridor, tavern common room, forest clearing"
+              />
+              {locationError && <div className="field-error">{locationError}</div>}
+              {activeCampaign && campaignLocations.length > 0 && (
+                <div style={{ marginTop: 6 }}>
+                  <button
+                    onClick={() => setLocExpanded(v => !v)}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: 11, cursor: 'pointer', padding: 0, letterSpacing: '0.05em', fontFamily: 'var(--body)' }}
+                  >{locExpanded ? '▴ Campaign locations' : '▾ Campaign locations'}</button>
+                  {locExpanded && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 6 }}>
+                      {campaignLocations.map(loc => (
+                        <button
+                          key={loc}
+                          onClick={() => { setLocation(loc); setLocationError(""); setLocExpanded(false); }}
+                          style={{
+                            padding: '3px 10px', borderRadius: 20,
+                            background: location === loc ? 'rgba(201,168,76,0.12)' : 'transparent',
+                            border: `1px solid ${location === loc ? '#c9a84c66' : 'var(--border)'}`,
+                            color: location === loc ? 'var(--gold-bright)' : 'var(--text-muted)',
+                            fontSize: 11, fontFamily: 'var(--body)', cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap',
+                          }}
+                        >{loc}</button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="field">
+              <label className="field-label">Mood</label>
+              <PillSelector options={MOODS} value={mood} onChange={setMood} />
+            </div>
+
+            <div className="field">
+              <label className="field-label">Lighting</label>
+              <select value={lighting} onChange={e => setLighting(e.target.value)}>
+                <option>bright daylight</option>
+                <option>overcast / dim natural light</option>
+                <option>torch / firelight</option>
+                <option>moonlight</option>
+                <option>magical glow</option>
+                <option>near darkness</option>
+                <option>total darkness</option>
+              </select>
+            </div>
+
+            <div className="field">
+              <label className="field-label">Scale</label>
+              <PillSelector options={SCALES} value={scale} onChange={setScale} />
+            </div>
+
+            <div className="field">
+              <label className="field-label">
+                Key Feature
+                <span className="optional-tag">optional</span>
+              </label>
+              <input
+                type="text"
+                value={keyFeature}
+                onChange={e => setKeyFeature(e.target.value)}
+                placeholder="e.g. crumbling statue, velvet curtains"
+              />
+            </div>
+
+            <div className="field">
+              <label className="field-label">
+                Occupants / Activity
+                <span className="optional-tag">optional</span>
+              </label>
+              <input
+                type="text"
+                value={occupants}
+                onChange={e => setOccupants(e.target.value)}
+                placeholder="e.g. three sleeping goblins, a heated debate"
+              />
+            </div>
+
+            <div className="field">
+              <label className="field-label">
+                Environmental Effect
+                <span className="optional-tag">optional</span>
+              </label>
+              <input
+                type="text"
+                value={environment}
+                onChange={e => setEnvironment(e.target.value)}
+                placeholder="e.g. heavy rain, magical darkness, earthquake tremors"
+              />
+            </div>
+
+          </div>
+
+          <button className={`btn-paint ${loading ? "loading" : ""}`} onClick={handlePaint}>
+            <span>{loading ? "⚒ Painting..." : "⚒ Paint Scene"}</span>
+          </button>
+
+          {error && <div style={{ color: 'var(--red-text)', fontSize: 12, marginTop: 8, textAlign: 'center' }}>{error}</div>}
+
+          <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+            <button className="btn-util" onClick={handleExportCopy}>
+              {exportCopied ? '✓ Copied' : 'Copy Prompt'}
+            </button>
+            <button className="btn-util" onClick={handleExportDownload}>
+              ↓ .md
+            </button>
+          </div>
+
+          {savedScenes.length > 0 && (
+            <div className="saved-list">
+              <div className="saved-label">Recent Scenes</div>
+              {savedScenes.map((s, i) => (
+                <div key={i} className="saved-item" onClick={() => loadScene(s)}>
+                  <div className="saved-dot"></div>
+                  <div className="saved-name">{s.inputs.location}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="lore-hint">
+            Press <strong>Ctrl + Enter</strong> in any field to paint.<br />
+            All scenes are saved locally to your session.
+            <div style={{marginTop: 10, fontSize: 11, fontStyle: 'normal', letterSpacing: '0.02em'}}>
+              Powered by {tweaks.aiProvider === 'gemini' ? 'Gemini 1.5 Flash · Free Tier' : 'Claude Haiku · ~$0.003 per Scene'}<br/>
+              {tweaks.aiProvider === 'gemini' ? '15 requests per minute limit' : 'roughly 300 scenes per dollar'}
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT: Output */}
+        <div className="right-panel">
+          {loading ? (
+            <LoadingState />
+          ) : scene ? (
+            <SceneOutput
+              scene={scene}
+              setScene={setScene}
+              onRegen={handleRepaint}
+              onSave={handleSave}
+              isSaved={savedCurrent}
+              loading={loading}
+            />
+          ) : (
+            <div className="empty-state">
+              <div className="empty-icon">🎨</div>
+              <div className="empty-title">The Canvas is Blank</div>
+              <div className="empty-body">Describe a location on the left to paint a vivid scene for your players.</div>
+            </div>
+          )}
+        </div>
+
+      </div>
+    </>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>

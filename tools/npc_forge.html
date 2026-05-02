@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NPC Forge — DM Toolkit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --bg:          #111318;
+    --bg-panel:    #16191f;
+    --bg-card:     #1c2028;
+    --bg-input:    #13161c;
+    --border:      #2a2f3d;
+    --border-glow: #c9a84c55;
+    --gold:        #c9a84c;
+    --gold-dim:    #9e7c2e;
+    --gold-bright: #e8c875;
+    --text:        #dde3f0;
+    --text-muted:  #8a92a8;
+    --text-dim:    #555d72;
+    --danger:      #a04040;
+    --serif:       'Cinzel', serif;
+    --body:        'Crimson Pro', Georgia, serif;
+    --radius:      6px;
+    --radius-lg:   12px;
+    --shadow-gold: 0 0 24px #c9a84c22, 0 2px 8px #00000080;
+    --shadow-card: 0 2px 16px #00000060;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 16px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  /* Subtle background texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(ellipse 80% 60% at 20% 10%, #c9a84c08 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 90%, #6b4fa808 0%, transparent 60%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body > * { position: relative; z-index: 1; }
+
+  /* HEADER */
+  .header {
+    height: 48px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    flex-shrink: 0;
+  }
+
+  .header-logo {
+    font-family: var(--serif);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .header-logo::before {
+    content: '⚔';
+    font-size: 14px;
+    opacity: 0.8;
+  }
+
+  .campaign-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+  }
+
+  .campaign-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 6px var(--gold);
+  }
+
+  /* MAIN LAYOUT */
+  .main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 0;
+    max-height: calc(100vh - 48px);
+    overflow: hidden;
+  }
+
+  /* LEFT PANEL */
+  .left-panel {
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 32px 28px;
+    gap: 0;
+  }
+
+  .left-panel::-webkit-scrollbar { width: 4px; }
+  .left-panel::-webkit-scrollbar-track { background: transparent; }
+  .left-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .forge-title {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+
+  .forge-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 32px;
+    line-height: 1.5;
+  }
+
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .field-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .field-label .optional-tag {
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    text-transform: none;
+    padding: 1px 6px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+  }
+
+  input[type="text"], textarea {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 15px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+  }
+
+  input[type="text"]::placeholder, textarea::placeholder {
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
+  input[type="text"]:focus, textarea:focus {
+    border-color: var(--gold-dim);
+    box-shadow: 0 0 0 3px #c9a84c18;
+  }
+
+  .divider {
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--border), transparent);
+    margin: 4px 0 24px;
+  }
+
+  .btn-forge {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #c9a84c, #a8841e);
+    border: none;
+    border-radius: var(--radius);
+    color: #1a1508;
+    font-family: var(--serif);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 12px #c9a84c30, 0 1px 3px #00000060;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-forge::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, #e8c875, #c9a84c);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .btn-forge:hover::before { opacity: 1; }
+  .btn-forge:hover { box-shadow: 0 4px 20px #c9a84c50, 0 1px 3px #00000060; transform: translateY(-1px); }
+  .btn-forge:active { transform: translateY(0); }
+  .btn-forge span { position: relative; z-index: 1; }
+
+  .btn-forge.loading {
+    pointer-events: none;
+    opacity: 0.75;
+  }
+
+  /* Lore hint at bottom */
+  .lore-hint {
+    margin-top: auto;
+    padding-top: 28px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-dim);
+    font-style: italic;
+    line-height: 1.6;
+    text-align: center;
+  }
+
+  /* RIGHT PANEL */
+  .right-panel {
+    overflow-y: auto;
+    padding: 32px 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .right-panel::-webkit-scrollbar { width: 4px; }
+  .right-panel::-webkit-scrollbar-track { background: transparent; }
+  .right-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Empty state */
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    color: var(--text-dim);
+    text-align: center;
+    padding: 60px 20px;
+  }
+
+  .empty-icon {
+    font-size: 48px;
+    opacity: 0.3;
+  }
+
+  .empty-title {
+    font-family: var(--serif);
+    font-size: 18px;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+  }
+
+  .empty-body {
+    font-size: 14px;
+    max-width: 280px;
+    line-height: 1.6;
+  }
+
+  /* NPC OUTPUT */
+  .npc-output {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    animation: fadeInUp 0.4s ease both;
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .npc-header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+  }
+
+  .npc-name {
+    font-family: var(--serif);
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 0.04em;
+    line-height: 1.1;
+    margin-bottom: 12px;
+    text-shadow: 0 0 40px #c9a84c30;
+  }
+
+  /* At a Glance badges */
+  .glance-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .badge-role {
+    background: #c9a84c18;
+    border: 1px solid #c9a84c55;
+    color: var(--gold-bright);
+  }
+
+  .badge-stat {
+    background: #6b9fd418;
+    border: 1px solid #6b9fd455;
+    color: #9dc4e8;
+  }
+
+  .badge-faction {
+    background: #8b68c818;
+    border: 1px solid #8b68c855;
+    color: #b89fe0;
+  }
+
+  .badge-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .badge-role .badge-dot    { background: var(--gold); }
+  .badge-stat .badge-dot    { background: #6b9fd4; }
+  .badge-faction .badge-dot { background: #8b68c8; }
+
+  /* Physical description */
+  .description-block {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--gold-dim);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--text);
+  }
+
+  /* 2x2 trait grid */
+  .trait-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .trait-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .trait-card:hover {
+    border-color: var(--border-glow);
+    box-shadow: var(--shadow-gold);
+  }
+
+  .trait-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .trait-label::before {
+    content: '';
+    display: block;
+    width: 12px;
+    height: 1px;
+    background: var(--gold-dim);
+    opacity: 0.6;
+  }
+
+  .trait-value {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--text);
+  }
+
+  /* Deep Want / Fear card */
+  .trait-card-deep {
+    background: #191d25;
+    border: 1px solid #c9a84c44;
+    border-radius: var(--radius-lg);
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .trait-card-deep:hover {
+    border-color: #c9a84c88;
+    box-shadow: 0 0 28px #c9a84c18, 0 2px 8px #00000060;
+  }
+
+  .trait-label-deep {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--gold);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .trait-label-deep::before {
+    content: '';
+    display: block;
+    width: 12px;
+    height: 1px;
+    background: var(--gold);
+    opacity: 0.5;
+  }
+
+  /* Sample dialogue */
+  .dialogue-section {}
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .dialogue-block {
+    background: #0e1016;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .dialogue-block::before {
+    content: '\201C';
+    position: absolute;
+    top: -10px;
+    left: 14px;
+    font-family: Georgia, serif;
+    font-size: 80px;
+    color: var(--gold);
+    opacity: 0.08;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  .dialogue-line {
+    font-style: italic;
+    font-size: 15px;
+    line-height: 1.65;
+    color: #c8cedf;
+    padding-left: 16px;
+    border-left: 2px solid var(--gold-dim);
+    opacity: 0.9;
+  }
+
+  /* Bottom action row */
+  .action-row {
+    display: flex;
+    gap: 12px;
+    padding-top: 4px;
+  }
+
+  .btn-save {
+    flex: 1;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #c9a84c, #a8841e);
+    border: none;
+    border-radius: var(--radius);
+    color: #1a1508;
+    font-family: var(--serif);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 10px #c9a84c25;
+  }
+
+  .btn-save:hover {
+    box-shadow: 0 4px 18px #c9a84c45;
+    transform: translateY(-1px);
+  }
+
+  .btn-save.saved {
+    background: linear-gradient(135deg, #4a7c59, #2d5e3e);
+    color: #c8eed8;
+    pointer-events: none;
+  }
+
+  .btn-regen {
+    flex: 1;
+    padding: 12px 20px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-muted);
+    font-family: var(--serif);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-regen:hover {
+    border-color: var(--gold-dim);
+    color: var(--gold);
+    background: #c9a84c08;
+  }
+
+  .btn-regen:disabled {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  /* Export prompt buttons */
+  .export-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .btn-export {
+    flex: 1;
+    padding: 9px 14px;
+    background: rgba(61,168,148,0.08);
+    border: 1px solid rgba(61,168,148,0.25);
+    border-radius: var(--radius);
+    color: var(--teal);
+    font-family: var(--serif);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .btn-export:hover { background: rgba(61,168,148,0.16); border-color: rgba(61,168,148,0.45); }
+  .btn-export.copied { color: var(--gold); border-color: rgba(201,168,76,0.4); background: rgba(201,168,76,0.08); }
+
+  /* Loading shimmer */
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .shimmer {
+    border-radius: var(--radius);
+    background: linear-gradient(90deg, var(--bg-card) 25%, #242835 50%, var(--bg-card) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+  }
+
+  @keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  .shimmer-name { height: 42px; width: 60%; }
+  .shimmer-badges { height: 28px; width: 80%; }
+  .shimmer-desc { height: 70px; }
+  .shimmer-grid { height: 140px; }
+  .shimmer-dialogue { height: 100px; }
+
+  /* Saved NPCs sidebar hint */
+  .saved-list {
+    margin-top: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .saved-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  .saved-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background 0.15s;
+    border: 1px solid transparent;
+  }
+
+  .saved-item:hover {
+    background: var(--bg-card);
+    border-color: var(--border);
+  }
+
+  .saved-item.active {
+    background: #c9a84c10;
+    border-color: #c9a84c30;
+  }
+
+  .saved-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--gold-dim);
+    flex-shrink: 0;
+  }
+
+  .saved-name {
+    font-size: 13px;
+    color: var(--text-muted);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .saved-item.active .saved-name { color: var(--gold); }
+
+  /* Validation error */
+  .field-error {
+    font-size: 12px;
+    color: #e06060;
+    margin-top: 2px;
+  }
+
+  /* Ornament divider */
+  .ornament {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-dim);
+    font-size: 13px;
+    margin: 4px 0;
+  }
+
+  .ornament-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--border));
+  }
+
+  .ornament-line.right {
+    background: linear-gradient(to left, transparent, var(--border));
+  }
+</style>
+</head>
+<body>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+const RANDOM_CONCEPTS = [
+  "nervous blacksmith hiding a debt to a thieves' guild",
+  "retired soldier who drinks too much and talks to her dead captain",
+  "smug noble's herald who knows where the bodies are buried",
+  "blind herbalist who seems to know more than she should",
+  "disgraced priest seeking redemption through questionable means",
+  "halfling con artist with a genuine soft spot for children",
+  "scarred pit fighter trying to go straight",
+  "overworked city guard who's seen too much and cares too little",
+  "eccentric wizard's apprentice who outlived their master",
+  "gravedigger who's developed opinions about everyone in town",
+  "innkeeper's spouse who runs a quiet information network",
+  "young pickpocket who found something they shouldn't have",
+  "gruff dwarf merchant with a secret charitable streak",
+  "traveling merchant with cargo they won't talk about",
+  "widowed farmer whose land borders something dangerous",
+  "court jester who stopped being funny the day they saw the king's true face",
+  "harbor master accepting bribes from two rival factions",
+  "temple acolyte who has started doubting their faith",
+  "bounty hunter who only takes jobs they consider morally justified",
+  "tailor to the nobility who knows every scar and secret they cover up",
+];
+
+// ─── Example NPC (shown on load) ───────────────────────────────────────────
+const EXAMPLE_NPC = {
+  name: "Marta Coldvein",
+  role: "Blacksmith",
+  statBlock: "Commoner (tough)",
+  faction: "Ironworkers' Union",
+  description: "A stocky woman in her mid-forties with soot-blackened forearms and a jaw set like hammered iron. Her right hand is missing the tip of one finger, and she never explains why—just rubs the stub when she's thinking.",
+  voiceQuirk: "Ends declarative statements with 'that's the truth of it' and lowers her voice to a near-whisper when lying.",
+  physicalTell: "Cracks her knuckles one by one when she's nervous, starting with the thumb. Watch her hands.",
+  immediateWant: "Needs the party to recover a shipment of Dwarven steel taken by bandits on the Thornridge road—before her guild master finds out it went missing.",
+  secret: "She's been skimming raw iron from guild shipments for two years, selling to a fence in the undercity. The 'bandit theft' might have been staged.",
+  deepWant: "Marta is terrified of becoming her father — a drunk who died in debt and obscurity. Every coin skimmed, every corner cut, is a quiet act of desperation to die owning something that matters.",
+  dialogue: [
+    "\"I don't ask where coin comes from. I ask if it's real. Go on, bite it.\"",
+    "\"You want the short blade or the long one? Both'll kill a man. One just takes longer—that's the truth of it.\"",
+    "\"Bandits hit the Thornridge road three nights back. My supplier. My problem. Maybe your opportunity.\""
+  ]
+};
+
+// ─── Shimmer Loading ─────────────────────────────────────────────────────────
+function LoadingState() {
+  return (
+    <div className="loading-state">
+      <div>
+        <div className="shimmer shimmer-name" style={{marginBottom: 12}} />
+        <div className="shimmer shimmer-badges" />
+      </div>
+      <div className="shimmer shimmer-desc" />
+      <div className="shimmer shimmer-grid" />
+      <div className="shimmer shimmer-dialogue" />
+    </div>
+  );
+}
+
+// ─── NPC Output ──────────────────────────────────────────────────────────────
+function NPCOutput({ npc, onSave, onRegen, isSaved, isRegening, showDialogue, compact }) {
+  const nameSize = compact ? 24 : 32;
+  const bodySize = compact ? 13 : 15;
+  const cardPad  = compact ? '12px 14px' : '16px 18px';
+  const gridCols = compact ? '1fr 1fr 1fr 1fr' : '1fr 1fr';
+
+  return (
+    <div className="npc-output" style={{gap: compact ? 16 : 24}}>
+      <div className="npc-header">
+        <h1 className="npc-name" style={{fontSize: nameSize}}>{npc.name}</h1>
+        <div className="glance-row">
+          <span className="badge badge-role"><span className="badge-dot"></span>{npc.role}</span>
+          <span className="badge badge-stat"><span className="badge-dot"></span>{npc.statBlock}</span>
+          <span className="badge badge-faction"><span className="badge-dot"></span>{npc.faction}</span>
+        </div>
+      </div>
+
+      <div>
+        <div className="section-label">Physical Description</div>
+        <div className="description-block" style={{fontSize: bodySize}}>{npc.description}</div>
+      </div>
+
+      <div className="trait-grid" style={{gridTemplateColumns: gridCols, gap: compact ? 8 : 12}}>
+        {[
+          {label: 'Voice Quirk',    val: npc.voiceQuirk},
+          {label: 'Physical Tell',  val: npc.physicalTell},
+          {label: 'Immediate Want', val: npc.immediateWant},
+          {label: 'Secret',         val: npc.secret},
+        ].map(t => (
+          <div key={t.label} className="trait-card" style={{padding: cardPad}}>
+            <div className="trait-label">{t.label}</div>
+            <div className="trait-value" style={{fontSize: compact ? 12 : 14}}>{t.val}</div>
+          </div>
+        ))}
+      </div>
+
+      {npc.deepWant && (
+        <div className="trait-card-deep">
+          <div className="trait-label-deep">Deep Want / Fear</div>
+          <div className="trait-value" style={{fontSize: compact ? 12 : 14}}>{npc.deepWant}</div>
+        </div>
+      )}
+
+      {showDialogue && (
+        <div className="dialogue-section">
+          <div className="section-label">Sample Dialogue</div>
+          <div className="dialogue-block">
+            {npc.dialogue.map((line, i) => (
+              <div key={i} className="dialogue-line" style={{fontSize: bodySize}}>{line}</div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="action-row">
+        <button className={`btn-save ${isSaved ? 'saved' : ''}`} onClick={onSave}>
+          {isSaved ? '✓ Saved to Campaign' : 'Save to Campaign'}
+        </button>
+        <button className="btn-regen" onClick={onRegen} disabled={isRegening}>
+          {isRegening ? 'Forging…' : '↻ Regenerate'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main App ────────────────────────────────────────────────────────────────
+function App() {
+  const [concept, setConcept] = useState('');
+  const [nameVal, setNameVal] = useState('');
+  const [faction, setFaction] = useState('');
+  const [npc, setNpc] = useState(EXAMPLE_NPC);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [conceptError, setConceptError] = useState('');
+  const [savedNpcs, setSavedNpcs] = useState([EXAMPLE_NPC]);
+  const [savedCurrent, setSavedCurrent] = useState(false);
+  const [activeNpcIndex, setActiveNpcIndex] = useState(0);
+  const [lastConcept, setLastConcept] = useState('nervous blacksmith');
+  const [lastName, setLastName] = useState('');
+  const [lastFaction, setLastFaction] = useState('');
+  const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+    "showDialogue": true,
+    "compactMode": false,
+    "accentColor": "#c9a84c",
+    "aiProvider": "claude"
+  }/*EDITMODE-END*/;
+  const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [campaigns, setCampaigns] = useState([]);
+  const [activeCampaign, setActiveCampaign] = useState('');
+  const [exportCopied, setExportCopied] = useState(false);
+  const [campaignFactions, setCampaignFactions] = useState([]);
+  const [factionMode, setFactionMode] = useState('pill');
+
+  // Load saved campaign from localStorage on mount; fetch campaign list
+  useEffect(() => {
+    const saved = localStorage.getItem('npc_forge_campaign');
+    if (saved) setActiveCampaign(saved);
+    fetch('/api/campaigns')
+      .then(r => r.ok ? r.json() : {})
+      .then(d => setCampaigns(d.campaigns || []))
+      .catch(() => {});
+  }, []);
+
+  // Persist selected campaign to localStorage
+  useEffect(() => {
+    if (activeCampaign) localStorage.setItem('npc_forge_campaign', activeCampaign);
+  }, [activeCampaign]);
+
+  // Fetch factions when campaign changes
+  useEffect(() => {
+    if (!activeCampaign) { setCampaignFactions([]); return; }
+    fetch(`/api/campaign/factions?campaign=${encodeURIComponent(activeCampaign)}`)
+      .then(r => r.ok ? r.json() : {})
+      .then(d => { setCampaignFactions(d.factions || []); setFactionMode('pill'); })
+      .catch(() => {});
+  }, [activeCampaign]);
+
+  const buildPrompt = (concept, name, faction) => `You are a D&D NPC generator. Generate a vivid, playable NPC from this concept: "${concept}".${name ? ` The NPC's name is ${name}.` : ''}${faction ? ` Their faction/affiliation is ${faction}.` : ''}
+
+Respond with ONLY a valid JSON object in this exact structure:
+{
+  "name": "Full NPC Name",
+  "role": "Short role label (2-3 words)",
+  "statBlock": "Stat block hint (e.g. Guard, Commoner tough, Spy)",
+  "faction": "${faction || 'None'}",
+  "description": "2-sentence vivid physical description. Specific sensory details.",
+  "voiceQuirk": "One specific speech pattern, verbal tic, or dialogue habit.",
+  "physicalTell": "One specific body language or physical habit that reveals emotion.",
+  "immediateWant": "What they want RIGHT NOW from or near the party. Specific and actionable.",
+  "secret": "One secret they're hiding. Should create dramatic potential.",
+  "deepWant": "The underlying motivation or fear driving this NPC at a deeper level — what they truly want or dread beyond the immediate situation.",
+  "dialogue": [
+    "Line 1 of example dialogue in character voice",
+    "Line 2 of example dialogue",
+    "Line 3 of example dialogue"
+  ]
+}
+
+Make it gritty, specific, and immediately playable. Avoid clichés. Each field should be 1-2 sentences max.`;
+
+  const generateNPC = useCallback(async (conceptOverride, nameOverride, factionOverride) => {
+    const useConcept = conceptOverride ?? concept;
+    const useName = nameOverride ?? nameVal;
+    const useFaction = factionOverride ?? faction;
+
+    if (!useConcept.trim()) {
+      setConceptError('A concept is required to forge an NPC.');
+      return;
+    }
+
+    setConceptError('');
+    setError('');
+    setLoading(true);
+    setSavedCurrent(false);
+    setLastConcept(useConcept);
+    setLastName(useName);
+    setLastFaction(useFaction);
+
+    try {
+      // Optionally fetch campaign context before generating
+      let systemPrompt = undefined;
+      if (activeCampaign) {
+        const hints = useFaction ? encodeURIComponent(useFaction) : '';
+        const ctxRes = await fetch(`/api/campaign/context?campaign=${encodeURIComponent(activeCampaign)}&hints=${hints}`);
+        if (ctxRes.ok) {
+          const ctxData = await ctxRes.json();
+          if (ctxData && ctxData.context) systemPrompt = ctxData.context;
+        }
+      }
+
+      const bodyPayload = { prompt: buildPrompt(useConcept, useName, useFaction), max_tokens: 600, provider: tweaks.aiProvider };
+      if (systemPrompt) bodyPayload.system = systemPrompt;
+
+      const res = await fetch('/api/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bodyPayload)
+      });
+      if (!res.ok) throw new Error(`API error ${res.status}`);
+      const data = await res.json();
+      const result = data.content;
+      const jsonMatch = result.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Invalid response format');
+      const parsed = JSON.parse(jsonMatch[0]);
+      setNpc(parsed);
+    } catch (e) {
+      setError('The forge failed. Check your connection and try again.');
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, [concept, nameVal, faction, tweaks.aiProvider, activeCampaign]);
+
+  const handleForge = () => generateNPC();
+  const handleRegen = useCallback(() => generateNPC(lastConcept, lastName, lastFaction), [lastConcept, lastName, lastFaction, generateNPC]);
+
+  async function buildExportMarkdown() {
+    let campaignCtx = "";
+    if (activeCampaign) {
+      try {
+        const hints = faction ? encodeURIComponent(faction) : '';
+        const ctxRes = await fetch(`/api/campaign/context?campaign=${encodeURIComponent(activeCampaign)}&hints=${hints}`);
+        if (ctxRes.ok) {
+          const ctxData = await ctxRes.json();
+          if (ctxData && ctxData.context) campaignCtx = ctxData.context;
+        }
+      } catch {}
+    }
+    const prompt = buildPrompt(concept, nameVal, faction);
+    const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const lines = [
+      `# NPC Forge Prompt`,
+      `_Exported from DM Toolkit · ${date}_`,
+      ``,
+      `## Inputs`,
+      `- **Concept:** ${concept}`,
+      nameVal  ? `- **Name:** ${nameVal}`       : null,
+      faction  ? `- **Faction:** ${faction}`     : null,
+    ].filter(l => l !== null);
+    if (campaignCtx) {
+      lines.push(``, `## Campaign Context`, ``, campaignCtx);
+    }
+    lines.push(``, `## Full Prompt`, ``, `\`\`\``, prompt, `\`\`\``);
+    return lines.join('\n');
+  }
+
+  async function handleExportDownload() {
+    const md = await buildExportMarkdown();
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `npc-prompt-${Date.now()}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleExportCopy() {
+    const md = await buildExportMarkdown();
+    await navigator.clipboard.writeText(md);
+    setExportCopied(true);
+    setTimeout(() => setExportCopied(false), 2000);
+  }
+
+  const handleSave = () => {
+    if (!npc || savedCurrent) return;
+    setSavedNpcs(prev => {
+      // Avoid duplicates by name
+      if (prev.find(n => n.name === npc.name)) return prev;
+      return [npc, ...prev];
+    });
+    setActiveNpcIndex(0);
+    setSavedCurrent(true);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && e.ctrlKey) handleForge();
+  };
+
+  // Apply accent color tweak
+  useEffect(() => {
+    document.documentElement.style.setProperty('--gold', tweaks.accentColor);
+  }, [tweaks.accentColor]);
+
+  return (
+    <>
+      <TweaksPanel>
+        <TweakSection label="AI Settings" />
+        <TweakRadio label="AI Provider" value={tweaks.aiProvider}
+          options={[{value:'claude',label:'Claude'},{value:'gemini',label:'Gemini'}]}
+          onChange={v => setTweak('aiProvider', v)} />
+        <TweakSection label="Display" />
+        <TweakColor label="Accent Color" value={tweaks.accentColor} onChange={v => setTweak('accentColor', v)} />
+        <TweakToggle label="Show Dialogue Block" value={tweaks.showDialogue} onChange={v => setTweak('showDialogue', v)} />
+        <TweakToggle label="Compact Mode" value={tweaks.compactMode} onChange={v => setTweak('compactMode', v)} />
+      </TweaksPanel>
+
+      <header className="header">
+        <div className="header-logo">DM Toolkit</div>
+        <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+          <div className="campaign-indicator">
+            <div className="campaign-dot" style={activeCampaign ? {boxShadow: '0 0 8px var(--gold), 0 0 2px var(--gold)'} : {}}></div>
+            <span>{activeCampaign ? `Campaign: ${activeCampaign}` : 'No Campaign'}</span>
+          </div>
+          <select
+            value={activeCampaign}
+            onChange={e => setActiveCampaign(e.target.value)}
+            style={{
+              background: '#13161c',
+              border: '1px solid #2a2f3d',
+              color: '#8a92a8',
+              fontSize: 12,
+              padding: '4px 8px',
+              borderRadius: 4,
+              outline: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            <option value="">No Campaign</option>
+            {campaigns.map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+      </header>
+
+      <div className="main">
+        {/* LEFT: Inputs */}
+        <div className="left-panel">
+          <div className="forge-title">NPC Forge</div>
+          <div className="forge-subtitle">Describe a concept and forge a fully playable character in seconds.</div>
+
+          <div className="field-group" onKeyDown={handleKeyDown}>
+            <div className="field">
+              <label className="field-label" style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                <span>Concept</span>
+                <button
+                  onClick={() => { setConcept(RANDOM_CONCEPTS[Math.floor(Math.random() * RANDOM_CONCEPTS.length)]); setConceptError(''); }}
+                  title="Random concept"
+                  style={{background:'none',border:'none',color:'var(--text-dim)',cursor:'pointer',fontSize:14,padding:'0 2px',lineHeight:1,transition:'color 0.15s'}}
+                  onMouseEnter={e => e.currentTarget.style.color='var(--gold)'}
+                  onMouseLeave={e => e.currentTarget.style.color='var(--text-dim)'}
+                >🎲</button>
+              </label>
+              <input
+                type="text"
+                value={concept}
+                onChange={e => { setConcept(e.target.value); setConceptError(''); }}
+                placeholder="e.g. nervous blacksmith, smug noble guard captain"
+              />
+              {conceptError && <div className="field-error">{conceptError}</div>}
+            </div>
+
+            <div className="field">
+              <label className="field-label">
+                Name
+                <span className="optional-tag">optional</span>
+              </label>
+              <input
+                type="text"
+                value={nameVal}
+                onChange={e => setNameVal(e.target.value)}
+                placeholder="Leave blank to generate"
+              />
+            </div>
+
+            <div className="field">
+              <label className="field-label">
+                Faction / Affiliation
+                <span className="optional-tag">optional</span>
+              </label>
+              {activeCampaign && campaignFactions.length > 0 ? (
+                <div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                    {campaignFactions.map(f => (
+                      <button
+                        key={f}
+                        onClick={() => { setFaction(faction === f ? '' : f); setFactionMode('pill'); }}
+                        style={{
+                          padding: '4px 12px', borderRadius: 20,
+                          background: faction === f && factionMode === 'pill' ? 'rgba(201,168,76,0.15)' : 'transparent',
+                          border: `1px solid ${faction === f && factionMode === 'pill' ? '#c9a84c88' : 'var(--border)'}`,
+                          color: faction === f && factionMode === 'pill' ? 'var(--gold-bright)' : 'var(--text-muted)',
+                          fontSize: 12, fontFamily: 'var(--serif)', cursor: 'pointer', transition: 'all 0.15s',
+                        }}
+                      >{f}</button>
+                    ))}
+                    <button
+                      onClick={() => { setFactionMode('custom'); if (factionMode !== 'custom') setFaction(''); }}
+                      style={{
+                        padding: '4px 12px', borderRadius: 20,
+                        background: factionMode === 'custom' ? 'rgba(61,168,148,0.12)' : 'transparent',
+                        border: `1px solid ${factionMode === 'custom' ? 'rgba(61,168,148,0.4)' : 'var(--border)'}`,
+                        color: factionMode === 'custom' ? 'var(--teal)' : 'var(--text-muted)',
+                        fontSize: 12, fontFamily: 'var(--serif)', cursor: 'pointer', transition: 'all 0.15s',
+                      }}
+                    >Custom…</button>
+                  </div>
+                  {factionMode === 'custom' && (
+                    <input
+                      type="text"
+                      value={faction}
+                      onChange={e => setFaction(e.target.value)}
+                      placeholder="e.g. Thieves Guild, Town Guard"
+                      style={{ marginTop: 8 }}
+                    />
+                  )}
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  value={faction}
+                  onChange={e => setFaction(e.target.value)}
+                  placeholder="e.g. Thieves Guild, Town Guard, None"
+                />
+              )}
+            </div>
+          </div>
+
+          <div className="divider" />
+
+          <button
+            className={`btn-forge ${loading ? 'loading' : ''}`}
+            onClick={handleForge}
+            disabled={loading}
+          >
+            <span>{loading ? '⚒ Forging…' : '⚒ Forge NPC'}</span>
+          </button>
+
+          <div className="export-row">
+            <button className={`btn-export ${exportCopied ? 'copied' : ''}`} onClick={handleExportCopy}>
+              {exportCopied ? '✓ Copied!' : 'Copy Prompt'}
+            </button>
+            <button className="btn-export" onClick={handleExportDownload}>
+              Export .md
+            </button>
+          </div>
+
+          {error && <div className="field-error" style={{marginTop: 12, textAlign: 'center'}}>{error}</div>}
+
+          {savedNpcs.length > 0 && (
+            <div className="saved-list">
+              <div className="saved-label">Saved NPCs</div>
+              {savedNpcs.map((n, i) => (
+                <div
+                  key={n.name + i}
+                  className={`saved-item ${activeNpcIndex === i && npc && npc.name === n.name ? 'active' : ''}`}
+                  onClick={() => { setNpc(n); setSavedCurrent(true); }}
+                >
+                  <div className="saved-dot"></div>
+                  <div className="saved-name">{n.name}</div>
+                  <div style={{fontSize: 11, color: 'var(--text-dim)'}}>{n.role}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="lore-hint">
+            Press <strong>Ctrl + Enter</strong> in any field to forge.<br />
+            All NPCs are saved locally to your session.
+            <div style={{marginTop: 10, fontSize: 11, fontStyle: 'normal', letterSpacing: '0.02em'}}>
+              {tweaks.aiProvider === 'gemini'
+                ? 'Powered by Gemini 1.5 Flash · Free Tier · 15 req/min'
+                : 'Powered by Claude Haiku · ~$0.002 per NPC · ~500 NPCs per dollar'}
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT: Output */}
+        <div className="right-panel">
+          {loading ? (
+            <LoadingState />
+          ) : npc ? (
+            <NPCOutput
+              npc={npc}
+              onSave={handleSave}
+              onRegen={handleRegen}
+              isSaved={savedCurrent}
+              isRegening={loading}
+              showDialogue={tweaks.showDialogue}
+              compact={tweaks.compactMode}
+            />
+          ) : (
+            <div className="empty-state">
+              <div className="empty-icon">🗡️</div>
+              <div className="empty-title">The Forge Awaits</div>
+              <div className="empty-body">Describe a concept on the left and hit Forge NPC to breathe life into your next character.</div>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+
+<template id="__bundler_thumbnail">
+  <svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg">
+    <rect width="120" height="80" fill="#111318"/>
+    <rect x="8" y="8" width="40" height="64" rx="3" fill="#16191f" stroke="#2a2f3d" stroke-width="0.5"/>
+    <rect x="52" y="8" width="60" height="64" rx="3" fill="#1c2028" stroke="#2a2f3d" stroke-width="0.5"/>
+    <text x="60" y="30" font-family="serif" font-size="10" fill="#c9a84c" text-anchor="middle">⚔ NPC Forge</text>
+    <rect x="56" y="36" width="52" height="6" rx="1" fill="#c9a84c" opacity="0.7"/>
+    <rect x="56" y="46" width="36" height="3" rx="1" fill="#2a2f3d"/>
+    <rect x="56" y="52" width="52" height="10" rx="2" fill="#16191f" stroke="#2a2f3d" stroke-width="0.5"/>
+  </svg>
+</template>
+</body>
+</html>

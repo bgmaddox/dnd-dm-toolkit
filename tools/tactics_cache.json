@@ -1,0 +1,10 @@
+{
+  "goblin": {
+    "tactics": [
+      "Opens combat with shortbow attacks from 60+ feet away, maximizing range advantage while staying out of melee",
+      "Uses Nimble Escape to disengage as a bonus action after each attack, maintaining distance and avoiding opportunity attacks\u2014core to goblin hit-and-run strategy",
+      "Falls back behind cover, terrain, or allies when forced into melee, relying on AC 15 to weather hits while repositioning for ranged attacks"
+    ],
+    "flee_threshold": "Flees at ~50% HP (4 HP) or immediately if cornered with no escape route \u2014 goblins are cowardly opportunists who fight only when they have numerical advantage or a safe retreat path; a wounded goblin alone prioritizes survival over combat honor."
+  }
+}
