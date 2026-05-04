@@ -208,12 +208,14 @@ function hpPct(hp, maxHp) {
 
 // ─── LEFT PANEL ─────────────────────────────────────────────────────────────
 
-function CombatantRow({ combatant, isActive, onClick, onHpChange, onDelete, portrait }) {
+function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeChange, onDelete, portrait }) {
   const { name, type, hp, maxHp, conditions } = combatant;
   const pct = hpPct(hp, maxHp);
   const color = hpColor(hp, maxHp);
   const [editingHp, setEditingHp] = useState(false);
   const [hpInput, setHpInput] = useState("");
+  const [editingInit, setEditingInit] = useState(false);
+  const [initInput, setInitInput] = useState("");
   const [hovered, setHovered] = useState(false);
 
   function startHpEdit(e) {
@@ -226,6 +228,18 @@ function CombatantRow({ combatant, isActive, onClick, onHpChange, onDelete, port
     const val = parseInt(hpInput);
     if (!isNaN(val)) onHpChange(combatant.id, val);
     setEditingHp(false);
+  }
+
+  function startInitEdit(e) {
+    e.stopPropagation();
+    setInitInput(String(combatant.initiative ?? ""));
+    setEditingInit(true);
+  }
+
+  function commitInitEdit() {
+    const val = parseInt(initInput);
+    if (!isNaN(val)) onInitiativeChange(combatant.id, val);
+    setEditingInit(false);
   }
 
   return (
@@ -287,7 +301,7 @@ function CombatantRow({ combatant, isActive, onClick, onHpChange, onDelete, port
         </span>
       </div>
 
-      {/* HP bar */}
+      {/* HP bar + initiative */}
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: conditions.length ? 5 : 0 }}>
         <div style={{ flex: 1, height: 5, background: "var(--border)", borderRadius: 3, overflow: "hidden" }}>
           <div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: 3, transition: "width 0.3s ease" }} />
@@ -309,6 +323,28 @@ function CombatantRow({ combatant, isActive, onClick, onHpChange, onDelete, port
             style={{ fontSize: 13, color: hp === 0 ? "#666" : "var(--text-dim)", whiteSpace: "nowrap", minWidth: 40, textAlign: "right", cursor: "text" }}
           >
             {hp}/{maxHp}
+          </span>
+        )}
+        {/* Initiative */}
+        <div style={{ width: 1, background: "var(--border)", alignSelf: "stretch", flexShrink: 0 }} />
+        {editingInit ? (
+          <input
+            autoFocus
+            value={initInput}
+            onChange={e => setInitInput(e.target.value)}
+            onBlur={commitInitEdit}
+            onKeyDown={e => { if (e.key === "Enter") commitInitEdit(); if (e.key === "Escape") setEditingInit(false); }}
+            onClick={e => e.stopPropagation()}
+            type="number"
+            style={{ width: 38, fontSize: 13, background: "#0d1017", border: "1px solid var(--gold-dim)", borderRadius: 3, color: "var(--gold)", padding: "1px 4px", textAlign: "center", outline: "none" }}
+          />
+        ) : (
+          <span
+            onClick={startInitEdit}
+            title="Click to edit initiative"
+            style={{ fontSize: 13, color: "var(--gold-dim)", whiteSpace: "nowrap", minWidth: 20, textAlign: "center", cursor: "text", fontFamily: "var(--font-head)" }}
+          >
+            {combatant.initiative ?? "—"}
           </span>
         )}
       </div>
@@ -378,6 +414,17 @@ function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks,
 
   function hpChange(id, newHp) {
     setCombatants(prev => prev.map(c => c.id === id ? { ...c, hp: Math.max(0, Math.min(c.maxHp, newHp)) } : c));
+  }
+
+  function initiativeChange(id, newInit) {
+    setCombatants(prev => {
+      const activeId = prev[activeIdx]?.id;
+      const updated = prev.map(c => c.id === id ? { ...c, initiative: newInit } : c);
+      const sorted = [...updated].sort((a, b) => b.initiative - a.initiative);
+      const newActiveIdx = sorted.findIndex(c => c.id === activeId);
+      if (newActiveIdx !== -1) setActiveIdx(newActiveIdx);
+      return sorted;
+    });
   }
 
   function deleteCombatant(id) {
@@ -466,6 +513,7 @@ function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks,
               isActive={i === activeIdx}
               onClick={() => setActiveIdx(i)}
               onHpChange={hpChange}
+              onInitiativeChange={initiativeChange}
               onDelete={deleteCombatant}
               portrait={portraits && portraits[c.id]}
             />
