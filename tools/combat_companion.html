@@ -401,7 +401,7 @@ function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeCh
   );
 }
 
-function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks, onOpenAdd, portraits, encName, setEncName, encNote, setEncNote, roundNumber, setRoundNumber, onOpenSessions }) {
+function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks, onOpenAdd, onOpenInitiatives, portraits, encName, setEncName, encNote, setEncNote, roundNumber, setRoundNumber, onOpenSessions }) {
   const [editingEnc, setEditingEnc] = useState(null); // "name" | "note" | null
 
   function nextTurn() {
@@ -547,7 +547,7 @@ function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks,
       </div>
 
       {/* Add / Remove combatant */}
-      <div style={{ padding: "0 10px 14px", display: "flex", gap: 6 }}>
+      <div style={{ padding: "0 10px 6px", display: "flex", gap: 6 }}>
         <button
           onClick={() => onOpenAdd()}
           style={{
@@ -576,6 +576,25 @@ function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks,
           onMouseLeave={e => e.currentTarget.style.color = "var(--text-faint)"}
         >
           − REMOVE
+        </button>
+      </div>
+
+      {/* Set Initiatives */}
+      <div style={{ padding: "0 10px 14px" }}>
+        <button
+          onClick={onOpenInitiatives}
+          style={{
+            width: "100%", background: "none",
+            border: "1px solid var(--border)", borderRadius: 5,
+            color: "var(--text-faint)", fontSize: 11,
+            fontFamily: "var(--font-head)", letterSpacing: "0.08em",
+            cursor: "pointer", textAlign: "center",
+            padding: "5px 0", transition: "all 0.15s",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.color = "var(--gold)"; e.currentTarget.style.borderColor = "var(--gold-dim)"; }}
+          onMouseLeave={e => { e.currentTarget.style.color = "var(--text-faint)"; e.currentTarget.style.borderColor = "var(--border)"; }}
+        >
+          ⚡ SET INITIATIVES
         </button>
       </div>
     </div>
@@ -1647,7 +1666,7 @@ const smallBtnStyle = {
 
 // ─── ADD COMBATANT MODAL ─────────────────────────────────────────────────────
 
-function AddCombatantModal({ onClose, onAdd, prefill, allMonsters }) {
+function AddCombatantModal({ onClose, onAdd, onAddMultiple, prefill, allMonsters }) {
   const initialTab = prefill ? "monster" : "custom";
   const [tab, setTab] = useState(initialTab);
   const [players, setPlayers] = useState([]);
@@ -1786,6 +1805,25 @@ function AddCombatantModal({ onClose, onAdd, prefill, allMonsters }) {
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <button onClick={() => {
+                  const all = players.map((p, i) => ({
+                    id: Date.now() + i,
+                    name: p.name, type: "PC",
+                    hp: p.hp || 10, maxHp: p.hp || 10,
+                    conditions: [], initiative: 0, pcData: p,
+                  }));
+                  onAddMultiple(all);
+                  onClose();
+                }} style={{
+                  width: "100%", padding: "9px 0",
+                  background: "rgba(74,120,196,0.15)",
+                  border: "1px solid rgba(74,120,196,0.4)",
+                  borderRadius: 6, color: "#6a9de8",
+                  fontFamily: "var(--font-head)", fontSize: 11, fontWeight: 700,
+                  letterSpacing: "0.1em", cursor: "pointer",
+                }}>
+                  + ADD ALL PLAYERS TO COMBAT
+                </button>
                 {players.map((p, i) => (
                   <button key={i} onClick={() => selectPlayer(p)} style={{
                     background: "var(--bg)", border: "1px solid var(--border)",
@@ -2102,6 +2140,117 @@ function SessionsModal({ onClose, encName, onSave, onLoad }) {
   );
 }
 
+// ─── INITIATIVES MODAL ───────────────────────────────────────────────────────
+
+function InitiativesModal({ combatants, onClose, onApply }) {
+  const [values, setValues] = useState(() =>
+    Object.fromEntries(combatants.map(c => [c.id, c.initiative != null ? String(c.initiative) : ""]))
+  );
+  const inputRefs = useRef({});
+
+  useEffect(() => {
+    const h = e => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, []);
+
+  function handleKeyDown(e, idx) {
+    if (e.key === "Enter" || (e.key === "Tab" && !e.shiftKey)) {
+      e.preventDefault();
+      const next = combatants[idx + 1];
+      if (next) inputRefs.current[next.id]?.focus();
+      else apply();
+    }
+  }
+
+  function apply() {
+    const map = {};
+    for (const [id, val] of Object.entries(values)) {
+      const n = parseInt(val);
+      if (!isNaN(n)) map[id] = n;
+    }
+    onApply(map);
+  }
+
+  return (
+    <div onClick={e => e.target === e.currentTarget && onClose()} style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)",
+      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+    }}>
+      <div style={{
+        background: "var(--card)", border: "1px solid var(--border)",
+        borderRadius: 8, width: 360, maxWidth: "90vw",
+        boxShadow: "0 8px 40px rgba(0,0,0,0.6)", overflow: "hidden",
+      }}>
+        {/* Header */}
+        <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontFamily: "var(--font-head)", fontSize: 12, color: "var(--gold)", letterSpacing: "0.1em" }}>⚡ SET INITIATIVES</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-faint)", cursor: "pointer", fontSize: 16, padding: "0 2px" }}>✕</button>
+        </div>
+
+        {/* Combatant rows */}
+        <div style={{ padding: "8px 16px", maxHeight: 380, overflowY: "auto" }}>
+          {combatants.length === 0 ? (
+            <div style={{ color: "var(--text-faint)", fontSize: 13, fontStyle: "italic", textAlign: "center", padding: "24px 0" }}>
+              No combatants in encounter.
+            </div>
+          ) : combatants.map((c, idx) => (
+            <div key={c.id} style={{
+              display: "flex", alignItems: "center", gap: 10,
+              padding: "8px 0",
+              borderBottom: idx < combatants.length - 1 ? "1px solid var(--border)" : "none",
+            }}>
+              <span style={{
+                fontSize: 9, padding: "1px 6px", borderRadius: 20, flexShrink: 0,
+                background: c.type === "PC" ? "rgba(74,120,196,0.25)" : "rgba(196,74,74,0.25)",
+                border: `1px solid ${c.type === "PC" ? "var(--blue)" : "var(--red)"}`,
+                color: c.type === "PC" ? "#6a9de8" : "#e06868",
+                fontFamily: "var(--font-head)", letterSpacing: "0.04em",
+              }}>{c.type === "PC" ? "PC" : "MON"}</span>
+              <span style={{ flex: 1, fontFamily: "var(--font-head)", fontSize: 13, color: "var(--text)", letterSpacing: "0.02em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {c.name}
+              </span>
+              <input
+                ref={el => inputRefs.current[c.id] = el}
+                autoFocus={idx === 0}
+                type="number"
+                value={values[c.id]}
+                onChange={e => setValues(prev => ({ ...prev, [c.id]: e.target.value }))}
+                onKeyDown={e => handleKeyDown(e, idx)}
+                placeholder="—"
+                style={{
+                  width: 60, fontSize: 16, fontFamily: "var(--font-head)",
+                  background: "#0d1017", border: "1px solid var(--border)",
+                  borderRadius: 4, color: "var(--gold)", padding: "4px 8px",
+                  textAlign: "center", outline: "none",
+                }}
+                onFocus={e => e.target.style.borderColor = "var(--gold-dim)"}
+                onBlur={e => e.target.style.borderColor = "var(--border)"}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: "12px 16px", borderTop: "1px solid var(--border)" }}>
+          <div style={{ fontSize: 11, color: "var(--text-faint)", marginBottom: 10, fontStyle: "italic" }}>
+            Tab or Enter to move between rows · Enter on last to apply
+          </div>
+          <button onClick={apply} style={{
+            width: "100%", padding: "11px 0",
+            background: "linear-gradient(135deg, #c9a84c 0%, #a8873a 100%)",
+            border: "none", borderRadius: 6, color: "#111318",
+            fontFamily: "var(--font-head)", fontSize: 12, fontWeight: 700,
+            letterSpacing: "0.12em", cursor: "pointer",
+          }}>
+            APPLY & SORT
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── ROOT APP ────────────────────────────────────────────────────────────────
 
 function App() {
@@ -2116,6 +2265,7 @@ function App() {
   const [encNote, setEncNote] = useState("Add a note about conditions, terrain...");
   const [roundNumber, setRoundNumber] = useState(1);
   const [showSessionModal, setShowSessionModal] = useState(false);
+  const [showInitModal, setShowInitModal] = useState(false);
 
   useEffect(() => {
     fetch("/tools/monsters.json")
@@ -2142,6 +2292,23 @@ function App() {
   function handleAddCombatant(c) {
     setCombatants(prev => [...prev, c]);
     generatePortrait(c);
+  }
+
+  function handleAddMultiple(newCombatants) {
+    setCombatants(prev => [...prev, ...newCombatants]);
+    newCombatants.forEach(c => generatePortrait(c));
+  }
+
+  function handleApplyInitiatives(map) {
+    setCombatants(prev => {
+      const activeId = prev[activeIdx]?.id;
+      const updated = prev.map(c => map[c.id] !== undefined ? { ...c, initiative: map[c.id] } : c);
+      const sorted = [...updated].sort((a, b) => b.initiative - a.initiative);
+      const newActiveIdx = sorted.findIndex(c => c.id === activeId);
+      if (newActiveIdx !== -1) setActiveIdx(newActiveIdx);
+      return sorted;
+    });
+    setShowInitModal(false);
   }
 
   async function handleSaveSession(name) {
@@ -2194,6 +2361,7 @@ function App() {
           setActiveIdx={setActiveIdx}
           tweaks={tweaks}
           onOpenAdd={handleOpenAdd}
+          onOpenInitiatives={() => setShowInitModal(true)}
           portraits={portraits}
           encName={encName} setEncName={setEncName}
           encNote={encNote} setEncNote={setEncNote}
@@ -2221,8 +2389,17 @@ function App() {
         <AddCombatantModal
           onClose={() => { setShowAddModal(false); setAddModalPrefill(null); }}
           onAdd={handleAddCombatant}
+          onAddMultiple={handleAddMultiple}
           prefill={addModalPrefill}
           allMonsters={allMonsters}
+        />
+      )}
+
+      {showInitModal && (
+        <InitiativesModal
+          combatants={combatants}
+          onClose={() => setShowInitModal(false)}
+          onApply={handleApplyInitiatives}
         />
       )}
 
