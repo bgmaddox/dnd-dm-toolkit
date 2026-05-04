@@ -946,31 +946,37 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
                 fontFamily: "var(--font-head)",
                 fontSize: 28, fontWeight: 700,
                 color: "var(--gold)",
-                letterSpacing: "0.02em", lineHeight: 1.2, marginBottom: 4,
+                letterSpacing: "0.02em", lineHeight: 1.2, marginBottom: 2,
               }}>
-                {sb.name}
+                {activeCombatant?.type === "Monster" ? activeCombatant.name : sb.name}
               </h2>
-              <div style={{ color: "var(--text-dim)", fontSize: 18, fontStyle: "italic", marginBottom: 8 }}>
+              {activeCombatant?.type === "Monster" && activeCombatant.name.toLowerCase() !== sb.name.toLowerCase() && (
+                <div style={{ fontSize: 13, color: "var(--text-faint)", fontFamily: "var(--font-head)", letterSpacing: "0.06em", marginBottom: 2 }}>
+                  {sb.name}
+                </div>
+              )}
+              <div style={{ color: "var(--text-dim)", fontSize: 18, fontStyle: "italic", marginBottom: activeCombatant?.type === "Monster" ? 0 : 8 }}>
                 {sb.size} {sb.type}, {sb.alignment}
               </div>
-              <button
-                onClick={() => onOpenAdd(currentMonster)}
-                style={{
-                  padding: "6px 16px",
-                  background: "rgba(201,168,76,0.1)", border: "1px solid rgba(201,168,76,0.3)",
-                  borderRadius: 5, color: "var(--gold)", fontFamily: "var(--font-head)",
-                  fontSize: 14, letterSpacing: "0.08em", cursor: "pointer",
-                  transition: "background 0.15s",
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = "rgba(201,168,76,0.2)"}
-                onMouseLeave={e => e.currentTarget.style.background = "rgba(201,168,76,0.1)"}
-              >
-                + ADD TO COMBAT
-              </button>
+              {activeCombatant?.type !== "Monster" && (
+                <button
+                  onClick={() => onOpenAdd(currentMonster)}
+                  style={{
+                    marginTop: 8, padding: "6px 16px",
+                    background: "rgba(201,168,76,0.1)", border: "1px solid rgba(201,168,76,0.3)",
+                    borderRadius: 5, color: "var(--gold)", fontFamily: "var(--font-head)",
+                    fontSize: 14, letterSpacing: "0.08em", cursor: "pointer",
+                    transition: "background 0.15s",
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = "rgba(201,168,76,0.2)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "rgba(201,168,76,0.1)"}
+                >
+                  + ADD TO COMBAT
+                </button>
+              )}
             </div>
             <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
               {[
-                { label: sb.size + " Humanoid", color: "#4a78c4" },
                 { label: "CR " + sb.cr, color: "var(--gold)" },
                 { label: sb.xp + " XP", color: "var(--text-dim)" },
               ].map(t => (
