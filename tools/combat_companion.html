@@ -665,11 +665,18 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
 
   const activeCombatant = combatants[activeIdx] || null;
 
-  // Sync center panel when active combatant changes in left panel
+  // Sync center panel when the active combatant selection changes
+  const prevActiveIdxRef = useRef(activeIdx);
   useEffect(() => {
     if (!combatants.length || activeIdx >= combatants.length) return;
+    const idxChanged = prevActiveIdxRef.current !== activeIdx;
+    prevActiveIdxRef.current = activeIdx;
+
     const active = combatants[activeIdx];
-    if (active.type === "PC") { setActiveTab("statblock"); return; }
+    if (active.type === "PC") {
+      if (idxChanged) setActiveTab("statblock");
+      return;
+    }
     if (!allMonsters.length) return;
     const nameLower = active.name.toLowerCase();
     const origLower = active._monsterName ? active._monsterName.toLowerCase() : null;
