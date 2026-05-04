@@ -1213,7 +1213,7 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
             {/* Conditions */}
             <div>
               <div style={{ fontFamily: "var(--font-head)", fontSize: 14, color: "var(--gold)", letterSpacing: "0.08em", marginBottom: 8 }}>CONDITIONS</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 10 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 10, justifyContent: "center" }}>
                 {Object.keys(CONDITION_COLORS).sort().map(cond => {
                   const active = (activeCombatant.conditions || []).includes(cond);
                   const col = CONDITION_COLORS[cond];
