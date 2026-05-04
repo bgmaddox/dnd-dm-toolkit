@@ -605,9 +605,9 @@ function normalizeMonster(m) {
 function StatValue({ label, val }) {
   return (
     <div style={{ textAlign: "center" }}>
-      <div style={{ fontSize: 10, color: "var(--text-faint)", fontFamily: "var(--font-head)", letterSpacing: "0.08em", marginBottom: 2 }}>{label}</div>
-      <div style={{ fontSize: 20, fontWeight: 600, color: "var(--text)" }}>{val[0]}</div>
-      <div style={{ fontSize: 15, color: "var(--gold)" }}>{val[1]}</div>
+      <div style={{ fontSize: 12, color: "var(--text-faint)", fontFamily: "var(--font-head)", letterSpacing: "0.08em", marginBottom: 2 }}>{label}</div>
+      <div style={{ fontSize: 24, fontWeight: 600, color: "var(--text)" }}>{val[0]}</div>
+      <div style={{ fontSize: 17, color: "var(--gold)" }}>{val[1]}</div>
     </div>
   );
 }
@@ -628,7 +628,7 @@ function StatSection({ title, children }) {
   return (
     <div style={{ marginBottom: 10 }}>
       <div style={{
-        fontFamily: "var(--font-head)", fontSize: 13,
+        fontFamily: "var(--font-head)", fontSize: 15,
         color: "var(--gold)", letterSpacing: "0.1em",
         borderBottom: "1px solid var(--border)", paddingBottom: 3, marginBottom: 6,
       }}>
@@ -641,11 +641,11 @@ function StatSection({ title, children }) {
 
 function ActionEntry({ action }) {
   return (
-    <div style={{ marginBottom: 7 }}>
-      <span style={{ fontWeight: 600, color: "var(--text)", fontSize: 17, fontStyle: "italic" }}>
+    <div style={{ marginBottom: 9 }}>
+      <span style={{ fontWeight: 600, color: "var(--text)", fontSize: 19, fontStyle: "italic" }}>
         {action.name}.{" "}
       </span>
-      <span style={{ color: "var(--text-dim)", fontSize: 17 }}>
+      <span style={{ color: "var(--text-dim)", fontSize: 19 }}>
         {action.desc}
       </span>
     </div>
@@ -828,7 +828,7 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
       </div>
 
       {/* Scroll area */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 0" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 24px" }}>
 
         {/* Header — PC or Monster */}
         {activeCombatant && activeCombatant.type === "PC" ? (
@@ -960,8 +960,8 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
                   }}>
                     {[["Class", pd.charClass], ["Race", pd.race], ["Level", pd.level]].filter(([,v]) => v != null).map(([k, v]) => (
                       <div key={k} style={{ display: "flex", gap: 5, alignItems: "baseline" }}>
-                        <span style={{ fontFamily: "var(--font-head)", fontSize: 14, color: "var(--blue)", letterSpacing: "0.08em" }}>{k}</span>
-                        <span style={{ fontSize: 19, color: "var(--text)" }}>{v}</span>
+                        <span style={{ fontFamily: "var(--font-head)", fontSize: 15, color: "var(--blue)", letterSpacing: "0.08em" }}>{k}</span>
+                        <span style={{ fontSize: 21, color: "var(--text)" }}>{v}</span>
                       </div>
                     ))}
                   </div>
@@ -972,9 +972,9 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
                   {/* Proficiencies */}
                   <div style={{
                     background: "var(--card)", border: "1px solid var(--border)",
-                    borderRadius: 6, padding: "10px 12px", marginBottom: 14, fontSize: 18,
+                    borderRadius: 6, padding: "10px 12px", marginBottom: 14, fontSize: 19,
                   }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 12px" }}>
                       {[
                         pd.savingThrows && ["Saving Throws", pd.savingThrows],
                         pd.skills       && ["Skills", pd.skills],
@@ -983,7 +983,7 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
                         pd.profBonus    && ["Proficiency Bonus", pd.profBonus],
                       ].filter(Boolean).map(([k, v]) => (
                         <React.Fragment key={k}>
-                          <span style={{ color: "var(--blue)", fontFamily: "var(--font-head)", fontSize: 15, letterSpacing: "0.06em", alignSelf: "start", paddingTop: 2 }}>{k}</span>
+                          <span style={{ color: "var(--blue)", fontFamily: "var(--font-head)", fontSize: 16, letterSpacing: "0.06em", alignSelf: "start", paddingTop: 2 }}>{k}</span>
                           <span style={{ color: "var(--text-dim)" }}>{v}</span>
                         </React.Fragment>
                       ))}
@@ -1013,8 +1013,8 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
             }}>
               {[["AC", sb.ac], ["HP", sb.hp], ["Speed", sb.speed]].map(([k, v]) => (
                 <div key={k} style={{ display: "flex", gap: 5, alignItems: "baseline" }}>
-                  <span style={{ fontFamily: "var(--font-head)", fontSize: 14, color: "var(--gold)", letterSpacing: "0.08em" }}>{k}</span>
-                  <span style={{ fontSize: 19, color: "var(--text)" }}>{v}</span>
+                  <span style={{ fontFamily: "var(--font-head)", fontSize: 15, color: "var(--gold)", letterSpacing: "0.08em" }}>{k}</span>
+                  <span style={{ fontSize: 21, color: "var(--text)" }}>{v}</span>
                 </div>
               ))}
             </div>
@@ -1027,9 +1027,9 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
             {/* Proficiencies block */}
             <div style={{
               background: "var(--card)", border: "1px solid var(--border)",
-              borderRadius: 6, padding: "10px 12px", marginBottom: 14, fontSize: 18,
+              borderRadius: 6, padding: "10px 12px", marginBottom: 14, fontSize: 19,
             }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 12px" }}>
                 {[
                   ["Saving Throws", sb.savingThrows],
                   ["Skills", sb.skills],
@@ -1037,7 +1037,7 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
                   ["Languages", sb.languages],
                 ].map(([k, v]) => (
                   <React.Fragment key={k}>
-                    <span style={{ color: "var(--gold)", fontFamily: "var(--font-head)", fontSize: 15, letterSpacing: "0.06em", alignSelf: "start", paddingTop: 2 }}>{k}</span>
+                    <span style={{ color: "var(--gold)", fontFamily: "var(--font-head)", fontSize: 16, letterSpacing: "0.06em", alignSelf: "start", paddingTop: 2 }}>{k}</span>
                     <span style={{ color: "var(--text-dim)" }}>{v}</span>
                   </React.Fragment>
                 ))}
