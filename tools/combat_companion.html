@@ -68,13 +68,52 @@ const INITIAL_COMBATANTS = [
   { id: 6, name: "Bramble",            type: "PC",      hp: 22, maxHp: 22, conditions: ["Poisoned"],       initiative: 6  },
 ];
 
+const PORTRAIT_STYLE = "classic D&D 5e tabletop illustration style, head and shoulders portrait, painterly, dramatic atmospheric lighting, dark fantasy background, highly detailed character art, no text";
+
+function buildPortraitPrompt(combatant) {
+  const name = combatant._monsterName || combatant.name;
+  if (combatant.type === "Monster") {
+    return `D&D 5e fantasy creature portrait, ${name}, ${PORTRAIT_STYLE}`;
+  }
+  return `D&D 5e heroic adventurer portrait, ${name}, ${PORTRAIT_STYLE}`;
+}
+
 const CONDITION_COLORS = {
-  "Concentrating": { bg: "rgba(61,168,148,0.25)", border: "#3da894", text: "#3da894" },
-  "Unconscious":   { bg: "rgba(140,140,140,0.2)", border: "#666",    text: "#999"    },
-  "Frightened":    { bg: "rgba(180,80,80,0.25)",  border: "#c44a4a", text: "#e06868" },
-  "Poisoned":      { bg: "rgba(109,181,94,0.25)", border: "#6db55e", text: "#6db55e" },
-  "Stunned":       { bg: "rgba(150,100,200,0.25)",border: "#9b6ac8", text: "#b48de0" },
-  "Prone":         { bg: "rgba(180,120,40,0.25)", border: "#c9843c", text: "#e0a060" },
+  "Blinded":        { bg: "rgba(120,120,120,0.25)",  border: "#888",    text: "#bbb"    },
+  "Charmed":        { bg: "rgba(220,100,180,0.25)",  border: "#d464b4", text: "#e080c8" },
+  "Concentrating":  { bg: "rgba(61,168,148,0.25)",   border: "#3da894", text: "#3da894" },
+  "Deafened":       { bg: "rgba(100,100,160,0.25)",  border: "#6666a0", text: "#9090c8" },
+  "Exhaustion":     { bg: "rgba(180,100,40,0.25)",   border: "#b46428", text: "#cc8040" },
+  "Frightened":     { bg: "rgba(180,80,80,0.25)",    border: "#c44a4a", text: "#e06868" },
+  "Grappled":       { bg: "rgba(100,160,80,0.25)",   border: "#64a050", text: "#80c060" },
+  "Incapacitated":  { bg: "rgba(200,60,60,0.25)",    border: "#c43c3c", text: "#e06060" },
+  "Invisible":      { bg: "rgba(100,180,200,0.2)",   border: "#64b4c8", text: "#80d0e0" },
+  "Paralyzed":      { bg: "rgba(140,60,200,0.25)",   border: "#8c3cc8", text: "#a060e0" },
+  "Petrified":      { bg: "rgba(120,100,80,0.25)",   border: "#786450", text: "#a08060" },
+  "Poisoned":       { bg: "rgba(109,181,94,0.25)",   border: "#6db55e", text: "#6db55e" },
+  "Prone":          { bg: "rgba(180,120,40,0.25)",   border: "#c9843c", text: "#e0a060" },
+  "Restrained":     { bg: "rgba(160,120,40,0.25)",   border: "#a07828", text: "#c09040" },
+  "Stunned":        { bg: "rgba(150,100,200,0.25)",  border: "#9b6ac8", text: "#b48de0" },
+  "Unconscious":    { bg: "rgba(140,140,140,0.2)",   border: "#666",    text: "#999"    },
+};
+
+const CONDITION_EFFECTS = {
+  "Blinded":       "Can't see. Auto-fail sight-based checks. Attack rolls have disadvantage; attacks against have advantage.",
+  "Charmed":       "Can't attack the charmer. Charmer has advantage on social ability checks against you.",
+  "Concentrating": "Maintaining a concentration spell. Must make DC 10 Con save (or half damage taken) each time you take damage.",
+  "Deafened":      "Can't hear. Auto-fail sound-based ability checks.",
+  "Exhaustion":    "Lvl 1: Disadvantage on checks. Lvl 2: Speed halved. Lvl 3: Disadvantage on attacks/saves. Lvl 4: Max HP halved. Lvl 5: Speed 0. Lvl 6: Death.",
+  "Frightened":    "Disadvantage on ability checks and attack rolls while source is in sight. Can't willingly move closer to source.",
+  "Grappled":      "Speed becomes 0. Ends if grappler is incapacitated or you're moved out of their reach.",
+  "Incapacitated": "Can't take actions or reactions.",
+  "Invisible":     "Can't be seen without magic. Attack rolls have advantage; attacks against you have disadvantage.",
+  "Paralyzed":     "Incapacitated. Can't move or speak. Auto-fail Str/Dex saves. Attacks have advantage. Hits within 5 ft. are critical.",
+  "Petrified":     "Transformed to stone. Incapacitated, no movement. Resistance to all damage. Auto-fail Str/Dex saves. Immune to poison/disease.",
+  "Poisoned":      "Disadvantage on attack rolls and ability checks.",
+  "Prone":         "Must crawl (costs double movement to stand). Melee attacks vs. you: advantage. Ranged attacks vs. you: disadvantage.",
+  "Restrained":    "Speed 0. Attack rolls have disadvantage. Attacks against you have advantage. Dex saves have disadvantage.",
+  "Stunned":       "Incapacitated, can't move. Can only speak falteringly. Auto-fail Str/Dex saves. Attacks against you have advantage.",
+  "Unconscious":   "Incapacitated, drop held items, fall prone. Auto-fail Str/Dex saves. Attacks have advantage. Hits within 5 ft. are critical.",
 };
 
 const HOBGOBLIN_STAT_BLOCK = {
@@ -121,7 +160,7 @@ const AI_PROMPTS = {
     ],
     buildPrompt: (vals, combatants, activeIdx) => {
       const active = combatants[activeIdx];
-      return `You are narrating a D&D 5e combat encounter. The ${active.name} just hit Thorin Ironfist for ${vals.damage || "14"} damage. Thorin is ${vals.hpState || "Bloodied (25-50%)"}. Write a single cinematic paragraph (3-4 sentences) describing the hit — visceral, dramatic, in present tense. No dialogue. Focus on body language, momentum, and the physical impact.`;
+      return `Narrate this D&D hit in 1-2 punchy sentences. ${active.name} hits for ${vals.damage || "14"} damage. Target is ${vals.hpState || "Bloodied (25-50%)"}. Present tense, visceral, no dialogue.`;
     },
     defaultResponse: `The Hobgoblin Captain's longsword bites deep into Thorin's shoulder, grinding against armor. He barely staggers — jaw set, eyes cold. The Captain pulls the blade free with a sharp twist and steps back into a fighting stance, clearly reading the dwarf as the bigger threat.`
   },
@@ -168,7 +207,7 @@ function hpPct(hp, maxHp) {
 
 // ─── LEFT PANEL ─────────────────────────────────────────────────────────────
 
-function CombatantRow({ combatant, isActive, onClick, onHpChange, onDelete }) {
+function CombatantRow({ combatant, isActive, onClick, onHpChange, onDelete, portrait }) {
   const { name, type, hp, maxHp, conditions } = combatant;
   const pct = hpPct(hp, maxHp);
   const color = hpColor(hp, maxHp);
@@ -207,6 +246,19 @@ function CombatantRow({ combatant, isActive, onClick, onHpChange, onDelete }) {
     >
       {/* Name + badges row */}
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5, flexWrap: "wrap" }}>
+        {/* Avatar */}
+        <div style={{
+          width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
+          border: `1px solid ${isActive ? "var(--gold-dim)" : "var(--border)"}`,
+          background: "var(--bg)", overflow: "hidden",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          {portrait ? (
+            <img src={portrait} style={{ width: "100%", height: "100%", objectFit: "cover", animation: "portraitFadeIn 0.4s ease" }} />
+          ) : (
+            <span style={{ fontSize: 14, opacity: 0.4 }}>{type === "PC" ? "⚔" : "☠"}</span>
+          )}
+        </div>
         <span style={{
           fontFamily: "var(--font-head)",
           fontSize: type === "Monster" ? 13 : 14,
@@ -312,11 +364,8 @@ function CombatantRow({ combatant, isActive, onClick, onHpChange, onDelete }) {
   );
 }
 
-function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks, onOpenAdd }) {
-  const [encName, setEncName] = useState("New Encounter");
-  const [encNote, setEncNote] = useState("Add a note about conditions, terrain...");
+function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks, onOpenAdd, portraits, encName, setEncName, encNote, setEncNote, roundNumber, setRoundNumber, onOpenSessions }) {
   const [editingEnc, setEditingEnc] = useState(null); // "name" | "note" | null
-  const [roundNumber, setRoundNumber] = useState(1);
 
   function nextTurn() {
     setActiveIdx(prev => {
@@ -349,8 +398,17 @@ function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks,
     }}>
       {/* Header */}
       <div style={{ padding: "14px 14px 10px", borderBottom: "1px solid var(--border)" }}>
-        <div style={{ fontFamily: "var(--font-head)", fontSize: 11, color: "var(--gold)", letterSpacing: "0.1em", marginBottom: 4 }}>
-          ACTIVE ENCOUNTER
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+          <div style={{ fontFamily: "var(--font-head)", fontSize: 11, color: "var(--gold)", letterSpacing: "0.1em" }}>
+            ACTIVE ENCOUNTER
+          </div>
+          <button
+            onClick={onOpenSessions}
+            title="Save / Load session"
+            style={{ background: "none", border: "none", cursor: "pointer", padding: "1px 3px", fontSize: 14, opacity: 0.55, transition: "opacity 0.15s" }}
+            onMouseEnter={e => e.currentTarget.style.opacity = "1"}
+            onMouseLeave={e => e.currentTarget.style.opacity = "0.55"}
+          >💾</button>
         </div>
         {editingEnc === "name" ? (
           <input
@@ -408,6 +466,7 @@ function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks,
               onClick={() => setActiveIdx(i)}
               onHpChange={hpChange}
               onDelete={deleteCombatant}
+              portrait={portraits && portraits[c.id]}
             />
           ))}
         </div>
@@ -547,8 +606,8 @@ function StatValue({ label, val }) {
   return (
     <div style={{ textAlign: "center" }}>
       <div style={{ fontSize: 10, color: "var(--text-faint)", fontFamily: "var(--font-head)", letterSpacing: "0.08em", marginBottom: 2 }}>{label}</div>
-      <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text)" }}>{val[0]}</div>
-      <div style={{ fontSize: 12, color: "var(--gold)" }}>{val[1]}</div>
+      <div style={{ fontSize: 20, fontWeight: 600, color: "var(--text)" }}>{val[0]}</div>
+      <div style={{ fontSize: 15, color: "var(--gold)" }}>{val[1]}</div>
     </div>
   );
 }
@@ -569,7 +628,7 @@ function StatSection({ title, children }) {
   return (
     <div style={{ marginBottom: 10 }}>
       <div style={{
-        fontFamily: "var(--font-head)", fontSize: 12,
+        fontFamily: "var(--font-head)", fontSize: 13,
         color: "var(--gold)", letterSpacing: "0.1em",
         borderBottom: "1px solid var(--border)", paddingBottom: 3, marginBottom: 6,
       }}>
@@ -583,22 +642,24 @@ function StatSection({ title, children }) {
 function ActionEntry({ action }) {
   return (
     <div style={{ marginBottom: 7 }}>
-      <span style={{ fontWeight: 600, color: "var(--text)", fontSize: 14, fontStyle: "italic" }}>
+      <span style={{ fontWeight: 600, color: "var(--text)", fontSize: 17, fontStyle: "italic" }}>
         {action.name}.{" "}
       </span>
-      <span style={{ color: "var(--text-dim)", fontSize: 14 }}>
+      <span style={{ color: "var(--text-dim)", fontSize: 17 }}>
         {action.desc}
       </span>
     </div>
   );
 }
 
-function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpenAdd }) {
+function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpenAdd, portraits }) {
   const [search, setSearch] = useState("");
   const [showResults, setShowResults] = useState(false);
   const [activeTab, setActiveTab] = useState("statblock");
   const [currentMonster, setCurrentMonster] = useState(HOBGOBLIN_STAT_BLOCK);
   const [hpDelta, setHpDelta] = useState("");
+  const [tacticsLoading, setTacticsLoading] = useState(false);
+  const [tacticsError, setTacticsError] = useState("");
   const searchInputRef = useRef(null);
   const sb = currentMonster;
 
@@ -606,9 +667,10 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
 
   // Sync center panel when active combatant changes in left panel
   useEffect(() => {
-    if (!combatants.length || activeIdx >= combatants.length || !allMonsters.length) return;
+    if (!combatants.length || activeIdx >= combatants.length) return;
     const active = combatants[activeIdx];
-    if (active.type !== "Monster") return;
+    if (active.type === "PC") { setActiveTab("statblock"); return; }
+    if (!allMonsters.length) return;
     const nameLower = active.name.toLowerCase();
     const origLower = active._monsterName ? active._monsterName.toLowerCase() : null;
     const found =
@@ -616,18 +678,85 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
       allMonsters.find(m => m.name.toLowerCase() === nameLower) ||
       allMonsters.find(m => nameLower.startsWith(m.name.toLowerCase())) ||
       allMonsters.find(m => m.name.toLowerCase().startsWith(nameLower));
-    if (found) { setCurrentMonster(normalizeMonster(found)); setSearch(found.name); setActiveTab("statblock"); }
+    if (found && found.name !== currentMonster.name) {
+      const normalized = normalizeMonster(found);
+      setCurrentMonster(normalized);
+      setSearch(found.name);
+      setActiveTab("statblock");
+      setTacticsError("");
+      loadOrGenerateTactics(normalized);
+    }
   }, [activeIdx, combatants, allMonsters]);
 
   const searchResults = search.trim().length >= 2 && allMonsters.length > 0
     ? allMonsters.filter(m => m.name.toLowerCase().includes(search.toLowerCase())).slice(0, 8)
     : [];
 
+  function monsterSlug(name) {
+    return name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  }
+
+  function applyTacticsData(tacticsData) {
+    setCurrentMonster(prev => ({
+      ...prev,
+      tactics: tacticsData.tactics || [],
+      fleeThreshold: tacticsData.flee_threshold || "",
+    }));
+  }
+
+  async function loadOrGenerateTactics(monster) {
+    const slug = monsterSlug(monster.name);
+    const statSummary = `AC ${monster.ac}, HP ${monster.hp}, Speed ${monster.speed}. Saves: ${monster.savingThrows}. Skills: ${monster.skills}. Traits: ${(monster.traits||[]).map(t=>t.name).join(", ")}. Actions: ${(monster.actions||[]).map(a=>a.name).join(", ")}.`;
+    // Check cache first — free
+    try {
+      const cached = await fetch(`/api/tactics/${slug}`).then(r => r.json());
+      if (cached.tactics) { applyTacticsData(cached.tactics); return; }
+    } catch(e) {}
+    // Not cached — auto-generate via Gemini (free tier)
+    setTacticsLoading(true);
+    try {
+      const res = await fetch(`/api/tactics/${slug}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: monster.name, stat_block: statSummary }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      applyTacticsData(data.tactics);
+    } catch(e) {
+      setTacticsError("Auto-generation failed. Use the Regenerate button to retry.");
+    }
+    setTacticsLoading(false);
+  }
+
   function selectMonster(m) {
-    setCurrentMonster(normalizeMonster(m));
+    const normalized = normalizeMonster(m);
+    setCurrentMonster(normalized);
     setSearch(m.name);
     setShowResults(false);
     setActiveTab("statblock");
+    setTacticsError("");
+    loadOrGenerateTactics(normalized);
+  }
+
+  async function generateTactics() {
+    setTacticsLoading(true);
+    setTacticsError("");
+    const slug = monsterSlug(sb.name);
+    const statSummary = `AC ${sb.ac}, HP ${sb.hp}, Speed ${sb.speed}. Saves: ${sb.savingThrows}. Skills: ${sb.skills}. Traits: ${(sb.traits||[]).map(t=>t.name).join(", ")}. Actions: ${(sb.actions||[]).map(a=>a.name).join(", ")}.`;
+    try {
+      const res = await fetch(`/api/tactics/${slug}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: sb.name, stat_block: statSummary }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      applyTacticsData(data.tactics);
+    } catch(e) {
+      setTacticsError("Failed to generate tactics. Check connection.");
+    }
+    setTacticsLoading(false);
   }
 
   function applyDamage() {
@@ -642,12 +771,19 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
       ? { ...c, hp: Math.max(0, Math.min(c.maxHp, c.hp + n)) } : c));
     setHpDelta("");
   }
+  function toggleCondition(condName) {
+    if (!activeCombatant) return;
+    setCombatants(prev => prev.map(c => {
+      if (c.id !== activeCombatant.id) return c;
+      const has = (c.conditions || []).includes(condName);
+      return { ...c, conditions: has ? c.conditions.filter(x => x !== condName) : [...(c.conditions || []), condName] };
+    }));
+  }
 
-  const tabs = [
-    { id: "statblock", label: "STAT BLOCK" },
-    { id: "hp",        label: "HP" },
-    { id: "tactics",   label: "TACTICS" },
-  ];
+  const isPC = activeCombatant?.type === "PC";
+  const tabs = isPC
+    ? [{ id: "statblock", label: "STAT BLOCK" }, { id: "hp", label: "HP" }]
+    : [{ id: "statblock", label: "STAT BLOCK" }, { id: "hp", label: "HP" }, { id: "tactics", label: "TACTICS" }];
 
   return (
     <div style={{
@@ -662,7 +798,7 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
         <div style={{ position: "relative" }}>
           <span style={{
             position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
-            color: "var(--text-faint)", fontSize: 15, pointerEvents: "none",
+            color: "var(--text-faint)", fontSize: 17, pointerEvents: "none",
           }}>⌕</span>
           <input
             ref={searchInputRef}
@@ -671,20 +807,20 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
             onFocus={() => setShowResults(true)}
             onBlur={() => setTimeout(() => setShowResults(false), 150)}
             placeholder="Search monster..."
-            style={{ ...inputStyle, paddingLeft: 30, width: "100%", fontSize: 14 }}
+            style={{ ...inputStyle, paddingLeft: 30, width: "100%", fontSize: 16 }}
           />
           <FloatingDropdown inputRef={searchInputRef} show={showResults && searchResults.length > 0}>
             {searchResults.map((m, i) => (
               <div key={i} onMouseDown={() => selectMonster(m)} style={{
                 padding: "9px 12px", cursor: "pointer",
                 display: "flex", justifyContent: "space-between",
-                borderBottom: "1px solid var(--border)", fontSize: 14,
+                borderBottom: "1px solid var(--border)", fontSize: 16,
               }}
                 onMouseEnter={e => e.currentTarget.style.background = "var(--card-hover)"}
                 onMouseLeave={e => e.currentTarget.style.background = "transparent"}
               >
                 <span style={{ color: "var(--text)" }}>{m.name}</span>
-                <span style={{ color: "var(--gold-dim)", fontFamily: "var(--font-head)", fontSize: 12 }}>CR {m.cr || m.challenge_rating}</span>
+                <span style={{ color: "var(--gold-dim)", fontFamily: "var(--font-head)", fontSize: 14 }}>CR {m.cr || m.challenge_rating}</span>
               </div>
             ))}
           </FloatingDropdown>
@@ -694,50 +830,83 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
       {/* Scroll area */}
       <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 0" }}>
 
-        {/* Monster name */}
-        <div style={{ marginBottom: 10 }}>
-          <h2 style={{
-            fontFamily: "var(--font-head)",
-            fontSize: 24, fontWeight: 700,
-            color: "var(--gold)",
-            letterSpacing: "0.02em", lineHeight: 1.2, marginBottom: 4,
-          }}>
-            {sb.name}
-          </h2>
-          <div style={{ color: "var(--text-dim)", fontSize: 14, fontStyle: "italic", marginBottom: 8 }}>
-            {sb.size} {sb.type}, {sb.alignment}
+        {/* Header — PC or Monster */}
+        {activeCombatant && activeCombatant.type === "PC" ? (
+          <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 16, padding: "12px 14px", background: "rgba(74,120,196,0.07)", border: "1px solid rgba(74,120,196,0.2)", borderRadius: 8 }}>
+            <div style={{
+              width: 72, height: 72, flexShrink: 0, borderRadius: 8,
+              border: "1px solid var(--border-bright)", background: "var(--bg)",
+              overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              {portraits && portraits[activeCombatant.id] ? (
+                <img src={portraits[activeCombatant.id]} style={{ width: "100%", height: "100%", objectFit: "cover", animation: "portraitFadeIn 0.4s ease" }} />
+              ) : (
+                <span style={{ fontSize: 28, opacity: 0.25 }}>⚔</span>
+              )}
+            </div>
+            <div>
+              <h2 style={{ fontFamily: "var(--font-head)", fontSize: 26, fontWeight: 700, color: "var(--text)", letterSpacing: "0.02em", lineHeight: 1.2, marginBottom: 4 }}>
+                {activeCombatant.name}
+              </h2>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <span style={{ fontSize: 13, padding: "2px 9px", borderRadius: 20, background: "rgba(74,120,196,0.25)", border: "1px solid var(--blue)", color: "#6a9de8", fontFamily: "var(--font-head)", letterSpacing: "0.04em" }}>PC</span>
+                <span style={{ fontSize: 15, color: "var(--text-dim)" }}>
+                  {activeCombatant.hp}/{activeCombatant.maxHp} HP
+                </span>
+              </div>
+              {activeCombatant.pcData && (
+                <div style={{ fontSize: 15, color: "var(--text-faint)", fontStyle: "italic", marginTop: 4 }}>
+                  {[activeCombatant.pcData.race, activeCombatant.pcData.charClass].filter(Boolean).join(" · ")}
+                  {activeCombatant.pcData.level ? ` · Level ${activeCombatant.pcData.level}` : ""}
+                </div>
+              )}
+            </div>
           </div>
-          <button
-            onClick={() => onOpenAdd(currentMonster)}
-            style={{
-              padding: "6px 16px",
-              background: "rgba(201,168,76,0.1)", border: "1px solid rgba(201,168,76,0.3)",
-              borderRadius: 5, color: "var(--gold)", fontFamily: "var(--font-head)",
-              fontSize: 12, letterSpacing: "0.08em", cursor: "pointer",
-              transition: "background 0.15s",
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = "rgba(201,168,76,0.2)"}
-            onMouseLeave={e => e.currentTarget.style.background = "rgba(201,168,76,0.1)"}
-          >
-            + ADD TO COMBAT
-          </button>
-        </div>
-
-        {/* Tag row */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-          {[
-            { label: sb.size + " Humanoid", color: "#4a78c4" },
-            { label: "CR " + sb.cr, color: "var(--gold)" },
-            { label: sb.xp + " XP", color: "var(--text-dim)" },
-          ].map(t => (
-            <span key={t.label} style={{
-              fontSize: 13, padding: "3px 10px",
-              border: `1px solid ${t.color}`, borderRadius: 20,
-              color: t.color, fontFamily: "var(--font-head)",
-              letterSpacing: "0.04em", background: "rgba(0,0,0,0.3)",
-            }}>{t.label}</span>
-          ))}
-        </div>
+        ) : (
+          <>
+            <div style={{ marginBottom: 10 }}>
+              <h2 style={{
+                fontFamily: "var(--font-head)",
+                fontSize: 28, fontWeight: 700,
+                color: "var(--gold)",
+                letterSpacing: "0.02em", lineHeight: 1.2, marginBottom: 4,
+              }}>
+                {sb.name}
+              </h2>
+              <div style={{ color: "var(--text-dim)", fontSize: 18, fontStyle: "italic", marginBottom: 8 }}>
+                {sb.size} {sb.type}, {sb.alignment}
+              </div>
+              <button
+                onClick={() => onOpenAdd(currentMonster)}
+                style={{
+                  padding: "6px 16px",
+                  background: "rgba(201,168,76,0.1)", border: "1px solid rgba(201,168,76,0.3)",
+                  borderRadius: 5, color: "var(--gold)", fontFamily: "var(--font-head)",
+                  fontSize: 14, letterSpacing: "0.08em", cursor: "pointer",
+                  transition: "background 0.15s",
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = "rgba(201,168,76,0.2)"}
+                onMouseLeave={e => e.currentTarget.style.background = "rgba(201,168,76,0.1)"}
+              >
+                + ADD TO COMBAT
+              </button>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+              {[
+                { label: sb.size + " Humanoid", color: "#4a78c4" },
+                { label: "CR " + sb.cr, color: "var(--gold)" },
+                { label: sb.xp + " XP", color: "var(--text-dim)" },
+              ].map(t => (
+                <span key={t.label} style={{
+                  fontSize: 15, padding: "3px 10px",
+                  border: `1px solid ${t.color}`, borderRadius: 20,
+                  color: t.color, fontFamily: "var(--font-head)",
+                  letterSpacing: "0.04em", background: "rgba(0,0,0,0.3)",
+                }}>{t.label}</span>
+              ))}
+            </div>
+          </>
+        )}
 
         {/* Tabs */}
         <div style={{
@@ -755,7 +924,7 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
                   background: "none", border: "none",
                   padding: "8px 16px 9px",
                   fontFamily: "var(--font-head)",
-                  fontSize: 12,
+                  fontSize: 14,
                   fontWeight: 600,
                   letterSpacing: "0.1em",
                   color: isActive ? "var(--gold)" : "var(--text-faint)",
@@ -774,8 +943,65 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
           })}
         </div>
 
-        {/* Tab: STAT BLOCK */}
-        {activeTab === "statblock" && (
+        {/* Tab: STAT BLOCK — PC */}
+        {activeTab === "statblock" && isPC && (() => {
+          const pd = activeCombatant?.pcData;
+          return (
+            <div style={{ paddingBottom: 20 }}>
+              {pd?.stats ? (
+                <>
+                  {/* Class / Race / Level row */}
+                  <div style={{
+                    display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap",
+                    padding: "10px 12px",
+                    background: "rgba(74,120,196,0.07)",
+                    border: "1px solid rgba(74,120,196,0.2)",
+                    borderRadius: 6,
+                  }}>
+                    {[["Class", pd.charClass], ["Race", pd.race], ["Level", pd.level]].filter(([,v]) => v != null).map(([k, v]) => (
+                      <div key={k} style={{ display: "flex", gap: 5, alignItems: "baseline" }}>
+                        <span style={{ fontFamily: "var(--font-head)", fontSize: 14, color: "var(--blue)", letterSpacing: "0.08em" }}>{k}</span>
+                        <span style={{ fontSize: 19, color: "var(--text)" }}>{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Ability scores */}
+                  <div style={{ marginBottom: 14 }}>
+                    <AbilityGrid stats={pd.stats} />
+                  </div>
+                  {/* Proficiencies */}
+                  <div style={{
+                    background: "var(--card)", border: "1px solid var(--border)",
+                    borderRadius: 6, padding: "10px 12px", marginBottom: 14, fontSize: 18,
+                  }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px" }}>
+                      {[
+                        pd.savingThrows && ["Saving Throws", pd.savingThrows],
+                        pd.skills       && ["Skills", pd.skills],
+                        pd.languages    && ["Languages", pd.languages],
+                        pd.passivePerception != null && ["Passive Perception", String(pd.passivePerception)],
+                        pd.profBonus    && ["Proficiency Bonus", pd.profBonus],
+                      ].filter(Boolean).map(([k, v]) => (
+                        <React.Fragment key={k}>
+                          <span style={{ color: "var(--blue)", fontFamily: "var(--font-head)", fontSize: 15, letterSpacing: "0.06em", alignSelf: "start", paddingTop: 2 }}>{k}</span>
+                          <span style={{ color: "var(--text-dim)" }}>{v}</span>
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div style={{ color: "var(--text-faint)", fontSize: 15, fontStyle: "italic", padding: "24px 0", textAlign: "center", lineHeight: 1.8 }}>
+                  No detailed stats available.<br />
+                  <span style={{ fontSize: 13 }}>Add this PC from the Players tab for a full stat block.</span>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Tab: STAT BLOCK — Monster */}
+        {activeTab === "statblock" && !isPC && (
           <div style={{ paddingBottom: 20 }}>
             {/* Quick stats */}
             <div style={{
@@ -787,8 +1013,8 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
             }}>
               {[["AC", sb.ac], ["HP", sb.hp], ["Speed", sb.speed]].map(([k, v]) => (
                 <div key={k} style={{ display: "flex", gap: 5, alignItems: "baseline" }}>
-                  <span style={{ fontFamily: "var(--font-head)", fontSize: 12, color: "var(--gold)", letterSpacing: "0.08em" }}>{k}</span>
-                  <span style={{ fontSize: 15, color: "var(--text)" }}>{v}</span>
+                  <span style={{ fontFamily: "var(--font-head)", fontSize: 14, color: "var(--gold)", letterSpacing: "0.08em" }}>{k}</span>
+                  <span style={{ fontSize: 19, color: "var(--text)" }}>{v}</span>
                 </div>
               ))}
             </div>
@@ -801,7 +1027,7 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
             {/* Proficiencies block */}
             <div style={{
               background: "var(--card)", border: "1px solid var(--border)",
-              borderRadius: 6, padding: "10px 12px", marginBottom: 14, fontSize: 14,
+              borderRadius: 6, padding: "10px 12px", marginBottom: 14, fontSize: 18,
             }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px" }}>
                 {[
@@ -811,7 +1037,7 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
                   ["Languages", sb.languages],
                 ].map(([k, v]) => (
                   <React.Fragment key={k}>
-                    <span style={{ color: "var(--gold)", fontFamily: "var(--font-head)", fontSize: 12, letterSpacing: "0.06em", alignSelf: "start", paddingTop: 2 }}>{k}</span>
+                    <span style={{ color: "var(--gold)", fontFamily: "var(--font-head)", fontSize: 15, letterSpacing: "0.06em", alignSelf: "start", paddingTop: 2 }}>{k}</span>
                     <span style={{ color: "var(--text-dim)" }}>{v}</span>
                   </React.Fragment>
                 ))}
@@ -833,22 +1059,38 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
         {/* Tab: HP */}
         {activeTab === "hp" && activeCombatant && (
           <div style={{ paddingBottom: 24 }}>
-            {/* Big HP display */}
-            <div style={{ textAlign: "center", marginBottom: 20 }}>
-              <div style={{ fontFamily: "var(--font-head)", fontSize: 12, color: "var(--gold)", letterSpacing: "0.1em", marginBottom: 8 }}>
-                {activeCombatant.name.toUpperCase()}
+            {/* Portrait + HP display */}
+            <div style={{ display: "flex", gap: 16, alignItems: "flex-start", marginBottom: 20 }}>
+              {/* Portrait */}
+              <div style={{
+                width: 90, height: 90, flexShrink: 0, borderRadius: 6,
+                border: `1px solid ${portraits && portraits[activeCombatant.id] ? "var(--border-bright)" : "var(--border)"}`,
+                background: "var(--bg)", overflow: "hidden",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                {portraits && portraits[activeCombatant.id] ? (
+                  <img src={portraits[activeCombatant.id]} style={{ width: "100%", height: "100%", objectFit: "cover", animation: "portraitFadeIn 0.4s ease" }} />
+                ) : (
+                  <span style={{ fontSize: 30, opacity: 0.2 }}>{activeCombatant.type === "PC" ? "⚔" : "☠"}</span>
+                )}
               </div>
-              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 6 }}>
-                <span style={{ fontFamily: "var(--font-head)", fontSize: 52, fontWeight: 700, color: activeCombatant.hp === 0 ? "var(--red)" : activeCombatant.hp < activeCombatant.maxHp * 0.25 ? "#e06868" : "var(--text)", lineHeight: 1 }}>
-                  {activeCombatant.hp}
-                </span>
-                <span style={{ fontSize: 24, color: "var(--text-faint)" }}>/ {activeCombatant.maxHp}</span>
-              </div>
-              <div style={{ marginTop: 10, height: 8, background: "var(--border)", borderRadius: 4, overflow: "hidden" }}>
-                <div style={{ height: "100%", borderRadius: 4, transition: "width 0.3s, background 0.3s",
-                  width: `${Math.round((activeCombatant.hp / activeCombatant.maxHp) * 100)}%`,
-                  background: activeCombatant.hp < activeCombatant.maxHp * 0.25 ? "var(--red)" : activeCombatant.hp < activeCombatant.maxHp * 0.5 ? "#c4844a" : "var(--green)",
-                }} />
+              {/* Name + HP */}
+              <div style={{ flex: 1, textAlign: "center" }}>
+                <div style={{ fontFamily: "var(--font-head)", fontSize: 14, color: "var(--gold)", letterSpacing: "0.1em", marginBottom: 6 }}>
+                  {activeCombatant.name.toUpperCase()}
+                </div>
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 6 }}>
+                  <span style={{ fontFamily: "var(--font-head)", fontSize: 50, fontWeight: 700, color: activeCombatant.hp === 0 ? "var(--red)" : activeCombatant.hp < activeCombatant.maxHp * 0.25 ? "#e06868" : "var(--text)", lineHeight: 1 }}>
+                    {activeCombatant.hp}
+                  </span>
+                  <span style={{ fontSize: 22, color: "var(--text-faint)" }}>/ {activeCombatant.maxHp}</span>
+                </div>
+                <div style={{ marginTop: 8, height: 8, background: "var(--border)", borderRadius: 4, overflow: "hidden" }}>
+                  <div style={{ height: "100%", borderRadius: 4, transition: "width 0.3s, background 0.3s",
+                    width: `${Math.round((activeCombatant.hp / activeCombatant.maxHp) * 100)}%`,
+                    background: activeCombatant.hp < activeCombatant.maxHp * 0.25 ? "var(--red)" : activeCombatant.hp < activeCombatant.maxHp * 0.5 ? "#c4844a" : "var(--green)",
+                  }} />
+                </div>
               </div>
             </div>
 
@@ -860,38 +1102,62 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
                 onKeyDown={e => { if (e.key === "Enter") applyDamage(); }}
                 placeholder="Amount..."
                 type="number" min="0"
-                style={{ ...inputStyle, flex: 1, fontSize: 16, textAlign: "center" }}
+                style={{ ...inputStyle, flex: 1, fontSize: 18, textAlign: "center" }}
               />
               <button onClick={applyDamage} style={{
                 padding: "8px 16px", background: "rgba(196,74,74,0.15)",
                 border: "1px solid rgba(196,74,74,0.4)", borderRadius: 5,
-                color: "#e06868", fontFamily: "var(--font-head)", fontSize: 12,
+                color: "#e06868", fontFamily: "var(--font-head)", fontSize: 14,
                 letterSpacing: "0.06em", cursor: "pointer",
               }}>DAMAGE</button>
               <button onClick={applyHeal} style={{
                 padding: "8px 16px", background: "rgba(90,171,106,0.15)",
                 border: "1px solid rgba(90,171,106,0.4)", borderRadius: 5,
-                color: "var(--green)", fontFamily: "var(--font-head)", fontSize: 12,
+                color: "var(--green)", fontFamily: "var(--font-head)", fontSize: 14,
                 letterSpacing: "0.06em", cursor: "pointer",
               }}>HEAL</button>
             </div>
 
             {/* Conditions */}
-            {activeCombatant.conditions && activeCombatant.conditions.length > 0 && (
-              <div>
-                <div style={{ fontFamily: "var(--font-head)", fontSize: 12, color: "var(--gold)", letterSpacing: "0.08em", marginBottom: 8 }}>CONDITIONS</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            <div>
+              <div style={{ fontFamily: "var(--font-head)", fontSize: 14, color: "var(--gold)", letterSpacing: "0.08em", marginBottom: 8 }}>CONDITIONS</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 10 }}>
+                {Object.keys(CONDITION_COLORS).sort().map(cond => {
+                  const active = (activeCombatant.conditions || []).includes(cond);
+                  const col = CONDITION_COLORS[cond];
+                  return (
+                    <button key={cond} onClick={() => toggleCondition(cond)} style={{
+                      background: active ? col.bg : "transparent",
+                      border: `1px solid ${active ? col.border : "var(--border)"}`,
+                      color: active ? col.text : "var(--text-faint)",
+                      borderRadius: 12, padding: "3px 10px", fontSize: 13,
+                      fontFamily: "var(--font-head)", letterSpacing: "0.04em",
+                      cursor: "pointer", transition: "all 0.15s",
+                    }}>{cond}</button>
+                  );
+                })}
+              </div>
+              {(activeCombatant.conditions || []).length === 0 ? (
+                <div style={{ fontSize: 14, color: "var(--text-faint)", fontStyle: "italic" }}>No conditions active. Tap a chip above to apply.</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {activeCombatant.conditions.map(cond => {
                     const col = CONDITION_COLORS[cond] || { bg: "rgba(100,100,100,0.2)", border: "#666", text: "#999" };
-                    return <span key={cond} style={{ background: col.bg, border: `1px solid ${col.border}`, color: col.text, borderRadius: 12, padding: "3px 12px", fontSize: 13 }}>{cond}</span>;
+                    const effect = CONDITION_EFFECTS[cond] || "See D&D 5e Player's Handbook for details.";
+                    return (
+                      <div key={cond} style={{ background: col.bg, border: `1px solid ${col.border}`, borderLeft: `3px solid ${col.border}`, borderRadius: 5, padding: "8px 10px" }}>
+                        <div style={{ fontFamily: "var(--font-head)", fontSize: 13, color: col.text, letterSpacing: "0.06em", marginBottom: 3 }}>{cond.toUpperCase()}</div>
+                        <div style={{ fontSize: 14, color: "var(--text-dim)", lineHeight: 1.5 }}>{effect}</div>
+                      </div>
+                    );
                   })}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
         {activeTab === "hp" && !activeCombatant && (
-          <div style={{ color: "var(--text-faint)", fontSize: 14, fontStyle: "italic", padding: "20px 0" }}>
+          <div style={{ color: "var(--text-faint)", fontSize: 16, fontStyle: "italic", padding: "20px 0" }}>
             No combatant selected.
           </div>
         )}
@@ -899,19 +1165,38 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
         {/* Tab: TACTICS */}
         {activeTab === "tactics" && (
           <div style={{ paddingBottom: 24 }}>
-            <div style={{
-              fontFamily: "var(--font-head)", fontSize: 12, color: "var(--gold)",
-              letterSpacing: "0.1em", marginBottom: 14,
-            }}>
-              ⚔ HOW TO PLAY THIS MONSTER
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <div style={{ fontFamily: "var(--font-head)", fontSize: 14, color: "var(--gold)", letterSpacing: "0.1em" }}>
+                ⚔ HOW TO PLAY THIS MONSTER
+              </div>
+              <button
+                onClick={generateTactics}
+                disabled={tacticsLoading}
+                style={{
+                  background: tacticsLoading ? "transparent" : "rgba(201,168,76,0.1)",
+                  border: "1px solid rgba(201,168,76,0.35)",
+                  borderRadius: 4, color: tacticsLoading ? "var(--text-faint)" : "var(--gold)",
+                  fontFamily: "var(--font-head)", fontSize: 10, letterSpacing: "0.08em",
+                  padding: "4px 10px", cursor: tacticsLoading ? "default" : "pointer",
+                  transition: "all 0.15s",
+                }}
+              >{tacticsLoading ? "Generating…" : (sb.tactics||[]).length > 0 ? "↺ Regenerate" : "✦ Generate"}</button>
             </div>
 
+            {tacticsError && <div style={{ fontSize: 14, color: "#e06868", marginBottom: 12, fontStyle: "italic" }}>{tacticsError}</div>}
+
+            {(sb.tactics||[]).length === 0 && tacticsLoading && (
+              <div style={{ color: "var(--text-faint)", fontSize: 16, fontStyle: "italic", marginBottom: 20 }}>
+                Generating tactics via Gemini…
+              </div>
+            )}
+            {(sb.tactics||[]).length === 0 && !tacticsLoading && (
+              <div style={{ color: "var(--text-faint)", fontSize: 16, fontStyle: "italic", marginBottom: 20 }}>
+                Fetching tactics…
+              </div>
+            )}
+
             <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 24 }}>
-              {(sb.tactics||[]).length === 0 && (
-                <div style={{ color: "var(--text-faint)", fontSize: 14, fontStyle: "italic" }}>
-                  No tactics loaded. Use the Tactics Generator in the right panel to generate AI tactics for this monster.
-                </div>
-              )}
               {(sb.tactics||[]).map((t, i) => (
                 <div key={i} style={{
                   display: "flex", gap: 14, alignItems: "flex-start",
@@ -919,37 +1204,32 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
                   border: "1px solid rgba(201,168,76,0.12)",
                   borderRadius: 6, padding: "12px 14px",
                 }}>
-                  <span style={{
-                    color: "var(--gold)", fontSize: 15, lineHeight: 1,
-                    flexShrink: 0, marginTop: 2,
-                    fontFamily: "var(--font-head)",
-                  }}>•</span>
-                  <span style={{ fontSize: 14, color: "var(--text-dim)", lineHeight: 1.7 }}>{t}</span>
+                  <span style={{ color: "var(--gold)", fontSize: 17, lineHeight: 1, flexShrink: 0, marginTop: 2, fontFamily: "var(--font-head)" }}>•</span>
+                  <span style={{ fontSize: 16, color: "var(--text-dim)", lineHeight: 1.7 }}>{t}</span>
                 </div>
               ))}
             </div>
 
             {/* Flee / Surrender callout */}
-            <div style={{
-              display: "flex", gap: 12, alignItems: "flex-start",
-              background: "rgba(196,74,74,0.08)",
-              border: "1px solid rgba(196,74,74,0.25)",
-              borderLeft: "3px solid #c44a4a",
-              borderRadius: 6, padding: "12px 14px",
-            }}>
-              <span style={{ fontSize: 16, flexShrink: 0, lineHeight: 1, marginTop: 1 }}>🏃</span>
-              <div>
-                <div style={{
-                  fontFamily: "var(--font-head)", fontSize: 12, color: "#e06868",
-                  letterSpacing: "0.08em", marginBottom: 4,
-                }}>
-                  FLEE / SURRENDER THRESHOLD
-                </div>
-                <div style={{ fontSize: 14, color: "var(--text-dim)", lineHeight: 1.6 }}>
-                  Flees at ~30% HP if allies are dead — hobgoblins are disciplined, not suicidal.
+            {(sb.fleeThreshold || (sb.tactics||[]).length > 0) && (
+              <div style={{
+                display: "flex", gap: 12, alignItems: "flex-start",
+                background: "rgba(196,74,74,0.08)",
+                border: "1px solid rgba(196,74,74,0.25)",
+                borderLeft: "3px solid #c44a4a",
+                borderRadius: 6, padding: "12px 14px",
+              }}>
+                <span style={{ fontSize: 18, flexShrink: 0, lineHeight: 1, marginTop: 1 }}>🏃</span>
+                <div>
+                  <div style={{ fontFamily: "var(--font-head)", fontSize: 14, color: "#e06868", letterSpacing: "0.08em", marginBottom: 4 }}>
+                    FLEE / SURRENDER THRESHOLD
+                  </div>
+                  <div style={{ fontSize: 16, color: "var(--text-dim)", lineHeight: 1.6 }}>
+                    {sb.fleeThreshold || "Flees at ~30% HP if allies are dead — hobgoblins are disciplined, not suicidal."}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -983,21 +1263,21 @@ function QuickActionBtn({ id, icon, label, subtitle, isActive, onClick }) {
       <div style={{
         display: "flex", alignItems: "center", gap: 7,
       }}>
-        <span style={{ fontSize: 14 }}>{icon}</span>
+        <span style={{ fontSize: 16 }}>{icon}</span>
         <span style={{
           fontFamily: "var(--font-head)",
-          fontSize: 11,
+          fontSize: 13,
           fontWeight: 600,
           color: isActive ? "var(--gold)" : "var(--text)",
           letterSpacing: "0.04em",
         }}>{label}</span>
       </div>
-      <div style={{ fontSize: 11, color: "var(--text-dim)", paddingLeft: 21 }}>{subtitle}</div>
+      <div style={{ fontSize: 13, color: "var(--text-dim)", paddingLeft: 21 }}>{subtitle}</div>
     </button>
   );
 }
 
-function RightPanel({ combatants, activeIdx, tweaks, aiProvider }) {
+function RightPanel({ combatants, activeIdx, tweaks, aiProvider, setTweak }) {
   const [activePrompt, setActivePrompt] = useState("Describe This Hit");
   const [fieldValues, setFieldValues] = useState({
     "Describe This Hit": { damage: "14", hpState: "Bloodied (25-50%)" },
@@ -1005,10 +1285,12 @@ function RightPanel({ combatants, activeIdx, tweaks, aiProvider }) {
     "Smart Move": { context: "" },
   });
   const [aiResponse, setAiResponse] = useState(AI_PROMPTS["Describe This Hit"].defaultResponse);
+  const [aiResponseProvider, setAiResponseProvider] = useState(null);
   const [loading, setLoading] = useState(false);
   const [freeform, setFreeform] = useState("");
   const [freeformLoading, setFreeformLoading] = useState(false);
   const [freeformResponse, setFreeformResponse] = useState("");
+  const [freeformResponseProvider, setFreeformResponseProvider] = useState(null);
 
   const prompt = AI_PROMPTS[activePrompt];
 
@@ -1028,12 +1310,15 @@ function RightPanel({ combatants, activeIdx, tweaks, aiProvider }) {
       const res = await fetch("/api/ai/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: promptText, max_tokens: 200, provider: aiProvider || "claude" }),
+        body: JSON.stringify({ prompt: promptText, max_tokens: 80, provider: aiProvider || "claude" }),
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || `Server error ${res.status}`);
       setAiResponse(data.content);
+      setAiResponseProvider(data.fallback ? "claude-fallback" : data.provider);
     } catch(e) {
-      setAiResponse("Could not reach AI — check connection.");
+      setAiResponse(`Error: ${e.message}`);
+      setAiResponseProvider(null);
     }
     setLoading(false);
   }
@@ -1051,9 +1336,12 @@ function RightPanel({ combatants, activeIdx, tweaks, aiProvider }) {
         body: JSON.stringify({ prompt: contextPrompt, max_tokens: 200, provider: aiProvider || "claude" }),
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || `Server error ${res.status}`);
       setFreeformResponse(data.content);
+      setFreeformResponseProvider(data.fallback ? "claude-fallback" : data.provider);
     } catch(e) {
-      setFreeformResponse("Could not reach AI — check connection.");
+      setFreeformResponse(`Error: ${e.message}`);
+      setFreeformResponseProvider(null);
     }
     setFreeformLoading(false);
   }
@@ -1068,11 +1356,29 @@ function RightPanel({ combatants, activeIdx, tweaks, aiProvider }) {
     }}>
       {/* Header */}
       <div style={{ padding: "14px 14px 10px", borderBottom: "1px solid var(--border)" }}>
-        <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 700, color: "var(--gold)", letterSpacing: "0.06em" }}>
-          AI Assist
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <div style={{ fontFamily: "var(--font-head)", fontSize: 18, fontWeight: 700, color: "var(--gold)", letterSpacing: "0.06em" }}>
+            AI Assist
+          </div>
+          <div style={{ display:"flex", border:"1px solid var(--border)", borderRadius:4, overflow:"hidden" }}>
+            {["claude","gemini"].map(p => {
+              const active = aiProvider === p;
+              return (
+                <button key={p} onClick={() => setTweak && setTweak("aiProvider", p)} style={{
+                  background: active ? "rgba(201,168,76,0.12)" : "transparent",
+                  border: "none",
+                  borderLeft: p === "gemini" ? "1px solid var(--border)" : "none",
+                  color: active ? "var(--gold)" : "var(--text-faint)",
+                  cursor: "pointer", fontFamily: "var(--font-head)",
+                  fontSize: 10, letterSpacing: "0.1em", padding: "4px 10px",
+                  transition: "color 0.15s, background 0.15s",
+                }}>{p.toUpperCase()}</button>
+              );
+            })}
+          </div>
         </div>
-        <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 2 }}>
-          {tweaks.aiProvider === "gemini" ? "Gemini 1.5 Flash · Free Tier · 15 req/min" : "Claude Haiku · ~$0.001 per query · ~1000 per dollar"}
+        <div style={{ fontSize: 13, color: "var(--text-faint)", marginTop: 4 }}>
+          {tweaks.aiProvider === "gemini" ? "Gemini 2.0 Flash · Free Tier · 15 req/min" : "Claude Haiku · ~$0.001 per query · ~1000 per dollar"}
         </div>
       </div>
 
@@ -1115,7 +1421,7 @@ function RightPanel({ combatants, activeIdx, tweaks, aiProvider }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
             {prompt.fields.map(f => (
               <div key={f.key}>
-                <label style={{ display: "block", fontSize: 11, color: "var(--text-dim)", marginBottom: 4, fontFamily: "var(--font-head)", letterSpacing: "0.04em" }}>
+                <label style={{ display: "block", fontSize: 13, color: "var(--text-dim)", marginBottom: 4, fontFamily: "var(--font-head)", letterSpacing: "0.04em" }}>
                   {f.label}
                 </label>
                 {f.type === "select" ? (
@@ -1148,7 +1454,7 @@ function RightPanel({ combatants, activeIdx, tweaks, aiProvider }) {
               borderRadius: 5,
               color: "#111318",
               fontFamily: "var(--font-head)",
-              fontSize: 11,
+              fontSize: 13,
               fontWeight: 700,
               letterSpacing: "0.12em",
               cursor: loading ? "not-allowed" : "pointer",
@@ -1169,15 +1475,22 @@ function RightPanel({ combatants, activeIdx, tweaks, aiProvider }) {
             padding: "12px",
             marginBottom: 14,
           }}>
-            <div style={{ fontSize: 9, color: "var(--gold-dim)", fontFamily: "var(--font-head)", letterSpacing: "0.1em", marginBottom: 8 }}>
-              AI RESPONSE
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <div style={{ fontSize: 9, color: "var(--gold-dim)", fontFamily: "var(--font-head)", letterSpacing: "0.1em" }}>
+                AI RESPONSE
+              </div>
+              {aiResponseProvider === "claude-fallback" && (
+                <div style={{ fontSize: 9, color: "#c44a4a", fontFamily: "var(--font-head)", letterSpacing: "0.08em", background: "rgba(196,74,74,0.12)", border: "1px solid rgba(196,74,74,0.3)", borderRadius: 3, padding: "2px 6px" }}>
+                  ⚠ CLAUDE FALLBACK
+                </div>
+              )}
             </div>
             {loading ? (
-              <div style={{ color: "var(--text-faint)", fontSize: 12, fontStyle: "italic" }}>
+              <div style={{ color: "var(--text-faint)", fontSize: 14, fontStyle: "italic" }}>
                 Consulting the arcane...
               </div>
             ) : (
-              <p style={{ fontSize: 13, color: "var(--text-dim)", lineHeight: 1.7, fontStyle: "italic" }}>
+              <p style={{ fontSize: 15, color: "var(--text-dim)", lineHeight: 1.7, fontStyle: "italic" }}>
                 "{aiResponse}"
               </p>
             )}
@@ -1194,10 +1507,17 @@ function RightPanel({ combatants, activeIdx, tweaks, aiProvider }) {
             padding: "12px",
             marginBottom: 14,
           }}>
-            <div style={{ fontSize: 9, color: "var(--teal)", fontFamily: "var(--font-head)", letterSpacing: "0.1em", marginBottom: 8 }}>
-              ANSWER
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <div style={{ fontSize: 9, color: "var(--teal)", fontFamily: "var(--font-head)", letterSpacing: "0.1em" }}>
+                ANSWER
+              </div>
+              {freeformResponseProvider === "claude-fallback" && (
+                <div style={{ fontSize: 9, color: "#c44a4a", fontFamily: "var(--font-head)", letterSpacing: "0.08em", background: "rgba(196,74,74,0.12)", border: "1px solid rgba(196,74,74,0.3)", borderRadius: 3, padding: "2px 6px" }}>
+                  ⚠ CLAUDE FALLBACK
+                </div>
+              )}
             </div>
-            <p style={{ fontSize: 13, color: "var(--text-dim)", lineHeight: 1.7 }}>
+            <p style={{ fontSize: 15, color: "var(--text-dim)", lineHeight: 1.7 }}>
               {freeformLoading ? "Consulting the arcane..." : freeformResponse}
             </p>
           </div>
@@ -1216,7 +1536,7 @@ function RightPanel({ combatants, activeIdx, tweaks, aiProvider }) {
           onChange={e => setFreeform(e.target.value)}
           onKeyDown={e => e.key === "Enter" && sendFreeform()}
           placeholder="Ask anything..."
-          style={{ ...inputStyle, flex: 1, fontSize: 12 }}
+          style={{ ...inputStyle, flex: 1, fontSize: 14 }}
         />
         <button
           onClick={sendFreeform}
@@ -1227,7 +1547,7 @@ function RightPanel({ combatants, activeIdx, tweaks, aiProvider }) {
             borderRadius: 5,
             color: "var(--gold)",
             padding: "0 10px",
-            fontSize: 14,
+            fontSize: 16,
             cursor: "pointer",
             transition: "background 0.15s",
           }}
@@ -1249,7 +1569,7 @@ const inputStyle = {
   borderRadius: 5,
   color: "var(--text)",
   padding: "6px 10px",
-  fontSize: 12,
+  fontSize: 14,
   outline: "none",
   fontFamily: "var(--font-body)",
   transition: "border-color 0.15s",
@@ -1279,6 +1599,7 @@ function AddCombatantModal({ onClose, onAdd, prefill, allMonsters }) {
   const [monsterSearch, setMonsterSearch] = useState(prefill ? (prefill.name || "") : "");
   const [showMonsterResults, setShowMonsterResults] = useState(false);
   const [selectedMonsterData, setSelectedMonsterData] = useState(prefill || null);
+  const [selectedPlayerData, setSelectedPlayerData] = useState(null);
 
   // Monster tab entry fields (separate from custom tab)
   const [monsterName, setMonsterName] = useState(prefill ? (prefill.name || "") : "");
@@ -1324,6 +1645,7 @@ function AddCombatantModal({ onClose, onAdd, prefill, allMonsters }) {
   }
 
   function selectPlayer(p) {
+    setSelectedPlayerData(p);
     setName(p.name);
     setHp(p.hp ? String(p.hp) : "");
     setInitiative(p.initiativeBonus != null ? String(p.initiativeBonus) : "");
@@ -1349,14 +1671,18 @@ function AddCombatantModal({ onClose, onAdd, prefill, allMonsters }) {
   function submit() {
     if (!name.trim()) return;
     const hpVal = parseInt(hp) || 10;
-    onAdd({
+    const combatant = {
       id: Date.now(),
       name: name.trim(),
       type,
       hp: hpVal, maxHp: hpVal,
       conditions: [],
       initiative: parseInt(initiative) || 0,
-    });
+    };
+    if (type === "PC" && selectedPlayerData) {
+      combatant.pcData = selectedPlayerData;
+    }
+    onAdd(combatant);
     onClose();
   }
 
@@ -1570,6 +1896,156 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "aiProvider": "claude"
 }/*EDITMODE-END*/;
 
+// ─── SESSIONS MODAL ──────────────────────────────────────────────────────────
+
+function SessionsModal({ onClose, encName, onSave, onLoad }) {
+  const [tab, setTab] = useState("save");
+  const [saveName, setSaveName] = useState(encName || "New Encounter");
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState("");
+  const [sessions, setSessions] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/sessions").then(r => r.json()).then(d => setSessions(d.sessions || [])).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const h = e => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, []);
+
+  async function handleSave() {
+    if (!saveName.trim()) return;
+    setSaving(true); setSaveMsg("");
+    try {
+      await onSave(saveName.trim());
+      setSaveMsg("✓ Saved!");
+      const d = await fetch("/api/sessions").then(r => r.json());
+      setSessions(d.sessions || []);
+    } catch(e) { setSaveMsg("Save failed."); }
+    setSaving(false);
+  }
+
+  async function handleLoad(id) {
+    setLoading(true);
+    try {
+      const data = await fetch(`/api/sessions/${id}`).then(r => r.json());
+      onLoad(data);
+      onClose();
+    } catch(e) { alert("Failed to load session."); }
+    setLoading(false);
+  }
+
+  async function handleDelete(id, e) {
+    e.stopPropagation();
+    await fetch(`/api/sessions/${id}`, { method: "DELETE" });
+    setSessions(prev => prev.filter(s => s.id !== id));
+  }
+
+  function formatDate(iso) {
+    if (!iso) return "";
+    try { return new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
+    catch(e) { return iso; }
+  }
+
+  const tabBtn = (id, label) => ({
+    flex: 1, padding: "8px 0", background: "none", border: "none",
+    borderBottom: `2px solid ${tab === id ? "var(--gold)" : "transparent"}`,
+    color: tab === id ? "var(--gold)" : "var(--text-dim)",
+    fontFamily: "var(--font-head)", fontSize: 11, letterSpacing: "0.08em",
+    cursor: "pointer", transition: "all 0.15s", marginBottom: -1,
+  });
+
+  return (
+    <div onClick={e => e.target === e.currentTarget && onClose()} style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)",
+      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+    }}>
+      <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, width: 400, maxWidth: "92vw", boxShadow: "0 8px 40px rgba(0,0,0,0.6)", overflow: "hidden" }}>
+        <div style={{ padding: "14px 16px 0", borderBottom: "1px solid var(--border)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <div style={{ fontFamily: "var(--font-head)", fontSize: 13, color: "var(--gold)", letterSpacing: "0.1em" }}>SESSIONS</div>
+            <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-faint)", cursor: "pointer", fontSize: 16 }}>✕</button>
+          </div>
+          <div style={{ display: "flex", borderBottom: "1px solid var(--border)" }}>
+            <button style={tabBtn("save", "SAVE")} onClick={() => setTab("save")}>SAVE</button>
+            <button style={tabBtn("load", "LOAD")} onClick={() => setTab("load")}>LOAD</button>
+          </div>
+        </div>
+
+        <div style={{ padding: 16, maxHeight: 420, overflowY: "auto" }}>
+          {tab === "save" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 11, color: "var(--text-dim)", fontFamily: "var(--font-head)", letterSpacing: "0.06em", marginBottom: 6 }}>SESSION NAME</div>
+                <input
+                  autoFocus value={saveName} onChange={e => setSaveName(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && handleSave()}
+                  placeholder="e.g. Goblin Ambush — Act 2"
+                  style={{ ...inputStyle, width: "100%", fontSize: 15 }}
+                />
+              </div>
+              <button onClick={handleSave} disabled={saving || !saveName.trim()} style={{
+                width: "100%", padding: "11px 0",
+                background: saveName.trim() ? "linear-gradient(135deg, #c9a84c 0%, #a8873a 100%)" : "var(--border)",
+                border: "none", borderRadius: 6,
+                color: saveName.trim() ? "#111318" : "var(--text-faint)",
+                fontFamily: "var(--font-head)", fontSize: 12, fontWeight: 700,
+                letterSpacing: "0.1em", cursor: saveName.trim() ? "pointer" : "not-allowed",
+              }}>
+                {saving ? "SAVING…" : "💾 SAVE SESSION"}
+              </button>
+              {saveMsg && <div style={{ textAlign: "center", fontSize: 13, color: saveMsg.startsWith("✓") ? "var(--green)" : "#e06868" }}>{saveMsg}</div>}
+              <div style={{ fontSize: 12, color: "var(--text-faint)", fontStyle: "italic", lineHeight: 1.5 }}>
+                Saves current combatants, HP, conditions, portraits, round number, and encounter notes.
+              </div>
+            </div>
+          )}
+
+          {tab === "load" && (
+            <div>
+              {sessions.length === 0 ? (
+                <div style={{ color: "var(--text-faint)", fontSize: 13, fontStyle: "italic", textAlign: "center", padding: "24px 0" }}>
+                  No saved sessions yet.<br/>Use the Save tab to save your first encounter.
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {sessions.map(s => (
+                    <div key={s.id} onClick={() => handleLoad(s.id)} style={{
+                      background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 6,
+                      padding: "10px 12px", cursor: "pointer", transition: "border-color 0.15s",
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                    }}
+                      onMouseEnter={e => e.currentTarget.style.borderColor = "var(--gold-dim)"}
+                      onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border)"}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontFamily: "var(--font-head)", fontSize: 13, color: "var(--text)", letterSpacing: "0.03em", marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div>
+                        <div style={{ fontSize: 12, color: "var(--text-faint)" }}>
+                          {s.combatantCount} combatants · Round {s.round} · {formatDate(s.savedAt)}
+                        </div>
+                      </div>
+                      <button onClick={e => handleDelete(s.id, e)} title="Delete" style={{
+                        background: "none", border: "none", color: "var(--text-faint)", cursor: "pointer",
+                        fontSize: 13, padding: "4px 6px", flexShrink: 0, transition: "color 0.15s",
+                      }}
+                        onMouseEnter={e => e.currentTarget.style.color = "#e06868"}
+                        onMouseLeave={e => e.currentTarget.style.color = "var(--text-faint)"}
+                      >✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── ROOT APP ────────────────────────────────────────────────────────────────
 
 function App() {
@@ -1579,6 +2055,11 @@ function App() {
   const [allMonsters, setAllMonsters] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [addModalPrefill, setAddModalPrefill] = useState(null);
+  const [portraits, setPortraits] = useState({});
+  const [encName, setEncName] = useState("New Encounter");
+  const [encNote, setEncNote] = useState("Add a note about conditions, terrain...");
+  const [roundNumber, setRoundNumber] = useState(1);
+  const [showSessionModal, setShowSessionModal] = useState(false);
 
   useEffect(() => {
     fetch("/tools/monsters.json")
@@ -1587,9 +2068,44 @@ function App() {
       .catch(() => {});
   }, []);
 
+  // Auto-generate portrait for any combatant that doesn't have one
+  function generatePortrait(combatant) {
+    const prompt = buildPortraitPrompt(combatant);
+    const seed = Math.floor(Math.random() * 99999);
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true&model=flux&seed=${seed}`;
+    const img = new Image();
+    img.onload = () => setPortraits(prev => ({ ...prev, [combatant.id]: url }));
+    img.src = url;
+  }
+
   function handleOpenAdd(prefill = null) {
     setAddModalPrefill(prefill || null);
     setShowAddModal(true);
+  }
+
+  function handleAddCombatant(c) {
+    setCombatants(prev => [...prev, c]);
+    generatePortrait(c);
+  }
+
+  async function handleSaveSession(name) {
+    const res = await fetch("/api/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, encounter: { name: encName, note: encNote, round: roundNumber }, activeIdx, combatants, portraits }),
+    });
+    if (!res.ok) throw new Error("Save failed");
+  }
+
+  function handleLoadSession(data) {
+    setCombatants(data.combatants || []);
+    setActiveIdx(data.activeIdx || 0);
+    setPortraits(data.portraits || {});
+    if (data.encounter) {
+      setEncName(data.encounter.name || "New Encounter");
+      setEncNote(data.encounter.note || "");
+      setRoundNumber(data.encounter.round || 1);
+    }
   }
 
   return (
@@ -1598,6 +2114,10 @@ function App() {
         @keyframes pulse {
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.5; transform: scale(1.4); }
+        }
+        @keyframes portraitFadeIn {
+          from { opacity: 0; transform: scale(0.95); }
+          to   { opacity: 1; transform: scale(1); }
         }
         input:focus, select:focus {
           border-color: var(--gold-dim) !important;
@@ -1618,6 +2138,11 @@ function App() {
           setActiveIdx={setActiveIdx}
           tweaks={tweaks}
           onOpenAdd={handleOpenAdd}
+          portraits={portraits}
+          encName={encName} setEncName={setEncName}
+          encNote={encNote} setEncNote={setEncNote}
+          roundNumber={roundNumber} setRoundNumber={setRoundNumber}
+          onOpenSessions={() => setShowSessionModal(true)}
         />
         <CenterPanel
           combatants={combatants}
@@ -1625,21 +2150,32 @@ function App() {
           setCombatants={setCombatants}
           allMonsters={allMonsters}
           onOpenAdd={handleOpenAdd}
+          portraits={portraits}
         />
         <RightPanel
           combatants={combatants}
           activeIdx={activeIdx}
           tweaks={tweaks}
           aiProvider={tweaks.aiProvider}
+          setTweak={setTweak}
         />
       </div>
 
       {showAddModal && (
         <AddCombatantModal
           onClose={() => { setShowAddModal(false); setAddModalPrefill(null); }}
-          onAdd={c => setCombatants(prev => [...prev, c])}
+          onAdd={handleAddCombatant}
           prefill={addModalPrefill}
           allMonsters={allMonsters}
+        />
+      )}
+
+      {showSessionModal && (
+        <SessionsModal
+          onClose={() => setShowSessionModal(false)}
+          encName={encName}
+          onSave={handleSaveSession}
+          onLoad={handleLoadSession}
         />
       )}
 
