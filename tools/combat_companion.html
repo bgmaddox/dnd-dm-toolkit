@@ -59,14 +59,7 @@ const { useState, useEffect, useRef, useCallback } = React;
 
 // ─── DATA ───────────────────────────────────────────────────────────────────
 
-const INITIAL_COMBATANTS = [
-  { id: 1, name: "Thorin Ironfist",    type: "PC",      hp: 28, maxHp: 34, conditions: [],                 initiative: 22 },
-  { id: 2, name: "Lyra Swiftarrow",    type: "PC",      hp: 19, maxHp: 26, conditions: ["Concentrating"], initiative: 18 },
-  { id: 3, name: "HOBGOBLIN CAPTAIN",  type: "Monster", hp: 14, maxHp: 52, conditions: [],                 initiative: 15, _monsterName: "Hobgoblin Captain" },
-  { id: 4, name: "Goblin 1",           type: "Monster", hp: 0,  maxHp: 7,  conditions: ["Unconscious"],   initiative: 12, _monsterName: "Goblin" },
-  { id: 5, name: "Goblin 2",           type: "Monster", hp: 3,  maxHp: 7,  conditions: ["Frightened"],    initiative: 9,  _monsterName: "Goblin" },
-  { id: 6, name: "Bramble",            type: "PC",      hp: 22, maxHp: 22, conditions: ["Poisoned"],       initiative: 6  },
-];
+const INITIAL_COMBATANTS = [];
 
 const PORTRAIT_STYLE = "classic D&D 5e tabletop illustration style, head and shoulders portrait, painterly, dramatic atmospheric lighting, dark fantasy background, highly detailed character art, no text";
 
@@ -2264,7 +2257,7 @@ function InitiativesModal({ combatants, onClose, onApply }) {
 function App() {
   const [tweaks, setTweak] = window.useTweaks(TWEAK_DEFAULTS);
   const [combatants, setCombatants] = useState(INITIAL_COMBATANTS);
-  const [activeIdx, setActiveIdx] = useState(2); // Hobgoblin Captain starts active
+  const [activeIdx, setActiveIdx] = useState(0);
   const [allMonsters, setAllMonsters] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [addModalPrefill, setAddModalPrefill] = useState(null);
