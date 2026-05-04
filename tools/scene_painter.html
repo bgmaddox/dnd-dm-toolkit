@@ -219,6 +219,7 @@
     margin: 0;
     width: 100%;
     resize: none;
+    overflow: hidden;
     color: var(--text);
     font-style: italic;
     line-height: 1.8;
@@ -450,8 +451,20 @@ function LoadingState() {
   );
 }
 
+function autoResize(el) {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
 function SceneOutput({ scene, setScene, onRegen, onSave, isSaved, loading }) {
   const [copied, setCopied] = useState(false);
+  const outputRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!outputRef.current) return;
+    outputRef.current.querySelectorAll('textarea').forEach(autoResize);
+  }, [scene]);
 
   function copyReadAloud() {
     navigator.clipboard.writeText(scene.readAloud).then(() => {
@@ -465,7 +478,7 @@ function SceneOutput({ scene, setScene, onRegen, onSave, isSaved, loading }) {
   }
 
   return (
-    <div className="scene-output">
+    <div className="scene-output" ref={outputRef}>
 
       <div>
         <div className="section-label">Read Aloud</div>
@@ -476,8 +489,8 @@ function SceneOutput({ scene, setScene, onRegen, onSave, isSaved, loading }) {
           <textarea
             className="output-textarea"
             value={scene.readAloud}
-            onChange={e => setScene(s => ({ ...s, readAloud: e.target.value }))}
-            rows={5}
+            onChange={e => { setScene(s => ({ ...s, readAloud: e.target.value })); autoResize(e.target); }}
+            rows={1}
           />
         </div>
       </div>
@@ -490,10 +503,10 @@ function SceneOutput({ scene, setScene, onRegen, onSave, isSaved, loading }) {
               <div className="detail-bullet">▸</div>
               <textarea
                 className="output-textarea"
-                style={{ fontStyle: "normal", fontSize: 23, lineHeight: 1.65, color: "var(--text-muted)", minHeight: 40 }}
+                style={{ fontStyle: "normal", fontSize: 23, lineHeight: 1.65, color: "var(--text-muted)" }}
                 value={d}
-                onChange={e => updateDetail(i, e.target.value)}
-                rows={3}
+                onChange={e => { updateDetail(i, e.target.value); autoResize(e.target); }}
+                rows={1}
               />
             </div>
           ))}
@@ -504,10 +517,10 @@ function SceneOutput({ scene, setScene, onRegen, onSave, isSaved, loading }) {
         <div className="dm-note-label">DM Only</div>
         <textarea
           className="output-textarea"
-          style={{ fontSize: 23, lineHeight: 1.7, color: "#a88080", minHeight: 60 }}
+          style={{ fontSize: 23, lineHeight: 1.7, color: "#a88080" }}
           value={scene.dmNote}
-          onChange={e => setScene(s => ({ ...s, dmNote: e.target.value }))}
-          rows={4}
+          onChange={e => { setScene(s => ({ ...s, dmNote: e.target.value })); autoResize(e.target); }}
+          rows={1}
         />
       </div>
 
