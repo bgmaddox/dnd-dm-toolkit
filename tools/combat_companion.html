@@ -851,9 +851,12 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
   }
 
   const isPC = activeCombatant?.type === "PC" && !searchedMonster;
+  const isBrowsing = activeCombatant?.type === "PC" && searchedMonster;
   const tabs = isPC
     ? [{ id: "statblock", label: "STAT BLOCK" }, { id: "hp", label: "HP" }]
-    : [{ id: "statblock", label: "STAT BLOCK" }, { id: "hp", label: "HP" }, { id: "tactics", label: "TACTICS" }];
+    : isBrowsing
+      ? [{ id: "statblock", label: "STAT BLOCK" }, { id: "tactics", label: "TACTICS" }]
+      : [{ id: "statblock", label: "STAT BLOCK" }, { id: "hp", label: "HP" }, { id: "tactics", label: "TACTICS" }];
 
   return (
     <div style={{
