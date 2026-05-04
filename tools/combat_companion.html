@@ -908,7 +908,7 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
       <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 24px" }}>
 
         {/* Header — PC or Monster */}
-        {activeCombatant && activeCombatant.type === "PC" ? (
+        {isPC ? (
           <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 16, padding: "12px 14px", background: "rgba(74,120,196,0.07)", border: "1px solid rgba(74,120,196,0.2)", borderRadius: 8 }}>
             <div style={{
               width: 72, height: 72, flexShrink: 0, borderRadius: 8,
