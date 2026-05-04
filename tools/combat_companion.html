@@ -75,7 +75,8 @@ function buildPortraitPrompt(combatant) {
   if (combatant.type === "Monster") {
     return `D&D 5e fantasy creature portrait, ${name}, ${PORTRAIT_STYLE}`;
   }
-  return `D&D 5e heroic adventurer portrait, ${name}, ${PORTRAIT_STYLE}`;
+  const race = combatant.pcData?.race ? `${combatant.pcData.race} ` : "";
+  return `D&D 5e heroic adventurer portrait, ${race}${name}, ${PORTRAIT_STYLE}`;
 }
 
 const CONDITION_COLORS = {
