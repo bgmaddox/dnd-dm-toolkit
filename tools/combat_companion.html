@@ -728,6 +728,7 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
   const [hpDelta, setHpDelta] = useState("");
   const [tacticsLoading, setTacticsLoading] = useState(false);
   const [tacticsError, setTacticsError] = useState("");
+  const [searchedMonster, setSearchedMonster] = useState(false);
   const searchInputRef = useRef(null);
   const sb = currentMonster;
 
@@ -742,7 +743,7 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
 
     const active = combatants[activeIdx];
     if (active.type === "PC") {
-      if (idxChanged) setActiveTab("statblock");
+      if (idxChanged) { setActiveTab("statblock"); setSearchedMonster(false); }
       return;
     }
     if (!allMonsters.length) return;
@@ -810,6 +811,7 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
     setSearch(m.name);
     setShowResults(false);
     setActiveTab("statblock");
+    setSearchedMonster(true);
     setTacticsError("");
     loadOrGenerateTactics(normalized);
   }
@@ -855,7 +857,7 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
     }));
   }
 
-  const isPC = activeCombatant?.type === "PC";
+  const isPC = activeCombatant?.type === "PC" && !searchedMonster;
   const tabs = isPC
     ? [{ id: "statblock", label: "STAT BLOCK" }, { id: "hp", label: "HP" }]
     : [{ id: "statblock", label: "STAT BLOCK" }, { id: "hp", label: "HP" }, { id: "tactics", label: "TACTICS" }];
