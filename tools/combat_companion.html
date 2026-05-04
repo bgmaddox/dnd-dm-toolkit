@@ -1036,7 +1036,7 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
         </div>}
 
         {/* Tab: STAT BLOCK — PC */}
-        {activeTab === "statblock" && isPC && (() => {
+        {(combatants.length > 0 || searchedMonster) && activeTab === "statblock" && isPC && (() => {
           const pd = activeCombatant?.pcData;
           return (
             <div style={{ paddingBottom: 20 }}>
@@ -1093,7 +1093,7 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
         })()}
 
         {/* Tab: STAT BLOCK — Monster */}
-        {activeTab === "statblock" && !isPC && (
+        {(combatants.length > 0 || searchedMonster) && activeTab === "statblock" && !isPC && (
           <div style={{ paddingBottom: 20 }}>
             {/* Quick stats */}
             <div style={{
@@ -1255,7 +1255,7 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
         )}
 
         {/* Tab: TACTICS */}
-        {activeTab === "tactics" && (
+        {(combatants.length > 0 || searchedMonster) && activeTab === "tactics" && (
           <div style={{ paddingBottom: 24 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
               <div style={{ fontFamily: "var(--font-head)", fontSize: 14, color: "var(--gold)", letterSpacing: "0.1em" }}>
