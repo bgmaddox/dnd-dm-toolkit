@@ -128,7 +128,6 @@ def load_campaign_context(
             
     # Also support explicit hints if provided
     if hints:
-        from campaign_loader import _matching_files
         entity_files.extend(_matching_files(base / "npcs", hints))
         entity_files.extend(_matching_files(base / "locations", hints))
         

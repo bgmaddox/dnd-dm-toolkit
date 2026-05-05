@@ -197,6 +197,9 @@ async def generate(req: GenerateRequest):
             pass  # fall through to Claude
 
     # Claude (default or fallback when Gemini key not configured or failed)
+    if not client:
+        raise HTTPException(status_code=503, detail="Claude API unavailable: ANTHROPIC_API_KEY not configured")
+
     fallback = req.provider == "gemini"
     kwargs = {
         "model": "claude-haiku-4-5-20251001",
@@ -227,36 +230,43 @@ async def chat(req: ChatRequest):
         token_budget=3500 # Leave room for history/response
     )
     
-    # 2. Prepare Messages
-    messages = []
+    if not client:
+        raise HTTPException(status_code=503, detail="Claude API unavailable: ANTHROPIC_API_KEY not configured")
+
+    # 2. Prepare Messages — enforce user/assistant alternation (Anthropic requirement)
+    raw_messages = []
     for msg in req.history:
-        # Filter and normalize roles for Anthropic
         role = "assistant" if msg["role"] == "assistant" else "user"
-        messages.append({"role": role, "content": msg["content"]})
-    
-    # Ensure messages alternate correctly if history is weird
-    # (Simplified for now)
-    
-    messages.append({"role": "user", "content": req.query})
-    
+        raw_messages.append({"role": role, "content": msg["content"]})
+
+    normalized: list[dict] = []
+    for msg in raw_messages:
+        if normalized and normalized[-1]["role"] == msg["role"]:
+            normalized[-1]["content"] += "\n\n" + msg["content"]
+        else:
+            normalized.append({"role": msg["role"], "content": msg["content"]})
+
+    if normalized and normalized[0]["role"] == "assistant":
+        normalized = normalized[1:]
+
+    normalized.append({"role": "user", "content": req.query})
+
     # 3. System Prompt
-    system_prompt = f"""You are an expert D&D Dungeon Master Assistant. 
+    system_prompt = f"""You are an expert D&D Dungeon Master Assistant.
 Use the provided campaign context to help the DM run the session.
 Be concise, helpful, and creative.
 
 {context}"""
 
     try:
-        # Use Claude 3.5 Sonnet for reasoning
         message = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model="claude-sonnet-4-6",
             max_tokens=1000,
             system=system_prompt,
-            messages=messages,
+            messages=normalized,
         )
         return {"content": message.content[0].text, "provider": "claude"}
     except Exception as e:
-        # Fallback error response
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -335,10 +345,12 @@ Be concise but thorough.
 Campaign: {req.campaign}
 Session: {req.sessionNumber}"""
 
+    if not client:
+        raise HTTPException(status_code=503, detail="Claude API unavailable: ANTHROPIC_API_KEY not configured")
+
     try:
-        # Use Claude for summarization
         message = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model="claude-sonnet-4-6",
             max_tokens=2000,
             system=system_prompt,
             messages=[{"role": "user", "content": f"Raw Notes:\n{raw_text}"}],
@@ -616,7 +628,7 @@ app.mount("/tools", StaticFiles(directory=str(TOOLS_DIR), html=False), name="too
 
 @app.get("/")
 async def root():
-    return FileResponse(str(TOOLS_DIR / "session_companion.html"))
+    return FileResponse(str(TOOLS_DIR / "npc_forge.html"))
 
 def find_available_port(start_port=8000, max_attempts=10):
     import socket
