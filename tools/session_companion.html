@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Session Companion — DM Toolkit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet" />
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+<style>
+  :root {
+    --bg:          #111318;
+    --bg-panel:    #16191f;
+    --bg-card:     #1c2028;
+    --bg-input:    #13161c;
+    --border:      #2a2f3d;
+    --border-glow: #c9a84c55;
+    --gold:        #c9a84c;
+    --gold-dim:    #9e7c2e;
+    --gold-bright: #e8c875;
+    --text:        #dde3f0;
+    --text-muted:  #8a92a8;
+    --text-dim:    #555d72;
+    --teal:        #3da894;
+    --serif:       'Cinzel', serif;
+    --body:        'Crimson Pro', Georgia, serif;
+    --radius:      6px;
+    --radius-lg:   12px;
+    --shadow-gold: 0 0 24px #c9a84c22, 0 2px 8px #00000080;
+    --shadow-card: 0 2px 16px #00000060;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 16px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(ellipse 80% 60% at 20% 10%, #c9a84c08 0%, transparent 60%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body > * { position: relative; z-index: 1; }
+
+  .header {
+    height: 48px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    flex-shrink: 0;
+  }
+
+  .header-logo {
+    font-family: var(--serif);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .nav-menu {
+    display: flex;
+    gap: 24px;
+    margin-left: 40px;
+    flex: 1;
+  }
+
+  .nav-link {
+    font-family: var(--serif);
+    font-size: 11px;
+    color: var(--text-dim);
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    transition: color 0.2s;
+    cursor: pointer;
+  }
+
+  .nav-link:hover { color: var(--gold); }
+  .nav-link.active { color: var(--gold); font-weight: 600; }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #4a7c59;
+    box-shadow: 0 0 8px #4a7c59;
+  }
+
+  .status-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .main-container {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* START VIEW */
+  .start-view {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+  }
+
+  .start-card {
+    width: 100%;
+    max-width: 500px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 40px;
+    box-shadow: var(--shadow-card);
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-size: 24px;
+    color: var(--gold);
+    margin-bottom: 24px;
+    text-align: center;
+    letter-spacing: 0.1em;
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  label {
+    display: block;
+    font-family: var(--serif);
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    letter-spacing: 0.05em;
+  }
+
+  select, input, textarea {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    padding: 12px 16px;
+    font-family: var(--body);
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  select:focus, input:focus, textarea:focus {
+    border-color: var(--gold);
+  }
+
+  .btn {
+    width: 100%;
+    background: var(--gold);
+    color: #000;
+    border: none;
+    border-radius: var(--radius);
+    padding: 14px;
+    font-family: var(--serif);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: transform 0.1s, background 0.2s;
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn:hover { background: var(--gold-bright); }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { background: var(--text-dim); cursor: not-allowed; }
+
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--gold);
+    color: var(--gold);
+  }
+
+  .btn-outline:hover {
+    background: rgba(201, 168, 76, 0.1);
+  }
+
+  /* LIVE VIEW LAYOUT */
+  .live-view {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 280px 1fr 280px;
+    overflow: hidden;
+  }
+
+  .side-panel {
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    overflow-y: auto;
+  }
+
+  .side-panel-right {
+    border-right: none;
+    border-left: 1px solid var(--border);
+  }
+
+  .panel-title {
+    font-family: var(--serif);
+    font-size: 12px;
+    color: var(--gold);
+    margin-bottom: 20px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* CHAT AREA */
+  .chat-container {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    overflow: hidden;
+  }
+
+  .chat-history {
+    flex: 1;
+    overflow-y: auto;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .message {
+    max-width: 85%;
+    padding: 16px 20px;
+    border-radius: var(--radius-lg);
+    line-height: 1.6;
+    font-size: 16px;
+    position: relative;
+  }
+
+  .message-user {
+    align-self: flex-end;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-bottom-right-radius: 2px;
+  }
+
+  .message-assistant {
+    align-self: flex-start;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--gold);
+    color: var(--text);
+    border-bottom-left-radius: 2px;
+  }
+
+  .chat-input-area {
+    padding: 20px 30px;
+    background: var(--bg-panel);
+    border-top: 1px solid var(--border);
+  }
+
+  .chat-input-wrapper {
+    position: relative;
+    display: flex;
+    gap: 12px;
+  }
+
+  .chat-input {
+    flex: 1;
+    height: 50px;
+    resize: none;
+    padding: 12px 16px;
+  }
+
+  .send-btn {
+    width: 50px; height: 50px; margin-top: 0; padding: 0;
+  }
+
+  /* CHAT ACTIONS */
+  .message-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .message:hover .message-actions {
+    opacity: 1;
+  }
+
+  .msg-action-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: var(--serif);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .msg-action-btn:hover {
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+
+  /* LOGGING */
+  .log-btn {
+    margin-bottom: 12px;
+    justify-content: flex-start;
+    padding: 12px 16px;
+    font-size: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+
+  .log-btn:hover {
+    color: var(--gold);
+    border-color: var(--gold);
+    background: var(--bg-input);
+  }
+
+  /* PC CHIPS */
+  .pc-list { display: flex; flex-direction: column; gap: 8px; }
+  .pc-chip { background: var(--bg-card); border: 1px solid var(--border); padding: 10px 14px; border-radius: var(--radius); font-size: 13px; }
+  .pc-name { color: var(--gold); font-weight: 600; }
+  .pc-meta { color: var(--text-muted); font-size: 11px; margin-top: 4px; }
+
+  /* PREP MODE */
+  .prep-toggle {
+    display: flex;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2px;
+    gap: 2px;
+  }
+  .prep-btn {
+    padding: 4px 12px;
+    border-radius: 18px;
+    border: none;
+    background: none;
+    color: var(--text-dim);
+    font-size: 10px;
+    font-family: var(--serif);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .prep-btn.active {
+    background: var(--gold);
+    color: #000;
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+  [x-cloak] { display: none !important; }
+</style>
+</head>
+<body x-data="companion">
+
+<div class="header">
+  <div class="header-logo">⚔ DM Toolkit</div>
+  
+  <nav class="nav-menu" x-show="view === 'live'" x-cloak>
+    <a class="nav-link active">Session</a>
+    <a href="/tools/combat_companion.html" class="nav-link" target="_blank">Combat</a>
+    <a href="/tools/npc_forge.html" class="nav-link" target="_blank">NPC Forge</a>
+    <a href="/tools/scene_painter.html" class="nav-link" target="_blank">Scene Paint</a>
+  </nav>
+
+  <div style="display: flex; align-items: center; gap: 20px;">
+    <div class="prep-toggle" x-show="view === 'live'" x-cloak>
+      <button class="prep-btn" :class="!prepMode ? 'active' : ''" @click="prepMode = false">Live</button>
+      <button class="prep-btn" :class="prepMode ? 'active' : ''" @click="prepMode = true">Prep</button>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <div class="status-dot"></div>
+      <span class="status-label">Online</span>
+    </div>
+  </div>
+</div>
+
+<div class="main-container">
+  <!-- START SCREEN -->
+  <template x-if="view === 'start'">
+    <div class="start-view">
+      <div class="start-card">
+        <h1>Begin Session</h1>
+        <div class="form-group">
+          <label>Campaign</label>
+          <select x-model="campaign" @change="checkContext">
+            <option value="">Select Campaign...</option>
+            <template x-for="c in campaigns" :key="c">
+              <option :value="c" x-text="c"></option>
+            </template>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Session Number</label>
+          <input type="number" x-model="sessionNumber" @input="checkContext" />
+        </div>
+        <div x-show="campaign" class="context-summary" x-cloak>
+          <label>Active Context</label>
+          <template x-if="activeContext">
+            <div>
+              <div class="context-item"><span>PC Stats</span><span class="context-val" x-text="activeContext.pcs"></span></div>
+              <div class="context-item"><span>Past Summaries</span><span class="context-val" x-text="activeContext.pastSummaries"></span></div>
+              <div class="context-item"><span>Indexed Entities</span><span class="context-val" x-text="activeContext.indexedEntities"></span></div>
+            </div>
+          </template>
+        </div>
+        <button class="btn" :disabled="!campaign || loading" @click="beginSession">
+          <span x-text="loading ? 'Initializing...' : 'Begin Session'"></span>
+        </button>
+      </div>
+    </div>
+  </template>
+
+  <!-- LIVE MODE -->
+  <template x-if="view === 'live'">
+    <div class="live-view" x-cloak>
+      <div class="side-panel">
+        <div class="panel-title">Active Party</div>
+        <div class="pc-list">
+          <template x-for="pc in party" :key="pc.name">
+            <div class="pc-chip">
+              <div class="pc-name" x-text="pc.name"></div>
+              <div class="pc-meta" x-text="pc.charClass + ' • PP:' + pc.passivePerception"></div>
+            </div>
+          </template>
+        </div>
+
+        <div class="panel-title" style="margin-top: 30px;">Quick NPC</div>
+        <button class="btn btn-outline" style="font-size: 11px; padding: 10px;" @click="handoff('NPC', 'random villager')">Random Commoner</button>
+        <button class="btn btn-outline" style="font-size: 11px; padding: 10px; margin-top: 8px;" @click="handoff('NPC', 'shady contact')">Shady Contact</button>
+      </div>
+
+      <div class="chat-container">
+        <div class="chat-history" id="chatHistory">
+          <div class="message message-assistant" x-show="!prepMode">
+            Hail, Dungeon Master. How can I assist <strong x-text="campaign"></strong> today?
+          </div>
+          <div class="message message-assistant" x-show="prepMode">
+            <strong>Prep Mode Active.</strong> I can help you prepare for Session <span x-text="sessionNumber"></span>. What are your main goals?
+          </div>
+          <template x-for="msg in (prepMode ? prepHistory : history)" :key="msg.id">
+            <div :class="'message message-' + msg.role">
+              <div x-text="msg.content"></div>
+              <template x-if="msg.role === 'assistant'">
+                <div class="message-actions">
+                  <button class="msg-action-btn" @click="handoff('NPC', msg.content)">Forge NPC</button>
+                  <button class="msg-action-btn" @click="handoff('SCENE', msg.content)">Paint Scene</button>
+                  <button class="msg-action-btn" @click="handoff('COMBAT', msg.content)">Start Combat</button>
+                </div>
+              </template>
+            </div>
+          </template>
+          <div x-show="chatLoading" class="message message-assistant" style="opacity: 0.6;">Claude is thinking...</div>
+        </div>
+        <div class="chat-input-area">
+          <div class="chat-input-wrapper">
+            <textarea class="chat-input" x-model="userInput" :placeholder="prepMode ? 'Describe your session goals...' : 'Ask about NPCs, locations, or rules...'" @keydown.enter.prevent="sendMessage"></textarea>
+            <button class="btn send-btn" @click="sendMessage" :disabled="chatLoading || !userInput.trim()">➤</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="side-panel side-panel-right">
+        <div class="panel-title">Session <span x-text="sessionNumber"></span> <span x-show="prepMode" class="context-val">(PREP)</span></div>
+        <template x-if="!prepMode">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <button class="btn log-btn" @click="promptLog('Loot')">💰 Log Loot</button>
+            <button class="btn log-btn" @click="promptLog('NPC')">👤 Log NPC Met</button>
+            <button class="btn log-btn" @click="promptLog('Event')">🎭 Log Plot Point</button>
+          </div>
+        </template>
+        <div style="margin-top: auto;">
+          <button class="btn btn-outline" @click="finalizeSession" x-text="prepMode ? 'Save Prep' : 'Finalize Session'"></button>
+        </div>
+      </div>
+    </div>
+  </template>
+</div>
+
+<script>
+document.addEventListener('alpine:init', () => {
+  Alpine.data('companion', () => ({
+    view: 'start',
+    campaigns: [],
+    campaign: '',
+    sessionNumber: 1,
+    activeContext: null,
+    loading: false,
+    chatLoading: false,
+    prepMode: false,
+    userInput: '',
+    history: [],
+    prepHistory: [],
+    party: [],
+    
+    async init() {
+      const res = await fetch('/api/campaigns');
+      const data = await res.json();
+      this.campaigns = data.campaigns;
+    },
+
+    async checkContext() {
+      if (!this.campaign) return;
+      const res = await fetch('/api/session/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaign: this.campaign, sessionNumber: parseInt(this.sessionNumber) })
+      });
+      if (res.ok) this.activeContext = (await res.json()).activeContext;
+    },
+
+    async beginSession() {
+      this.loading = true;
+      const res = await fetch('/api/players');
+      const data = await res.json();
+      this.party = data.players.filter(p => p.campaign === this.campaign);
+      this.view = 'live';
+      this.loading = false;
+    },
+
+    async sendMessage() {
+      if (!this.userInput.trim() || this.chatLoading) return;
+      const query = this.userInput;
+      this.userInput = '';
+      
+      const currentHistory = this.prepMode ? this.prepHistory : this.history;
+      currentHistory.push({ id: Date.now(), role: 'user', content: query });
+      this.chatLoading = true;
+      this.scrollToBottom();
+
+      const res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          campaign: this.campaign,
+          query: this.prepMode ? `[PREP MODE] ${query}` : query,
+          history: currentHistory.slice(-6),
+          sessionNumber: this.sessionNumber
+        })
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        currentHistory.push({ id: Date.now() + 1, role: 'assistant', content: data.content });
+      }
+      this.chatLoading = false;
+      this.scrollToBottom();
+    },
+
+    handoff(type, content) {
+      const cleaned = content.replace(/\[Forge NPC\]|\[Paint Scene\]|\[Start Combat\]/g, '').trim();
+      const concept = cleaned.length > 200 ? cleaned.substring(0, 200) + "..." : cleaned;
+      localStorage.setItem('dm_toolkit_handoff', JSON.stringify({ type, concept, location: concept, encounter: concept }));
+      const urls = { 'NPC': '/tools/npc_forge.html', 'SCENE': '/tools/scene_painter.html', 'COMBAT': '/tools/combat_companion.html' };
+      window.open(urls[type], '_blank');
+    },
+
+    async promptLog(type) {
+      const text = prompt(`Log ${type}:`);
+      if (text) {
+        await fetch('/api/session/notes/append', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ campaign: this.campaign, text: `${type}: ${text}` })
+        });
+      }
+    },
+
+    async finalizeSession() {
+      if (this.prepMode) { alert("Prep notes saved."); return; }
+      if (!confirm("End session and generate summary?")) return;
+      const res = await fetch('/api/session/finalize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaign: this.campaign, sessionNumber: this.sessionNumber })
+      });
+      if (res.ok) {
+        alert("Session finalized!");
+        this.view = 'start';
+        this.sessionNumber++;
+        this.history = [];
+      }
+    },
+
+    scrollToBottom() {
+      setTimeout(() => {
+        const h = document.getElementById('chatHistory');
+        if (h) h.scrollTop = h.scrollHeight;
+      }, 50);
+    }
+  }));
+});
+</script>
+</body>
+</html>

@@ -12,10 +12,67 @@ from dotenv import load_dotenv
 import re as _re
 from campaign_loader import load_campaign_context, list_campaigns
 
-load_dotenv()
+from setup_wizard import setup_wizard
+
+# Versioning
+VERSION = "1.0.0"
+
+# Ensure API keys are present before starting
+setup_wizard()
 
 app = FastAPI()
-client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+
+@app.get("/api/version")
+async def get_version():
+    return {"version": VERSION}
+
+@app.get("/api/updates/check")
+async def check_updates():
+    repo = "bgmaddox/dnd-dm-toolkit"
+    try:
+        import requests
+        # Use a short timeout to prevent blocking startup if no internet
+        response = requests.get(
+            f"https://api.github.com/repos/{repo}/releases/latest", 
+            timeout=2,
+            headers={"Accept": "application/vnd.github.v3+json"}
+        )
+        if response.status_code == 200:
+            data = response.json()
+            latest_version = data.get("tag_name", "").replace("v", "")
+            
+            # Simple version comparison
+            update_available = False
+            if latest_version:
+                try:
+                    curr = [int(x) for x in VERSION.split(".")]
+                    late = [int(x) for x in latest_version.split(".")]
+                    update_available = late > curr
+                except ValueError:
+                    update_available = latest_version != VERSION
+
+            return {
+                "current_version": VERSION,
+                "latest_version": latest_version,
+                "update_available": update_available,
+                "url": data.get("html_url", f"https://github.com/{repo}/releases")
+            }
+        else:
+            return {
+                "current_version": VERSION,
+                "update_available": False,
+                "error": f"GitHub returned {response.status_code}"
+            }
+    except Exception as e:
+        return {"current_version": VERSION, "update_available": False, "error": str(e)}
+
+# Anthropic Client (Claude)
+_anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+client = None
+if _anthropic_key:
+    client = anthropic.Anthropic(api_key=_anthropic_key)
+else:
+    print("WARNING: ANTHROPIC_API_KEY not found. AI features using Claude will be disabled.")
 
 # ── Gemini free-tier rate limiter ────────────────────────────────────────────
 # Free tier: 15 RPM text, 3 RPM images (Imagen 3).
@@ -57,6 +114,7 @@ except ImportError:
 TOOLS_DIR = Path(__file__).parent / "tools"
 TACTICS_CACHE = TOOLS_DIR / "tactics_cache.json"
 SESSIONS_DIR = TOOLS_DIR / "sessions"
+CAMPAIGN_BASE = Path(__file__).parent / "campaign"
 
 
 @app.get("/api/sessions")
@@ -154,8 +212,149 @@ async def generate(req: GenerateRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+class ChatRequest(BaseModel):
+    campaign: str
+    query: str
+    history: list = []
+    sessionNumber: int = 1
+
+@app.post("/api/ai/chat")
+async def chat(req: ChatRequest):
+    # 1. Load Tiered Context
+    context = load_campaign_context(
+        campaign=req.campaign,
+        query=req.query,
+        token_budget=3500 # Leave room for history/response
+    )
+    
+    # 2. Prepare Messages
+    messages = []
+    for msg in req.history:
+        # Filter and normalize roles for Anthropic
+        role = "assistant" if msg["role"] == "assistant" else "user"
+        messages.append({"role": role, "content": msg["content"]})
+    
+    # Ensure messages alternate correctly if history is weird
+    # (Simplified for now)
+    
+    messages.append({"role": "user", "content": req.query})
+    
+    # 3. System Prompt
+    system_prompt = f"""You are an expert D&D Dungeon Master Assistant. 
+Use the provided campaign context to help the DM run the session.
+Be concise, helpful, and creative.
+
+{context}"""
+
+    try:
+        # Use Claude 3.5 Sonnet for reasoning
+        message = client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=1000,
+            system=system_prompt,
+            messages=messages,
+        )
+        return {"content": message.content[0].text, "provider": "claude"}
+    except Exception as e:
+        # Fallback error response
+        raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Session Companion Lifecycle ──────────────────────────────────────────────
+
+class SessionStartRequest(BaseModel):
+    campaign: str
+    sessionNumber: int
+
+@app.post("/api/session/start")
+async def start_session(req: SessionStartRequest):
+    camp_dir = CAMPAIGN_BASE / req.campaign
+    if not camp_dir.exists():
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    
+    # 1. PC Stats
+    pcs = list((camp_dir / "pcs").glob("*.md"))
+    
+    # 2. Existing Summaries
+    summaries = list((camp_dir / "sessions").glob("*.md"))
+    
+    # 3. BM25 Indexing check (placeholder for now)
+    entities = list((camp_dir / "npcs").glob("*.md")) + list((camp_dir / "locations").glob("*.md"))
+    
+    return {
+        "campaign": req.campaign,
+        "session": req.sessionNumber,
+        "activeContext": {
+            "pcs": len(pcs),
+            "pastSummaries": len(summaries),
+            "indexedEntities": len(entities)
+        }
+    }
+
+class NoteAppendRequest(BaseModel):
+    campaign: str
+    text: str
+
+@app.post("/api/session/notes/append")
+async def append_note(req: NoteAppendRequest):
+    camp_dir = CAMPAIGN_BASE / req.campaign
+    transcripts_dir = camp_dir / "sessions" / "transcripts"
+    transcripts_dir.mkdir(parents=True, exist_ok=True)
+    
+    date_str = time.strftime("%Y-%m-%d")
+    path = transcripts_dir / f"raw_{date_str}.txt"
+    
+    with open(path, "a") as f:
+        f.write(f"\n[{time.strftime('%H:%M:%S')}] {req.text}")
+    
+    return {"ok": True, "path": str(path)}
+
+class FinalizeRequest(BaseModel):
+    campaign: str
+    sessionNumber: int
+
+@app.post("/api/session/finalize")
+async def finalize_session(req: FinalizeRequest):
+    camp_dir = CAMPAIGN_BASE / req.campaign
+    transcripts_dir = camp_dir / "sessions" / "transcripts"
+    
+    # Find most recent transcript or notes for today
+    date_str = time.strftime("%Y-%m-%d")
+    raw_path = transcripts_dir / f"raw_{date_str}.txt"
+    
+    if not raw_path.exists():
+        raise HTTPException(status_code=404, detail="No raw notes found for today")
+    
+    raw_text = raw_path.read_text()
+    
+    # AI Processing (Claude Sonnet recommended for reasoning)
+    system_prompt = f"""You are an expert D&D assistant. Summarize the following raw session notes into a structured Markdown log.
+Focus on: Plot Points, NPCs Met, Loot Found, PC Decisions, and Outstanding Questions.
+Be concise but thorough.
+
+Campaign: {req.campaign}
+Session: {req.sessionNumber}"""
+
+    try:
+        # Use Claude for summarization
+        message = client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=2000,
+            system=system_prompt,
+            messages=[{"role": "user", "content": f"Raw Notes:\n{raw_text}"}],
+        )
+        summary_md = message.content[0].text
+        
+        # Save Layer 2 Summary
+        summary_path = camp_dir / "sessions" / f"session_{req.sessionNumber}.md"
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        summary_path.write_text(summary_md)
+        
+        return {"ok": True, "path": str(summary_path), "summary": summary_md}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI Summarization failed: {e}")
+
+# ── Tactics & Monsters ───────────────────────────────────────────────────────
 
 @app.get("/api/tactics/{slug}")
 async def get_tactics(slug: str):
@@ -417,4 +616,30 @@ app.mount("/tools", StaticFiles(directory=str(TOOLS_DIR), html=False), name="too
 
 @app.get("/")
 async def root():
-    return FileResponse(str(TOOLS_DIR / "npc_forge.html"))
+    return FileResponse(str(TOOLS_DIR / "session_companion.html"))
+
+def find_available_port(start_port=8000, max_attempts=10):
+    import socket
+    for port in range(start_port, start_port + max_attempts):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(('localhost', port)) != 0:
+                return port
+    return start_port
+
+if __name__ == "__main__":
+    import uvicorn
+    import webbrowser
+    
+    port = find_available_port(8000)
+    url = f"http://localhost:{port}"
+    
+    print(f"\n--- DM Toolkit Starting at {url} ---")
+    
+    # Open browser in a separate thread after a short delay
+    def open_browser():
+        time.sleep(1.5)
+        webbrowser.open(url)
+    
+    threading.Thread(target=open_browser, daemon=True).start()
+    
+    uvicorn.run("server:app", host="127.0.0.1", port=port, log_level="info")
