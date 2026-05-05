@@ -48,6 +48,13 @@ def setup_wizard():
         from tkinter import simpledialog, messagebox
 
         root = tk.Tk()
+        root.title("DM Toolkit Setup")
+        try:
+            icon_path = Path(__file__).parent / "tools" / "DnDIcon-Computer.png"
+            if icon_path.exists():
+                root.iconphoto(True, tk.PhotoImage(file=str(icon_path)))
+        except Exception:
+            pass
         root.withdraw()
 
         if needs_anthropic:
