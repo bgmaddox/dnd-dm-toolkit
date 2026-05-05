@@ -548,6 +548,21 @@ function App() {
   const [occupants, setOccupants] = useState("");
   const [environment, setEnvironment] = useState("");
 
+  useEffect(() => {
+    const handoff = localStorage.getItem('dm_toolkit_handoff');
+    if (handoff) {
+      try {
+        const data = JSON.parse(handoff);
+        if (data.type === 'SCENE') {
+          setLocation(data.location || '');
+          setMood(data.mood || 'tense and foreboding');
+          setKeyFeature(data.keyFeature || '');
+          localStorage.removeItem('dm_toolkit_handoff');
+        }
+      } catch (e) {}
+    }
+  }, []);
+
   const [campaigns, setCampaigns] = useState([]);
   const [activeCampaign, setActiveCampaign] = useState(() => {
     try { return localStorage.getItem('scene_painter_campaign') || ""; } catch { return ""; }

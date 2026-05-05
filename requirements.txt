@@ -3,4 +3,6 @@ uvicorn[standard]
 anthropic
 python-dotenv
 requests
-google-generativeai
+google-genai
+Pillow
+rank-bm25

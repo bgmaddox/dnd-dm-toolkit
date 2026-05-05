@@ -12,10 +12,73 @@ from dotenv import load_dotenv
 import re as _re
 from campaign_loader import load_campaign_context, list_campaigns
 
-load_dotenv()
+from setup_wizard import setup_wizard
+
+# Versioning
+VERSION = "1.0.0"
+
+# PORTABLE=1 activates desktop-launcher mode: dynamic port, browser auto-open, setup wizard.
+# On Pi, this env var is never set — server starts on PORT (default 8502) with no wizard.
+PORTABLE = os.environ.get("PORTABLE", "").lower() in ("1", "true", "yes")
+PORT = int(os.environ.get("PORT", 8502))
+
+# Only run setup wizard for desktop/portable deployments
+if PORTABLE:
+    setup_wizard()
 
 app = FastAPI()
-client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+
+@app.get("/api/version")
+async def get_version():
+    return {"version": VERSION}
+
+@app.get("/api/updates/check")
+async def check_updates():
+    repo = "bgmaddox/dnd-dm-toolkit"
+    try:
+        import requests
+        # Use a short timeout to prevent blocking startup if no internet
+        response = requests.get(
+            f"https://api.github.com/repos/{repo}/releases/latest", 
+            timeout=2,
+            headers={"Accept": "application/vnd.github.v3+json"}
+        )
+        if response.status_code == 200:
+            data = response.json()
+            latest_version = data.get("tag_name", "").replace("v", "")
+            
+            # Simple version comparison
+            update_available = False
+            if latest_version:
+                try:
+                    curr = [int(x) for x in VERSION.split(".")]
+                    late = [int(x) for x in latest_version.split(".")]
+                    update_available = late > curr
+                except ValueError:
+                    update_available = latest_version != VERSION
+
+            return {
+                "current_version": VERSION,
+                "latest_version": latest_version,
+                "update_available": update_available,
+                "url": data.get("html_url", f"https://github.com/{repo}/releases")
+            }
+        else:
+            return {
+                "current_version": VERSION,
+                "update_available": False,
+                "error": f"GitHub returned {response.status_code}"
+            }
+    except Exception as e:
+        return {"current_version": VERSION, "update_available": False, "error": str(e)}
+
+# Anthropic Client (Claude)
+_anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+client = None
+if _anthropic_key:
+    client = anthropic.Anthropic(api_key=_anthropic_key)
+else:
+    print("WARNING: ANTHROPIC_API_KEY not found. AI features using Claude will be disabled.")
 
 # ── Gemini free-tier rate limiter ────────────────────────────────────────────
 # Free tier: 15 RPM text, 3 RPM images (Imagen 3).
@@ -57,6 +120,7 @@ except ImportError:
 TOOLS_DIR = Path(__file__).parent / "tools"
 TACTICS_CACHE = TOOLS_DIR / "tactics_cache.json"
 SESSIONS_DIR = TOOLS_DIR / "sessions"
+CAMPAIGN_BASE = Path(__file__).parent / "campaign"
 
 
 @app.get("/api/sessions")
@@ -139,6 +203,9 @@ async def generate(req: GenerateRequest):
             pass  # fall through to Claude
 
     # Claude (default or fallback when Gemini key not configured or failed)
+    if not client:
+        raise HTTPException(status_code=503, detail="Claude API unavailable: ANTHROPIC_API_KEY not configured")
+
     fallback = req.provider == "gemini"
     kwargs = {
         "model": "claude-haiku-4-5-20251001",
@@ -154,8 +221,192 @@ async def generate(req: GenerateRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+class ChatRequest(BaseModel):
+    campaign: str
+    query: str
+    history: list = []
+    sessionNumber: int = 1
+
+@app.post("/api/ai/chat")
+async def chat(req: ChatRequest):
+    # 1. Load Tiered Context
+    context = load_campaign_context(
+        campaign=req.campaign,
+        query=req.query,
+        token_budget=3500 # Leave room for history/response
+    )
+    
+    if not client:
+        raise HTTPException(status_code=503, detail="Claude API unavailable: ANTHROPIC_API_KEY not configured")
+
+    # 2. Prepare Messages — enforce user/assistant alternation (Anthropic requirement)
+    raw_messages = []
+    for msg in req.history:
+        role = "assistant" if msg["role"] == "assistant" else "user"
+        raw_messages.append({"role": role, "content": msg["content"]})
+
+    normalized: list[dict] = []
+    for msg in raw_messages:
+        if normalized and normalized[-1]["role"] == msg["role"]:
+            normalized[-1]["content"] += "\n\n" + msg["content"]
+        else:
+            normalized.append({"role": msg["role"], "content": msg["content"]})
+
+    if normalized and normalized[0]["role"] == "assistant":
+        normalized = normalized[1:]
+
+    normalized.append({"role": "user", "content": req.query})
+
+    # 3. System Prompt
+    system_prompt = f"""You are an expert D&D Dungeon Master Assistant.
+Use the provided campaign context to help the DM run the session.
+Be concise, helpful, and creative.
+
+{context}"""
+
+    try:
+        message = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1000,
+            system=system_prompt,
+            messages=normalized,
+        )
+        return {"content": message.content[0].text, "provider": "claude"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Session Companion Lifecycle ──────────────────────────────────────────────
+
+class SessionStartRequest(BaseModel):
+    campaign: str
+    sessionNumber: int
+
+@app.post("/api/session/start")
+async def start_session(req: SessionStartRequest):
+    camp_dir = CAMPAIGN_BASE / req.campaign
+    if not camp_dir.exists():
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    
+    # 1. PC Stats
+    pcs = list((camp_dir / "pcs").glob("*.md"))
+    
+    # 2. Existing Summaries
+    summaries = list((camp_dir / "sessions").glob("*.md"))
+    
+    # 3. BM25 Indexing check (placeholder for now)
+    entities = list((camp_dir / "npcs").glob("*.md")) + list((camp_dir / "locations").glob("*.md"))
+    
+    return {
+        "campaign": req.campaign,
+        "session": req.sessionNumber,
+        "activeContext": {
+            "pcs": len(pcs),
+            "pastSummaries": len(summaries),
+            "indexedEntities": len(entities)
+        }
+    }
+
+class NoteAppendRequest(BaseModel):
+    campaign: str
+    text: str
+
+@app.post("/api/session/notes/append")
+async def append_note(req: NoteAppendRequest):
+    camp_dir = CAMPAIGN_BASE / req.campaign
+    transcripts_dir = camp_dir / "sessions" / "transcripts"
+    transcripts_dir.mkdir(parents=True, exist_ok=True)
+    
+    date_str = time.strftime("%Y-%m-%d")
+    path = transcripts_dir / f"raw_{date_str}.txt"
+    
+    with open(path, "a") as f:
+        f.write(f"\n[{time.strftime('%H:%M:%S')}] {req.text}")
+    
+    return {"ok": True, "path": str(path)}
+
+@app.get("/api/session/summaries/{campaign}")
+async def list_session_summaries(campaign: str):
+    sessions_dir = CAMPAIGN_BASE / campaign / "sessions"
+    if not sessions_dir.exists():
+        return {"sessions": []}
+    results = []
+    for f in sorted(sessions_dir.glob("session_*.md"), key=lambda x: x.stat().st_mtime, reverse=True):
+        m = _re.match(r"session_(\d+)\.md", f.name)
+        if m:
+            num = int(m.group(1))
+            text = f.read_text()
+            title = next((l.lstrip("#").strip() for l in text.splitlines() if l.strip()), f"Session {num}")
+            saved_at = time.strftime("%Y-%m-%d", time.localtime(f.stat().st_mtime))
+            results.append({"sessionNumber": num, "title": title, "savedAt": saved_at})
+    return {"sessions": results}
+
+
+@app.get("/api/session/chat/{campaign}/{session_number}")
+async def get_chat_history(campaign: str, session_number: int):
+    chat_path = CAMPAIGN_BASE / campaign / "sessions" / f"chat_{session_number}.json"
+    if not chat_path.exists():
+        return {"history": []}
+    return {"history": json.loads(chat_path.read_text())}
+
+
+@app.post("/api/session/chat/{campaign}/{session_number}")
+async def save_chat_history(campaign: str, session_number: int, body: dict):
+    sessions_dir = CAMPAIGN_BASE / campaign / "sessions"
+    sessions_dir.mkdir(parents=True, exist_ok=True)
+    chat_path = sessions_dir / f"chat_{session_number}.json"
+    chat_path.write_text(json.dumps(body.get("history", []), indent=2))
+    return {"ok": True}
+
+
+class FinalizeRequest(BaseModel):
+    campaign: str
+    sessionNumber: int
+
+@app.post("/api/session/finalize")
+async def finalize_session(req: FinalizeRequest):
+    camp_dir = CAMPAIGN_BASE / req.campaign
+    transcripts_dir = camp_dir / "sessions" / "transcripts"
+    
+    # Find most recent transcript or notes for today
+    date_str = time.strftime("%Y-%m-%d")
+    raw_path = transcripts_dir / f"raw_{date_str}.txt"
+    
+    if not raw_path.exists():
+        raise HTTPException(status_code=404, detail="No raw notes found for today")
+    
+    raw_text = raw_path.read_text()
+    
+    # AI Processing (Claude Sonnet recommended for reasoning)
+    system_prompt = f"""You are an expert D&D assistant. Summarize the following raw session notes into a structured Markdown log.
+Focus on: Plot Points, NPCs Met, Loot Found, PC Decisions, and Outstanding Questions.
+Be concise but thorough.
+
+Campaign: {req.campaign}
+Session: {req.sessionNumber}"""
+
+    if not client:
+        raise HTTPException(status_code=503, detail="Claude API unavailable: ANTHROPIC_API_KEY not configured")
+
+    try:
+        message = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=2000,
+            system=system_prompt,
+            messages=[{"role": "user", "content": f"Raw Notes:\n{raw_text}"}],
+        )
+        summary_md = message.content[0].text
+        
+        # Save Layer 2 Summary
+        summary_path = camp_dir / "sessions" / f"session_{req.sessionNumber}.md"
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        summary_path.write_text(summary_md)
+        
+        return {"ok": True, "path": str(summary_path), "summary": summary_md}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI Summarization failed: {e}")
+
+# ── Tactics & Monsters ───────────────────────────────────────────────────────
 
 @app.get("/api/tactics/{slug}")
 async def get_tactics(slug: str):
@@ -238,6 +489,7 @@ Respond with JSON only:
 
 
 NPCS_DIR = TOOLS_DIR / "npcs"
+PORTRAITS_DIR = NPCS_DIR / "portraits"
 
 
 @app.get("/api/npcs")
@@ -246,7 +498,11 @@ async def list_npcs():
     npcs = []
     for f in sorted(NPCS_DIR.glob("*.json"), key=lambda x: x.stat().st_mtime, reverse=True):
         try:
-            npcs.append(json.loads(f.read_text()))
+            data = json.loads(f.read_text())
+            portrait_path = PORTRAITS_DIR / f"{f.stem}.png"
+            if portrait_path.exists():
+                data["portraitUrl"] = f"/tools/npcs/portraits/{f.stem}.png"
+            npcs.append(data)
         except Exception:
             pass
     return {"npcs": npcs}
@@ -269,7 +525,30 @@ async def delete_npc(npc_id: str):
     path = NPCS_DIR / f"{npc_id}.json"
     if path.exists():
         path.unlink()
+    portrait_path = PORTRAITS_DIR / f"{npc_id}.png"
+    if portrait_path.exists():
+        portrait_path.unlink()
     return {"ok": True}
+
+
+@app.post("/api/npcs/{npc_id}/portrait")
+async def save_portrait(npc_id: str, body: dict):
+    if not _re.match(r"^[a-z0-9\-]+$", npc_id):
+        raise HTTPException(status_code=400, detail="Invalid NPC ID")
+    image_url = body.get("imageUrl", "")
+    if not image_url:
+        raise HTTPException(status_code=400, detail="imageUrl required")
+    PORTRAITS_DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        import urllib.request
+        req = urllib.request.Request(image_url, headers={"User-Agent": "DMToolkit/1.0"})
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            image_data = resp.read()
+        portrait_path = PORTRAITS_DIR / f"{npc_id}.png"
+        portrait_path.write_bytes(image_data)
+        return {"ok": True, "portraitUrl": f"/tools/npcs/portraits/{npc_id}.png"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Portrait download failed: {e}")
 
 
 CAMPAIGN_DIR = Path(__file__).parent / "campaign"
@@ -418,3 +697,28 @@ app.mount("/tools", StaticFiles(directory=str(TOOLS_DIR), html=False), name="too
 @app.get("/")
 async def root():
     return FileResponse(str(TOOLS_DIR / "npc_forge.html"))
+
+def find_available_port(start_port=8000, max_attempts=10):
+    import socket
+    for port in range(start_port, start_port + max_attempts):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(('localhost', port)) != 0:
+                return port
+    return start_port
+
+if __name__ == "__main__":
+    import uvicorn
+
+    if PORTABLE:
+        import webbrowser
+        port = find_available_port(8080)
+        print(f"\n--- DM Toolkit (Portable) starting at http://localhost:{port} ---")
+        def open_browser():
+            time.sleep(1.5)
+            webbrowser.open(f"http://localhost:{port}")
+        threading.Thread(target=open_browser, daemon=True).start()
+    else:
+        port = PORT
+        print(f"\n--- DM Toolkit starting on port {port} ---")
+
+    uvicorn.run("server:app", host="127.0.0.1", port=port, log_level="info")

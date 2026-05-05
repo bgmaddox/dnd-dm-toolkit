@@ -121,8 +121,9 @@
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
+    height: calc(100vh - 48px);
     overflow-y: auto;
-    padding: 32px 28px;
+    padding: 28px 28px 24px;
     gap: 0;
   }
 
@@ -149,8 +150,8 @@
   .field-group {
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    margin-bottom: 28px;
+    gap: 16px;
+    margin-bottom: 0;
   }
 
   .field {
@@ -248,22 +249,11 @@
     opacity: 0.75;
   }
 
-  /* Lore hint at bottom */
-  .lore-hint {
-    margin-top: auto;
-    padding-top: 28px;
-    border-top: 1px solid var(--border);
-    font-size: 12px;
-    color: var(--text-dim);
-    font-style: italic;
-    line-height: 1.6;
-    text-align: center;
-  }
 
   /* RIGHT PANEL */
   .right-panel {
     overflow-y: auto;
-    padding: 32px 36px;
+    padding: 28px 36px 16px;
     display: flex;
     flex-direction: column;
     gap: 0;
@@ -388,7 +378,7 @@
     border-left: 3px solid var(--gold-dim);
     border-radius: var(--radius);
     padding: 16px 18px;
-    font-size: 15px;
+    font-size: 17px;
     line-height: 1.7;
     color: var(--text);
   }
@@ -437,7 +427,7 @@
   }
 
   .trait-value {
-    font-size: 14px;
+    font-size: 16px;
     line-height: 1.55;
     color: var(--text);
   }
@@ -528,7 +518,7 @@
 
   .dialogue-line {
     font-style: italic;
-    font-size: 15px;
+    font-size: 17px;
     line-height: 1.65;
     color: #c8cedf;
     padding-left: 16px;
@@ -650,20 +640,43 @@
   .shimmer-grid { height: 140px; }
   .shimmer-dialogue { height: 100px; }
 
-  /* Saved NPCs sidebar hint */
+  /* Saved NPCs section */
+  .saved-section {
+    background: #1a1e26;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    margin-top: 4px;
+  }
+
+  /* Saved NPCs list */
   .saved-list {
-    margin-top: 28px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
+    max-height: 160px;
+    overflow-y: auto;
+  }
+  .saved-list::-webkit-scrollbar { width: 3px; }
+  .saved-list::-webkit-scrollbar-track { background: transparent; }
+  .saved-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Sticky forge button — always visible at bottom of scrolling left panel */
+  .left-forge-sticky {
+    position: sticky;
+    bottom: 0;
+    background: var(--bg-panel);
+    padding: 14px 0 4px;
+    margin-top: 20px;
+    border-top: 1px solid var(--border);
   }
 
   .saved-label {
     font-size: 10px;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--text-dim);
+    color: #8a92a8;
     margin-bottom: 8px;
   }
 
@@ -671,25 +684,26 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 10px;
+    padding: 7px 10px;
     border-radius: var(--radius);
     cursor: pointer;
-    transition: background 0.15s;
-    border: 1px solid transparent;
+    transition: background 0.15s, border-color 0.15s;
+    border: 1px solid var(--border);
+    background: var(--bg-panel);
   }
 
   .saved-item:hover {
-    background: var(--bg-card);
-    border-color: var(--border);
+    background: #252b38;
+    border-color: #3a4255;
   }
 
   .saved-item.active {
-    background: #c9a84c10;
-    border-color: #c9a84c30;
+    background: #2a2310;
+    border-color: #c9a84c50;
   }
 
   .saved-dot {
-    width: 5px; height: 5px;
+    width: 6px; height: 6px;
     border-radius: 50%;
     background: var(--gold-dim);
     flex-shrink: 0;
@@ -697,14 +711,96 @@
 
   .saved-name {
     font-size: 13px;
-    color: var(--text-muted);
+    color: #c8cedf;
     flex: 1;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
+  .saved-item.active .saved-dot { background: var(--gold); }
   .saved-item.active .saved-name { color: var(--gold); }
+
+  /* AI Provider toggle in header */
+  .provider-toggle {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .provider-btn {
+    background: none;
+    border: none;
+    padding: 4px 12px;
+    font-family: var(--serif);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--text-dim);
+  }
+  .provider-btn.active {
+    background: #c9a84c18;
+    color: var(--gold);
+  }
+  .provider-btn:hover:not(.active) { color: var(--text-muted); }
+
+  /* Portrait frame */
+  .portrait-frame {
+    width: 120px;
+    height: 120px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    border: 1px solid var(--border-glow);
+    background: var(--bg-card);
+    overflow: hidden;
+    box-shadow: 0 0 20px #c9a84c10, 0 2px 12px #00000070;
+    position: relative;
+  }
+  .portrait-frame img {
+    width: 100%; height: 100%; object-fit: cover;
+  }
+  .portrait-placeholder {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 8px;
+  }
+  .portrait-placeholder-icon {
+    font-size: 28px; opacity: 0.2; line-height: 1;
+  }
+  .btn-portrait {
+    padding: 4px 10px;
+    background: #c9a84c12;
+    border: 1px solid #c9a84c40;
+    border-radius: 4px;
+    color: var(--gold-dim);
+    font-family: var(--serif);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-portrait:hover { background: #c9a84c22; border-color: #c9a84c70; color: var(--gold); }
+  .btn-portrait:disabled { opacity: 0.4; pointer-events: none; }
+  .portrait-regen {
+    position: absolute;
+    bottom: 4px; right: 4px;
+    width: 22px; height: 22px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(201,168,76,0.3);
+    border-radius: 4px;
+    color: var(--gold-dim);
+    font-size: 11px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .portrait-regen:hover { background: rgba(0,0,0,0.8); color: var(--gold); border-color: #c9a84c80; }
 
   /* Validation error */
   .field-error {
@@ -804,20 +900,51 @@ function LoadingState() {
 }
 
 // ─── NPC Output ──────────────────────────────────────────────────────────────
-function NPCOutput({ npc, onSave, onRegen, isSaved, isRegening, showDialogue, compact }) {
+function NPCOutput({ npc, onSave, onRegen, isSaved, isRegening, saveError, showDialogue, compact, portrait, portraitLoading, portraitError, onGeneratePortrait }) {
   const nameSize = compact ? 24 : 32;
-  const bodySize = compact ? 13 : 15;
+  const bodySize = compact ? 14 : 17;
   const cardPad  = compact ? '12px 14px' : '16px 18px';
   const gridCols = compact ? '1fr 1fr 1fr 1fr' : '1fr 1fr';
+  const portraitSize = compact ? 80 : 120;
 
   return (
-    <div className="npc-output" style={{gap: compact ? 16 : 24}}>
-      <div className="npc-header">
-        <h1 className="npc-name" style={{fontSize: nameSize}}>{npc.name}</h1>
-        <div className="glance-row">
-          <span className="badge badge-role"><span className="badge-dot"></span>{npc.role}</span>
-          <span className="badge badge-stat"><span className="badge-dot"></span>{npc.statBlock}</span>
-          <span className="badge badge-faction"><span className="badge-dot"></span>{npc.faction}</span>
+    <div className="npc-output" style={{gap: compact ? 14 : 18}}>
+      <div className="npc-header" style={{display:'flex', gap:18, alignItems:'flex-start'}}>
+        {/* Portrait */}
+        <div className="portrait-frame" style={{width: portraitSize, height: portraitSize, borderRadius: compact ? 6 : 8}}>
+          {portraitLoading ? (
+            <div className="shimmer" style={{width:'100%', height:'100%'}} />
+          ) : portrait ? (
+            <>
+              <img src={portrait} alt={`${npc.name} portrait`} />
+              <button className="portrait-regen" onClick={onGeneratePortrait} title="Regenerate portrait">↻</button>
+            </>
+          ) : (
+            <div className="portrait-placeholder">
+              <div className="portrait-placeholder-icon">🧙</div>
+              <button className="btn-portrait" onClick={onGeneratePortrait}>Generate</button>
+            </div>
+          )}
+          {portraitError && (
+            <div style={{position:'absolute', bottom:0, left:0, right:0, background:'rgba(160,64,64,0.88)',
+              fontSize:9, color:'#ffc0c0', padding:'3px 5px', textAlign:'center', lineHeight:1.3}}>
+              {portraitError}
+            </div>
+          )}
+        </div>
+
+        {/* Name + badges */}
+        <div style={{flex:1, paddingTop: 4}}>
+          <h1 className="npc-name" style={{fontSize: nameSize}}>{npc.name}</h1>
+          <div className="glance-row">
+            <span className="badge badge-role"><span className="badge-dot"></span>{npc.role}</span>
+            <span className="badge badge-stat"><span className="badge-dot"></span>{npc.statBlock}</span>
+            {npc.faction && npc.faction !== 'None' && <span className="badge badge-faction"><span className="badge-dot"></span>{npc.faction}</span>}
+            {npc._class && <span className="badge" style={{background:'#3d6b4818',border:'1px solid #3d6b4855',color:'#7ec89a'}}><span className="badge-dot" style={{background:'#4a8a5e'}}></span>{npc._class}</span>}
+            {npc._tier  && <span className="badge" style={{background:'#4a3d6818',border:'1px solid #4a3d6855',color:'#a08ad0'}}><span className="badge-dot" style={{background:'#6a5a90'}}></span>{npc._tier.split(' ')[0]}</span>}
+            {npc._disp  && <span className="badge" style={{background:'#1e4a6818',border:'1px solid #1e4a6855',color:'#7ab0d0'}}><span className="badge-dot" style={{background:'#3a7a9a'}}></span>{npc._disp}</span>}
+            {npc._role  && <span className="badge" style={{background:'#682a1e18',border:'1px solid #682a1e55',color:'#d08070'}}><span className="badge-dot" style={{background:'#904030'}}></span>{npc._role}</span>}
+          </div>
         </div>
       </div>
 
@@ -835,7 +962,7 @@ function NPCOutput({ npc, onSave, onRegen, isSaved, isRegening, showDialogue, co
         ].map(t => (
           <div key={t.label} className="trait-card" style={{padding: cardPad}}>
             <div className="trait-label">{t.label}</div>
-            <div className="trait-value" style={{fontSize: compact ? 12 : 14}}>{t.val}</div>
+            <div className="trait-value" style={{fontSize: compact ? 13 : 16}}>{t.val}</div>
           </div>
         ))}
       </div>
@@ -843,7 +970,7 @@ function NPCOutput({ npc, onSave, onRegen, isSaved, isRegening, showDialogue, co
       {npc.deepWant && (
         <div className="trait-card-deep">
           <div className="trait-label-deep">Deep Want / Fear</div>
-          <div className="trait-value" style={{fontSize: compact ? 12 : 14}}>{npc.deepWant}</div>
+          <div className="trait-value" style={{fontSize: compact ? 13 : 16}}>{npc.deepWant}</div>
         </div>
       )}
 
@@ -866,6 +993,7 @@ function NPCOutput({ npc, onSave, onRegen, isSaved, isRegening, showDialogue, co
           {isRegening ? 'Forging…' : '↻ Regenerate'}
         </button>
       </div>
+      {saveError && <div className="field-error" style={{marginTop: 6}}>{saveError}</div>}
     </div>
   );
 }
@@ -879,36 +1007,84 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [conceptError, setConceptError] = useState('');
-  const [savedNpcs, setSavedNpcs] = useState([EXAMPLE_NPC]);
+  const [savedNpcs, setSavedNpcs] = useState([EXAMPLE_NPC]);     // full server library
+
+  useEffect(() => {
+    const handoff = localStorage.getItem('dm_toolkit_handoff');
+    if (handoff) {
+      try {
+        const data = JSON.parse(handoff);
+        if (data.type === 'NPC') {
+          setConcept(data.concept || '');
+          setNameVal(data.name || '');
+          setFaction(data.faction || '');
+          localStorage.removeItem('dm_toolkit_handoff');
+        }
+      } catch (e) {}
+    }
+  }, []);
+  const [sidebarNpcs, setSidebarNpcs] = useState([EXAMPLE_NPC]); // quick-access list
+  const [showLibrary, setShowLibrary] = useState(false);
   const [savedCurrent, setSavedCurrent] = useState(false);
   const [activeNpcIndex, setActiveNpcIndex] = useState(0);
+  const [npcClass, setNpcClass] = useState('');
+  const [levelTier, setLevelTier] = useState('');
+  const [disposition, setDisposition] = useState('');
+  const [storyRole, setStoryRole] = useState('');
   const [lastConcept, setLastConcept] = useState('nervous blacksmith');
   const [lastName, setLastName] = useState('');
   const [lastFaction, setLastFaction] = useState('');
+  const [lastClass, setLastClass] = useState('');
+  const [lastTier, setLastTier] = useState('');
+  const [lastDisposition, setLastDisposition] = useState('');
+  const [lastRole, setLastRole] = useState('');
   const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
     "showDialogue": true,
     "compactMode": false,
     "accentColor": "#c9a84c",
-    "aiProvider": "claude"
+    "aiProvider": "claude",
+    "portraitStyle": "illustrated"
   }/*EDITMODE-END*/;
   const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const [campaigns, setCampaigns] = useState([]);
   const [activeCampaign, setActiveCampaign] = useState('');
   const [exportCopied, setExportCopied] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [campaignFactions, setCampaignFactions] = useState([]);
   const [factionMode, setFactionMode] = useState('pill');
+  const [portraits, setPortraits] = useState({});
+  const [portraitLoading, setPortraitLoading] = useState(false);
+  const [portraitError, setPortraitError] = useState('');
 
-  // Load saved campaign from localStorage on mount; fetch campaign list
+  // On mount: load saved campaign preference and fetch server-side data
   useEffect(() => {
     const saved = localStorage.getItem('npc_forge_campaign');
     if (saved) setActiveCampaign(saved);
+
     fetch('/api/campaigns')
       .then(r => r.ok ? r.json() : {})
       .then(d => setCampaigns(d.campaigns || []))
       .catch(() => {});
+
+    fetch('/api/npcs')
+      .then(r => r.ok ? r.json() : {})
+      .then(d => {
+        const loaded = d.npcs || [];
+        const list = loaded.length > 0 ? loaded : [EXAMPLE_NPC];
+        setSavedNpcs(list);
+        setSidebarNpcs(list);
+        const savedPortraits = {};
+        for (const n of loaded) {
+          if (n.portraitUrl) savedPortraits[n.name] = n.portraitUrl;
+        }
+        if (Object.keys(savedPortraits).length > 0) {
+          setPortraits(prev => ({ ...prev, ...savedPortraits }));
+        }
+      })
+      .catch(() => {});
   }, []);
 
-  // Persist selected campaign to localStorage
+  // Persist selected campaign preference to localStorage
   useEffect(() => {
     if (activeCampaign) localStorage.setItem('npc_forge_campaign', activeCampaign);
   }, [activeCampaign]);
@@ -922,20 +1098,26 @@ function App() {
       .catch(() => {});
   }, [activeCampaign]);
 
-  const buildPrompt = (concept, name, faction) => `You are a D&D NPC generator. Generate a vivid, playable NPC from this concept: "${concept}".${name ? ` The NPC's name is ${name}.` : ''}${faction ? ` Their faction/affiliation is ${faction}.` : ''}
+  const buildPrompt = (concept, name, faction, cls, tier, disp, role) => {
+    const classLine   = cls  ? ` This NPC has levels in ${cls}; their abilities, speech, and secrets should reflect that class's worldview and training.` : '';
+    const tierLine    = tier ? ` Power level: ${tier === 'Minor (1–4)' ? 'minor — a novice or dabbler, not yet seasoned' : tier === 'Seasoned (5–10)' ? 'seasoned — experienced and capable, known in their field' : 'legendary — extremely powerful, feared or revered, with a reputation that precedes them'}.` : '';
+    const dispLine    = disp ? ` Their disposition toward the party is ${disp.toLowerCase()} — the tone of their dialogue and immediate want should reflect this.` : '';
+    const roleLine    = role ? ` Their narrative role is ${role.toLowerCase()}. ${role === 'Villain' ? "Their secret should hint at their threat; their deep want should be dark or corrupted." : role === 'Ally' ? "Their deep want should align with helping the party; their secret should make them vulnerable." : role === 'Rival' ? "Their secret should create competitive tension; they want something the party also wants." : role === 'Quest Giver' ? "Their immediate want should directly launch a mission for the party." : "Keep their true allegiance ambiguous."}` : '';
+
+    return `You are a D&D NPC generator. Generate a vivid, playable NPC from this concept: "${concept}".${name ? ` The NPC's name is ${name}.` : ''}${faction ? ` Their faction/affiliation is ${faction}.` : ''}${classLine}${tierLine}${dispLine}${roleLine}
 
 Respond with ONLY a valid JSON object in this exact structure:
 {
   "name": "Full NPC Name",
-  "role": "Short role label (2-3 words)",
-  "statBlock": "Stat block hint (e.g. Guard, Commoner tough, Spy)",
+  "role": "Short role label (2-3 words, e.g. Rogue Fence, War Cleric, Street Warlock)",
+  "statBlock": "Stat block hint (e.g. ${cls ? cls + ' 5, use spell/ability references' : 'Guard, Commoner tough, Spy'})",
   "faction": "${faction || 'None'}",
-  "description": "2-sentence vivid physical description. Specific sensory details.",
+  "description": "2-sentence vivid physical description. Include visible signs of their class if applicable.",
   "voiceQuirk": "One specific speech pattern, verbal tic, or dialogue habit.",
   "physicalTell": "One specific body language or physical habit that reveals emotion.",
   "immediateWant": "What they want RIGHT NOW from or near the party. Specific and actionable.",
   "secret": "One secret they're hiding. Should create dramatic potential.",
-  "deepWant": "The underlying motivation or fear driving this NPC at a deeper level — what they truly want or dread beyond the immediate situation.",
+  "deepWant": "The underlying motivation or fear driving this NPC — what they truly want or dread beyond the immediate situation.",
   "dialogue": [
     "Line 1 of example dialogue in character voice",
     "Line 2 of example dialogue",
@@ -944,11 +1126,16 @@ Respond with ONLY a valid JSON object in this exact structure:
 }
 
 Make it gritty, specific, and immediately playable. Avoid clichés. Each field should be 1-2 sentences max.`;
+  };
 
-  const generateNPC = useCallback(async (conceptOverride, nameOverride, factionOverride) => {
+  const generateNPC = useCallback(async (conceptOverride, nameOverride, factionOverride, classOverride, tierOverride, dispOverride, roleOverride) => {
     const useConcept = conceptOverride ?? concept;
-    const useName = nameOverride ?? nameVal;
+    const useName    = nameOverride   ?? nameVal;
     const useFaction = factionOverride ?? faction;
+    const useCls     = classOverride  ?? npcClass;
+    const useTier    = tierOverride   ?? levelTier;
+    const useDisp    = dispOverride   ?? disposition;
+    const useRole    = roleOverride   ?? storyRole;
 
     if (!useConcept.trim()) {
       setConceptError('A concept is required to forge an NPC.');
@@ -962,9 +1149,12 @@ Make it gritty, specific, and immediately playable. Avoid clichés. Each field s
     setLastConcept(useConcept);
     setLastName(useName);
     setLastFaction(useFaction);
+    setLastClass(useCls);
+    setLastTier(useTier);
+    setLastDisposition(useDisp);
+    setLastRole(useRole);
 
     try {
-      // Optionally fetch campaign context before generating
       let systemPrompt = undefined;
       if (activeCampaign) {
         const hints = useFaction ? encodeURIComponent(useFaction) : '';
@@ -975,7 +1165,11 @@ Make it gritty, specific, and immediately playable. Avoid clichés. Each field s
         }
       }
 
-      const bodyPayload = { prompt: buildPrompt(useConcept, useName, useFaction), max_tokens: 600, provider: tweaks.aiProvider };
+      const bodyPayload = {
+        prompt: buildPrompt(useConcept, useName, useFaction, useCls, useTier, useDisp, useRole),
+        max_tokens: 650,
+        provider: tweaks.aiProvider,
+      };
       if (systemPrompt) bodyPayload.system = systemPrompt;
 
       const res = await fetch('/api/ai/generate', {
@@ -989,6 +1183,11 @@ Make it gritty, specific, and immediately playable. Avoid clichés. Each field s
       const jsonMatch = result.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error('Invalid response format');
       const parsed = JSON.parse(jsonMatch[0]);
+      // Attach input metadata so NPCOutput can display it
+      parsed._class = useCls;
+      parsed._tier  = useTier;
+      parsed._disp  = useDisp;
+      parsed._role  = useRole;
       setNpc(parsed);
     } catch (e) {
       setError('The forge failed. Check your connection and try again.');
@@ -996,10 +1195,42 @@ Make it gritty, specific, and immediately playable. Avoid clichés. Each field s
     } finally {
       setLoading(false);
     }
-  }, [concept, nameVal, faction, tweaks.aiProvider, activeCampaign]);
+  }, [concept, nameVal, faction, npcClass, levelTier, disposition, storyRole, tweaks.aiProvider, activeCampaign]);
+
+  const PORTRAIT_STYLES = {
+    illustrated: 'classic D&D 5e rulebook illustration style, detailed painterly fantasy art, warm dramatic lighting, Forgotten Realms aesthetic',
+    painterly:   'oil painting portrait, Old Masters chiaroscuro, rich textured brushwork, deep shadows and warm amber highlights',
+    gritty:      'dark gritty fantasy digital painting, harsh shadows, weathered and battle-scarred, moody desaturated tones',
+  };
+  const PORTRAIT_BASE = 'Fantasy RPG character portrait, close-up three-quarter view face and shoulders, plain dark background, no text, single character, highly detailed face';
+
+  const generatePortrait = useCallback((targetNpc) => {
+    const target = targetNpc || npc;
+    if (!target || portraitLoading) return;
+    setPortraitLoading(true);
+    setPortraitError('');
+
+    const style = PORTRAIT_STYLES[tweaks.portraitStyle] || PORTRAIT_STYLES.illustrated;
+    const prompt = `${target.name ? target.name + ', ' : ''}${target.description || 'mysterious fantasy character'}. ${PORTRAIT_BASE}. ${style}.`;
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true&model=flux&seed=${Math.floor(Math.random()*99999)}`;
+
+    const img = new Image();
+    img.onload = () => {
+      setPortraits(prev => ({ ...prev, [target.name]: url }));
+      setPortraitLoading(false);
+    };
+    img.onerror = () => {
+      setPortraitError('Portrait failed — Pollinations.ai may be temporarily unavailable.');
+      setPortraitLoading(false);
+    };
+    img.src = url;
+  }, [npc, portraitLoading, tweaks.portraitStyle]);
 
   const handleForge = () => generateNPC();
-  const handleRegen = useCallback(() => generateNPC(lastConcept, lastName, lastFaction), [lastConcept, lastName, lastFaction, generateNPC]);
+  const handleRegen = useCallback(
+    () => generateNPC(lastConcept, lastName, lastFaction, lastClass, lastTier, lastDisposition, lastRole),
+    [lastConcept, lastName, lastFaction, lastClass, lastTier, lastDisposition, lastRole, generateNPC]
+  );
 
   async function buildExportMarkdown() {
     let campaignCtx = "";
@@ -1049,15 +1280,47 @@ Make it gritty, specific, and immediately playable. Avoid clichés. Each field s
     setTimeout(() => setExportCopied(false), 2000);
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!npc || savedCurrent) return;
-    setSavedNpcs(prev => {
-      // Avoid duplicates by name
-      if (prev.find(n => n.name === npc.name)) return prev;
-      return [npc, ...prev];
-    });
-    setActiveNpcIndex(0);
-    setSavedCurrent(true);
+    setSaveError('');
+    try {
+      const res = await fetch('/api/npcs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(npc),
+      });
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+      const data = await res.json();
+      const saved = { ...npc, _id: data.id };
+      const addToList = (prev) => {
+        if (prev.find(n => n.name === npc.name)) return prev;
+        return [saved, ...prev.filter(n => n.name !== EXAMPLE_NPC.name)];
+      };
+      setSavedNpcs(addToList);
+      setSidebarNpcs(addToList);
+      setActiveNpcIndex(0);
+      setSavedCurrent(true);
+
+      // Save portrait server-side if one was generated (external URL → local file)
+      const portraitUrl = portraits[npc.name];
+      if (portraitUrl && !portraitUrl.startsWith('/')) {
+        fetch(`/api/npcs/${data.id}/portrait`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageUrl: portraitUrl }),
+        })
+          .then(r => r.ok ? r.json() : null)
+          .then(pData => {
+            if (pData && pData.portraitUrl) {
+              setPortraits(prev => ({ ...prev, [npc.name]: pData.portraitUrl }));
+            }
+          })
+          .catch(() => {});
+      }
+    } catch(e) {
+      setSaveError(`Save failed: ${e.message}`);
+      console.error('Save failed:', e);
+    }
   };
 
   const handleKeyDown = (e) => {
@@ -1076,6 +1339,9 @@ Make it gritty, specific, and immediately playable. Avoid clichés. Each field s
         <TweakRadio label="AI Provider" value={tweaks.aiProvider}
           options={[{value:'claude',label:'Claude'},{value:'gemini',label:'Gemini'}]}
           onChange={v => setTweak('aiProvider', v)} />
+        <TweakRadio label="Portrait Style" value={tweaks.portraitStyle}
+          options={[{value:'illustrated',label:'Illustrated'},{value:'painterly',label:'Painterly'},{value:'gritty',label:'Gritty'}]}
+          onChange={v => setTweak('portraitStyle', v)} />
         <TweakSection label="Display" />
         <TweakColor label="Accent Color" value={tweaks.accentColor} onChange={v => setTweak('accentColor', v)} />
         <TweakToggle label="Show Dialogue Block" value={tweaks.showDialogue} onChange={v => setTweak('showDialogue', v)} />
@@ -1085,6 +1351,13 @@ Make it gritty, specific, and immediately playable. Avoid clichés. Each field s
       <header className="header">
         <div className="header-logo">DM Toolkit</div>
         <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+          {/* Visible AI provider toggle */}
+          <div className="provider-toggle">
+            {[{v:'claude',label:'Claude'},{v:'gemini',label:'Gemini'}].map(({v,label}) => (
+              <button key={v} className={`provider-btn ${tweaks.aiProvider === v ? 'active' : ''}`}
+                onClick={() => setTweak('aiProvider', v)}>{label}</button>
+            ))}
+          </div>
           <div className="campaign-indicator">
             <div className="campaign-dot" style={activeCampaign ? {boxShadow: '0 0 8px var(--gold), 0 0 2px var(--gold)'} : {}}></div>
             <span>{activeCampaign ? `Campaign: ${activeCampaign}` : 'No Campaign'}</span>
@@ -1116,6 +1389,80 @@ Make it gritty, specific, and immediately playable. Avoid clichés. Each field s
         <div className="left-panel">
           <div className="forge-title">NPC Forge</div>
           <div className="forge-subtitle">Describe a concept and forge a fully playable character in seconds.</div>
+
+          {(sidebarNpcs.length > 0 || savedNpcs.length > 0) && (
+            <div className="saved-section">
+              <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: sidebarNpcs.length > 0 ? 8 : 0}}>
+                <div className="saved-label" style={{marginBottom:0}}>Quick Access</div>
+                <div style={{display:'flex', gap:6}}>
+                  {savedNpcs.length > 0 && (
+                    <button
+                      onClick={() => setShowLibrary(v => !v)}
+                      title={showLibrary ? 'Hide library' : 'Browse all saved NPCs'}
+                      style={{background:'none',border:'none',cursor:'pointer',color: showLibrary ? 'var(--gold)' : 'var(--text-dim)',fontSize:12,padding:'0 2px',lineHeight:1,transition:'color 0.15s'}}
+                    >{showLibrary ? '✕ Library' : '📚 Library'}</button>
+                  )}
+                  {sidebarNpcs.length > 0 && (
+                    <button
+                      onClick={() => setSidebarNpcs([])}
+                      title="Clear quick access list"
+                      style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-dim)',fontSize:12,padding:'0 2px',lineHeight:1,transition:'color 0.15s'}}
+                    >Clear</button>
+                  )}
+                </div>
+              </div>
+
+              {/* Quick-access sidebar list */}
+              {sidebarNpcs.length > 0 && (
+                <div className="saved-list">
+                  {sidebarNpcs.map((n, i) => (
+                    <div
+                      key={n.name + i}
+                      className={`saved-item ${activeNpcIndex === i && npc && npc.name === n.name ? 'active' : ''}`}
+                      onClick={() => { setNpc(n); setActiveNpcIndex(i); setSavedCurrent(true); }}
+                    >
+                      <div className="saved-dot"></div>
+                      <div className="saved-name">{n.name}</div>
+                      <div style={{fontSize: 11, color: '#6a7490', flex:1}}>{n.role}</div>
+                      <button
+                        onClick={e => { e.stopPropagation(); setSidebarNpcs(prev => prev.filter((_, idx) => idx !== i)); }}
+                        title="Remove from quick access"
+                        style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-dim)',fontSize:12,padding:'0 2px',lineHeight:1,flexShrink:0,transition:'color 0.15s'}}
+                        onMouseEnter={e => e.currentTarget.style.color='#c87070'}
+                        onMouseLeave={e => e.currentTarget.style.color='var(--text-dim)'}
+                      >×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Full library browser */}
+              {showLibrary && savedNpcs.length > 0 && (
+                <div style={{marginTop: sidebarNpcs.length > 0 ? 10 : 0, borderTop: sidebarNpcs.length > 0 ? '1px solid var(--border)' : 'none', paddingTop: sidebarNpcs.length > 0 ? 10 : 0}}>
+                  <div className="saved-label" style={{marginBottom:6}}>All Saved NPCs</div>
+                  <div className="saved-list" style={{maxHeight:200}}>
+                    {savedNpcs.map((n, i) => {
+                      const inSidebar = sidebarNpcs.some(s => s.name === n.name);
+                      return (
+                        <div key={n.name + i} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 8px',borderRadius:'var(--radius)',border:'1px solid var(--border)',background:'var(--bg-panel)'}}>
+                          <div style={{flex:1, minWidth:0}}>
+                            <div style={{fontSize:13,color:'#c8cedf',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{n.name}</div>
+                            <div style={{fontSize:11,color:'#6a7490'}}>{n.role}</div>
+                          </div>
+                          <button
+                            onClick={() => { setNpc(n); setSavedCurrent(true); if (!inSidebar) setSidebarNpcs(prev => [n, ...prev.filter(s => s.name !== EXAMPLE_NPC.name)]); setShowLibrary(false); }}
+                            style={{flexShrink:0,padding:'3px 8px',borderRadius:'var(--radius)',background: inSidebar ? 'transparent' : '#2a3420',border:`1px solid ${inSidebar ? 'var(--border)' : '#4a7a30'}`,color: inSidebar ? 'var(--text-dim)' : '#8ac870',fontSize:11,cursor:'pointer',whiteSpace:'nowrap'}}
+                          >{inSidebar ? 'Load' : '+ Load'}</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="divider" style={{marginTop: 16, marginBottom: 20}} />
 
           <div className="field-group" onKeyDown={handleKeyDown}>
             <div className="field">
@@ -1202,55 +1549,136 @@ Make it gritty, specific, and immediately playable. Avoid clichés. Each field s
                 />
               )}
             </div>
-          </div>
 
-          <div className="divider" />
-
-          <button
-            className={`btn-forge ${loading ? 'loading' : ''}`}
-            onClick={handleForge}
-            disabled={loading}
-          >
-            <span>{loading ? '⚒ Forging…' : '⚒ Forge NPC'}</span>
-          </button>
-
-          <div className="export-row">
-            <button className={`btn-export ${exportCopied ? 'copied' : ''}`} onClick={handleExportCopy}>
-              {exportCopied ? '✓ Copied!' : 'Copy Prompt'}
-            </button>
-            <button className="btn-export" onClick={handleExportDownload}>
-              Export .md
-            </button>
-          </div>
-
-          {error && <div className="field-error" style={{marginTop: 12, textAlign: 'center'}}>{error}</div>}
-
-          {savedNpcs.length > 0 && (
-            <div className="saved-list">
-              <div className="saved-label">Saved NPCs</div>
-              {savedNpcs.map((n, i) => (
-                <div
-                  key={n.name + i}
-                  className={`saved-item ${activeNpcIndex === i && npc && npc.name === n.name ? 'active' : ''}`}
-                  onClick={() => { setNpc(n); setSavedCurrent(true); }}
-                >
-                  <div className="saved-dot"></div>
-                  <div className="saved-name">{n.name}</div>
-                  <div style={{fontSize: 11, color: 'var(--text-dim)'}}>{n.role}</div>
-                </div>
-              ))}
+            {/* ── Class ── */}
+            <div className="field">
+              <label className="field-label">
+                Class
+                <span className="optional-tag">optional</span>
+              </label>
+              <select
+                value={npcClass}
+                onChange={e => setNpcClass(e.target.value)}
+                style={{
+                  background: 'var(--bg-input)', border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius)', color: npcClass ? 'var(--text)' : 'var(--text-dim)',
+                  fontFamily: 'var(--body)', fontSize: 15, padding: '10px 14px',
+                  outline: 'none', width: '100%', cursor: 'pointer',
+                  transition: 'border-color 0.2s',
+                }}
+                onFocus={e => e.target.style.borderColor = 'var(--gold-dim)'}
+                onBlur={e => e.target.style.borderColor = 'var(--border)'}
+              >
+                <option value="">None (Commoner)</option>
+                {['Artificer','Barbarian','Bard','Cleric','Druid','Fighter','Monk','Paladin','Ranger','Rogue','Sorcerer','Warlock','Wizard'].map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
             </div>
-          )}
 
-          <div className="lore-hint">
-            Press <strong>Ctrl + Enter</strong> in any field to forge.<br />
-            All NPCs are saved locally to your session.
-            <div style={{marginTop: 10, fontSize: 11, fontStyle: 'normal', letterSpacing: '0.02em'}}>
-              {tweaks.aiProvider === 'gemini'
-                ? 'Powered by Gemini 1.5 Flash · Free Tier · 15 req/min'
-                : 'Powered by Claude Haiku · ~$0.002 per NPC · ~500 NPCs per dollar'}
+            {/* ── Level Tier ── */}
+            <div className="field">
+              <label className="field-label">
+                Level Tier
+                <span className="optional-tag">optional</span>
+              </label>
+              <div style={{display:'flex', gap:6}}>
+                {[['Minor (1–4)', 'Novice — low threat, limited abilities'],
+                  ['Seasoned (5–10)', 'Experienced — capable and known'],
+                  ['Legendary (11+)', 'Powerful — feared or revered']].map(([val, tip]) => (
+                  <button key={val} title={tip}
+                    onClick={() => setLevelTier(levelTier === val ? '' : val)}
+                    style={{
+                      flex: 1, padding: '7px 4px', borderRadius: 'var(--radius)',
+                      background: levelTier === val ? '#4a3d6828' : 'var(--bg-input)',
+                      border: `1px solid ${levelTier === val ? '#6a5a9080' : 'var(--border)'}`,
+                      color: levelTier === val ? '#b09de0' : 'var(--text-muted)',
+                      fontFamily: 'var(--serif)', fontSize: 11, fontWeight: 600,
+                      letterSpacing: '0.04em', cursor: 'pointer', transition: 'all 0.15s',
+                    }}
+                  >{val.split(' ')[0]}<br/><span style={{fontSize:9,opacity:0.7}}>{val.match(/\(.*\)/)?.[0]}</span></button>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Disposition ── */}
+            <div className="field">
+              <label className="field-label">
+                Disposition toward Party
+                <span className="optional-tag">optional</span>
+              </label>
+              <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
+                {[['Friendly','#2d5e3e','#7ec89a'],['Neutral','#3a4a5e','#8ab0d0'],
+                  ['Hostile','#5e2d2d','#d08080'],['Unknown','#3a3a3a','#909090']].map(([val, bg, col]) => (
+                  <button key={val}
+                    onClick={() => setDisposition(disposition === val ? '' : val)}
+                    style={{
+                      flex: '1 1 calc(50% - 3px)', padding: '7px 8px', borderRadius: 'var(--radius)',
+                      background: disposition === val ? bg + '44' : 'var(--bg-input)',
+                      border: `1px solid ${disposition === val ? col + '80' : 'var(--border)'}`,
+                      color: disposition === val ? col : 'var(--text-muted)',
+                      fontFamily: 'var(--serif)', fontSize: 11, fontWeight: 600,
+                      letterSpacing: '0.06em', cursor: 'pointer', transition: 'all 0.15s',
+                    }}
+                  >{val}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Story Role ── */}
+            <div className="field">
+              <label className="field-label">
+                Story Role
+                <span className="optional-tag">optional</span>
+              </label>
+              <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
+                {[['Ally','#2d5e40','#7ecb90'],['Villain','#5e2d2d','#d07070'],
+                  ['Quest Giver','#4a3d10','#c9a84c'],['Rival','#3a2d5e','#a08ad0'],
+                  ['Wild Card','#2d4a4a','#70b0b0']].map(([val, bg, col]) => (
+                  <button key={val}
+                    onClick={() => setStoryRole(storyRole === val ? '' : val)}
+                    style={{
+                      flex: '1 1 calc(33% - 4px)', padding: '7px 6px', borderRadius: 'var(--radius)',
+                      background: storyRole === val ? bg + '44' : 'var(--bg-input)',
+                      border: `1px solid ${storyRole === val ? col + '80' : 'var(--border)'}`,
+                      color: storyRole === val ? col : 'var(--text-muted)',
+                      fontFamily: 'var(--serif)', fontSize: 11, fontWeight: 600,
+                      letterSpacing: '0.04em', cursor: 'pointer', transition: 'all 0.15s',
+                      textAlign: 'center',
+                    }}
+                  >{val}</button>
+                ))}
+              </div>
+            </div>
+
+          </div>{/* end field-group */}
+
+          {/* Sticky forge section — always visible at the bottom of the panel */}
+          <div className="left-forge-sticky">
+            <button
+              className={`btn-forge ${loading ? 'loading' : ''}`}
+              onClick={handleForge}
+              disabled={loading}
+            >
+              <span>{loading ? '⚒ Forging…' : '⚒ Forge NPC'}</span>
+            </button>
+
+            <div className="export-row" style={{marginTop: 8}}>
+              <button className={`btn-export ${exportCopied ? 'copied' : ''}`} onClick={handleExportCopy}>
+                {exportCopied ? '✓ Copied!' : 'Copy Prompt'}
+              </button>
+              <button className="btn-export" onClick={handleExportDownload}>
+                Export .md
+              </button>
+            </div>
+
+            {error && <div className="field-error" style={{marginTop: 6, textAlign: 'center'}}>{error}</div>}
+
+            <div style={{marginTop: 10, fontSize: 11, color: 'var(--text-dim)', textAlign: 'center', fontStyle: 'italic'}}>
+              Ctrl+Enter to forge · {tweaks.aiProvider === 'gemini' ? 'Gemini Flash' : 'Claude Haiku'} · Portraits via Pollinations
             </div>
           </div>
+
         </div>
 
         {/* RIGHT: Output */}
@@ -1264,8 +1692,13 @@ Make it gritty, specific, and immediately playable. Avoid clichés. Each field s
               onRegen={handleRegen}
               isSaved={savedCurrent}
               isRegening={loading}
+              saveError={saveError}
               showDialogue={tweaks.showDialogue}
               compact={tweaks.compactMode}
+              portrait={portraits[npc.name] || null}
+              portraitLoading={portraitLoading}
+              portraitError={portraitError}
+              onGeneratePortrait={() => generatePortrait(npc)}
             />
           ) : (
             <div className="empty-state">
