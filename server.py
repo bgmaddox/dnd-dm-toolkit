@@ -17,8 +17,14 @@ from setup_wizard import setup_wizard
 # Versioning
 VERSION = "1.0.0"
 
-# Ensure API keys are present before starting
-setup_wizard()
+# PORTABLE=1 activates desktop-launcher mode: dynamic port, browser auto-open, setup wizard.
+# On Pi, this env var is never set — server starts on PORT (default 8502) with no wizard.
+PORTABLE = os.environ.get("PORTABLE", "").lower() in ("1", "true", "yes")
+PORT = int(os.environ.get("PORT", 8502))
+
+# Only run setup wizard for desktop/portable deployments
+if PORTABLE:
+    setup_wizard()
 
 app = FastAPI()
 
@@ -319,6 +325,40 @@ async def append_note(req: NoteAppendRequest):
     
     return {"ok": True, "path": str(path)}
 
+@app.get("/api/session/summaries/{campaign}")
+async def list_session_summaries(campaign: str):
+    sessions_dir = CAMPAIGN_BASE / campaign / "sessions"
+    if not sessions_dir.exists():
+        return {"sessions": []}
+    results = []
+    for f in sorted(sessions_dir.glob("session_*.md"), key=lambda x: x.stat().st_mtime, reverse=True):
+        m = _re.match(r"session_(\d+)\.md", f.name)
+        if m:
+            num = int(m.group(1))
+            text = f.read_text()
+            title = next((l.lstrip("#").strip() for l in text.splitlines() if l.strip()), f"Session {num}")
+            saved_at = time.strftime("%Y-%m-%d", time.localtime(f.stat().st_mtime))
+            results.append({"sessionNumber": num, "title": title, "savedAt": saved_at})
+    return {"sessions": results}
+
+
+@app.get("/api/session/chat/{campaign}/{session_number}")
+async def get_chat_history(campaign: str, session_number: int):
+    chat_path = CAMPAIGN_BASE / campaign / "sessions" / f"chat_{session_number}.json"
+    if not chat_path.exists():
+        return {"history": []}
+    return {"history": json.loads(chat_path.read_text())}
+
+
+@app.post("/api/session/chat/{campaign}/{session_number}")
+async def save_chat_history(campaign: str, session_number: int, body: dict):
+    sessions_dir = CAMPAIGN_BASE / campaign / "sessions"
+    sessions_dir.mkdir(parents=True, exist_ok=True)
+    chat_path = sessions_dir / f"chat_{session_number}.json"
+    chat_path.write_text(json.dumps(body.get("history", []), indent=2))
+    return {"ok": True}
+
+
 class FinalizeRequest(BaseModel):
     campaign: str
     sessionNumber: int
@@ -449,6 +489,7 @@ Respond with JSON only:
 
 
 NPCS_DIR = TOOLS_DIR / "npcs"
+PORTRAITS_DIR = NPCS_DIR / "portraits"
 
 
 @app.get("/api/npcs")
@@ -457,7 +498,11 @@ async def list_npcs():
     npcs = []
     for f in sorted(NPCS_DIR.glob("*.json"), key=lambda x: x.stat().st_mtime, reverse=True):
         try:
-            npcs.append(json.loads(f.read_text()))
+            data = json.loads(f.read_text())
+            portrait_path = PORTRAITS_DIR / f"{f.stem}.png"
+            if portrait_path.exists():
+                data["portraitUrl"] = f"/tools/npcs/portraits/{f.stem}.png"
+            npcs.append(data)
         except Exception:
             pass
     return {"npcs": npcs}
@@ -480,7 +525,30 @@ async def delete_npc(npc_id: str):
     path = NPCS_DIR / f"{npc_id}.json"
     if path.exists():
         path.unlink()
+    portrait_path = PORTRAITS_DIR / f"{npc_id}.png"
+    if portrait_path.exists():
+        portrait_path.unlink()
     return {"ok": True}
+
+
+@app.post("/api/npcs/{npc_id}/portrait")
+async def save_portrait(npc_id: str, body: dict):
+    if not _re.match(r"^[a-z0-9\-]+$", npc_id):
+        raise HTTPException(status_code=400, detail="Invalid NPC ID")
+    image_url = body.get("imageUrl", "")
+    if not image_url:
+        raise HTTPException(status_code=400, detail="imageUrl required")
+    PORTRAITS_DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        import urllib.request
+        req = urllib.request.Request(image_url, headers={"User-Agent": "DMToolkit/1.0"})
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            image_data = resp.read()
+        portrait_path = PORTRAITS_DIR / f"{npc_id}.png"
+        portrait_path.write_bytes(image_data)
+        return {"ok": True, "portraitUrl": f"/tools/npcs/portraits/{npc_id}.png"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Portrait download failed: {e}")
 
 
 CAMPAIGN_DIR = Path(__file__).parent / "campaign"
@@ -640,18 +708,17 @@ def find_available_port(start_port=8000, max_attempts=10):
 
 if __name__ == "__main__":
     import uvicorn
-    import webbrowser
-    
-    port = find_available_port(8000)
-    url = f"http://localhost:{port}"
-    
-    print(f"\n--- DM Toolkit Starting at {url} ---")
-    
-    # Open browser in a separate thread after a short delay
-    def open_browser():
-        time.sleep(1.5)
-        webbrowser.open(url)
-    
-    threading.Thread(target=open_browser, daemon=True).start()
-    
+
+    if PORTABLE:
+        import webbrowser
+        port = find_available_port(8080)
+        print(f"\n--- DM Toolkit (Portable) starting at http://localhost:{port} ---")
+        def open_browser():
+            time.sleep(1.5)
+            webbrowser.open(f"http://localhost:{port}")
+        threading.Thread(target=open_browser, daemon=True).start()
+    else:
+        port = PORT
+        print(f"\n--- DM Toolkit starting on port {port} ---")
+
     uvicorn.run("server:app", host="127.0.0.1", port=port, log_level="info")

@@ -398,6 +398,61 @@
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
 
   [x-cloak] { display: none !important; }
+
+  .context-summary { margin-bottom: 20px; }
+  .context-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .context-val { color: var(--gold); font-weight: 600; }
+
+  .past-sessions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 150px;
+    overflow-y: auto;
+  }
+  .session-item {
+    cursor: pointer;
+    padding: 8px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: border-color 0.2s;
+  }
+  .session-item:hover { border-color: var(--gold-dim); }
+  .session-item.selected { border-color: var(--gold); }
+  .session-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .session-item-num { color: var(--gold); font-size: 13px; font-family: var(--serif); }
+  .session-item-date { color: var(--text-dim); font-size: 11px; }
+  .session-item-title {
+    color: var(--text-muted);
+    font-size: 12px;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .resume-badge {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: rgba(201,168,76,0.08);
+    border: 1px solid var(--border-glow);
+    border-radius: var(--radius);
+    font-size: 12px;
+    color: var(--gold-dim);
+    text-align: center;
+  }
 </style>
 </head>
 <body x-data="companion">
@@ -454,9 +509,37 @@
             </div>
           </template>
         </div>
-        <button class="btn" :disabled="!campaign || loading" @click="beginSession">
-          <span x-text="loading ? 'Initializing...' : 'Begin Session'"></span>
+
+        <template x-if="pastSessions.length > 0">
+          <div class="form-group">
+            <label>Past Sessions</label>
+            <div class="past-sessions-list">
+              <template x-for="s in pastSessions" :key="s.sessionNumber">
+                <div @click="loadSession(s.sessionNumber)"
+                     :class="'session-item' + (sessionNumber == s.sessionNumber ? ' selected' : '')">
+                  <div class="session-item-header">
+                    <span class="session-item-num" x-text="`Session ${s.sessionNumber}`"></span>
+                    <span class="session-item-date" x-text="s.savedAt"></span>
+                  </div>
+                  <div class="session-item-title" x-text="s.title"></div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <template x-if="resumeAvailable">
+          <div class="resume-badge">💬 Saved conversation found for Session <span x-text="sessionNumber"></span></div>
+        </template>
+
+        <button class="btn" :disabled="!campaign || loading" @click="beginSession(false)">
+          <span x-text="loading ? 'Initializing...' : (resumeAvailable ? 'New Session' : 'Begin Session')"></span>
         </button>
+        <template x-if="resumeAvailable">
+          <button class="btn btn-outline" style="margin-top: 8px;" :disabled="loading" @click="beginSession(true)">
+            ↩ Resume Conversation
+          </button>
+        </template>
       </div>
     </div>
   </template>
@@ -535,6 +618,8 @@ document.addEventListener('alpine:init', () => {
     campaign: '',
     sessionNumber: 1,
     activeContext: null,
+    pastSessions: [],
+    resumeAvailable: false,
     loading: false,
     chatLoading: false,
     prepMode: false,
@@ -542,7 +627,7 @@ document.addEventListener('alpine:init', () => {
     history: [],
     prepHistory: [],
     party: [],
-    
+
     async init() {
       const res = await fetch('/api/campaigns');
       const data = await res.json();
@@ -551,16 +636,42 @@ document.addEventListener('alpine:init', () => {
 
     async checkContext() {
       if (!this.campaign) return;
-      const res = await fetch('/api/session/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ campaign: this.campaign, sessionNumber: parseInt(this.sessionNumber) })
-      });
-      if (res.ok) this.activeContext = (await res.json()).activeContext;
+      const [startRes, summariesRes, chatRes] = await Promise.all([
+        fetch('/api/session/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ campaign: this.campaign, sessionNumber: parseInt(this.sessionNumber) })
+        }),
+        fetch(`/api/session/summaries/${this.campaign}`),
+        fetch(`/api/session/chat/${this.campaign}/${this.sessionNumber}`)
+      ]);
+      if (startRes.ok) this.activeContext = (await startRes.json()).activeContext;
+      if (summariesRes.ok) this.pastSessions = (await summariesRes.json()).sessions || [];
+      if (chatRes.ok) {
+        const chatData = await chatRes.json();
+        this.resumeAvailable = (chatData.history || []).length > 0;
+      } else {
+        this.resumeAvailable = false;
+      }
     },
 
-    async beginSession() {
+    async loadSession(num) {
+      this.sessionNumber = num;
+      await this.checkContext();
+    },
+
+    async beginSession(resume = false) {
       this.loading = true;
+      if (resume) {
+        const chatRes = await fetch(`/api/session/chat/${this.campaign}/${this.sessionNumber}`);
+        if (chatRes.ok) {
+          const chatData = await chatRes.json();
+          this.history = (chatData.history || []).map((m, i) => ({ id: Date.now() + i, ...m }));
+        }
+      } else {
+        this.history = [];
+        this.prepHistory = [];
+      }
       const res = await fetch('/api/players');
       const data = await res.json();
       this.party = data.players.filter(p => p.campaign === this.campaign);
@@ -568,11 +679,23 @@ document.addEventListener('alpine:init', () => {
       this.loading = false;
     },
 
+    async saveChatHistory() {
+      const active = this.prepMode ? this.prepHistory : this.history;
+      const toSave = active.map(({ role, content }) => ({ role, content }));
+      try {
+        await fetch(`/api/session/chat/${this.campaign}/${this.sessionNumber}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ history: toSave })
+        });
+      } catch(e) { /* non-fatal */ }
+    },
+
     async sendMessage() {
       if (!this.userInput.trim() || this.chatLoading) return;
       const query = this.userInput;
       this.userInput = '';
-      
+
       const currentHistory = this.prepMode ? this.prepHistory : this.history;
       currentHistory.push({ id: Date.now(), role: 'user', content: query });
       this.chatLoading = true;
@@ -588,13 +711,14 @@ document.addEventListener('alpine:init', () => {
           sessionNumber: this.sessionNumber
         })
       });
-      
+
       if (res.ok) {
         const data = await res.json();
         currentHistory.push({ id: Date.now() + 1, role: 'assistant', content: data.content });
       }
       this.chatLoading = false;
       this.scrollToBottom();
+      await this.saveChatHistory();
     },
 
     handoff(type, content) {

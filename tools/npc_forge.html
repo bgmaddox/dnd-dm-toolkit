@@ -1073,6 +1073,13 @@ function App() {
         const list = loaded.length > 0 ? loaded : [EXAMPLE_NPC];
         setSavedNpcs(list);
         setSidebarNpcs(list);
+        const savedPortraits = {};
+        for (const n of loaded) {
+          if (n.portraitUrl) savedPortraits[n.name] = n.portraitUrl;
+        }
+        if (Object.keys(savedPortraits).length > 0) {
+          setPortraits(prev => ({ ...prev, ...savedPortraits }));
+        }
       })
       .catch(() => {});
   }, []);
@@ -1293,6 +1300,23 @@ Make it gritty, specific, and immediately playable. Avoid clichés. Each field s
       setSidebarNpcs(addToList);
       setActiveNpcIndex(0);
       setSavedCurrent(true);
+
+      // Save portrait server-side if one was generated (external URL → local file)
+      const portraitUrl = portraits[npc.name];
+      if (portraitUrl && !portraitUrl.startsWith('/')) {
+        fetch(`/api/npcs/${data.id}/portrait`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageUrl: portraitUrl }),
+        })
+          .then(r => r.ok ? r.json() : null)
+          .then(pData => {
+            if (pData && pData.portraitUrl) {
+              setPortraits(prev => ({ ...prev, [npc.name]: pData.portraitUrl }));
+            }
+          })
+          .catch(() => {});
+      }
     } catch(e) {
       setSaveError(`Save failed: ${e.message}`);
       console.error('Save failed:', e);

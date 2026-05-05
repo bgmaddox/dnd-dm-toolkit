@@ -35,6 +35,8 @@ pip install --quiet -r requirements.txt
 
 :: 4. Start Server
 echo Starting toolkit...
+:: PORTABLE=1 enables dynamic port selection, browser auto-open, and setup wizard
+set PORTABLE=1
 %PYTHON_EXE% server.py
 
 if %ERRORLEVEL% neq 0 (
