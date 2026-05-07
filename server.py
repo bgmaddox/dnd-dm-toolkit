@@ -15,7 +15,7 @@ from campaign_loader import load_campaign_context, list_campaigns
 from setup_wizard import setup_wizard
 
 # Versioning
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 
 # PORTABLE=1 activates desktop-launcher mode: dynamic port, browser auto-open, setup wizard.
 # On Pi, this env var is never set — server starts on PORT (default 8502) with no wizard.
@@ -690,13 +690,131 @@ async def get_players():
     return {"players": players}
 
 
+class CreateCampaignRequest(BaseModel):
+    name: str
+
+@app.post("/api/campaign/create")
+async def create_campaign(req: CreateCampaignRequest):
+    # Sanitize name for folder
+    folder_name = _re.sub(r"[^a-z0-9]+", "_", req.name.lower()).strip("_")
+    if not folder_name:
+        raise HTTPException(status_code=400, detail="Invalid campaign name")
+    
+    camp_dir = CAMPAIGN_BASE / folder_name
+    if camp_dir.exists():
+        raise HTTPException(status_code=400, detail="Campaign already exists")
+    
+    # Scaffold structure
+    camp_dir.mkdir(parents=True)
+    (camp_dir / "npcs").mkdir()
+    (camp_dir / "locations").mkdir()
+    (camp_dir / "pcs").mkdir()
+    (camp_dir / "sessions").mkdir()
+    (camp_dir / "sessions" / "transcripts").mkdir()
+    
+    # Create base files
+    (camp_dir / "WORLD.md").write_text(f"# {req.name}\n\n## Overview\n[Add your campaign overview here]")
+    (camp_dir / "FACTIONS.md").write_text("# Factions\n\n## [Faction Name]\nDescription here.")
+    
+    return {"ok": True, "campaign": folder_name}
+
+
+class SaveEntityRequest(BaseModel):
+    campaign: str
+    type: str  # "npc" or "location"
+    data: dict
+
+@app.post("/api/campaign/save_entity")
+async def save_campaign_entity(req: SaveEntityRequest):
+    camp_dir = CAMPAIGN_BASE / req.campaign
+    if not camp_dir.exists():
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    
+    target_dir = camp_dir / (req.type + "s")
+    target_dir.mkdir(exist_ok=True)
+    
+    name = req.data.get("name", "Unnamed").strip()
+    file_name = _re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_") + ".md"
+    file_path = target_dir / file_name
+    
+    content = ""
+    if req.type == "npc":
+        d = req.data
+        # Format NPC Markdown
+        content = f"""# {name}
+
+## At a Glance
+- **Role:** {d.get('role', '')}
+- **Location:** {d.get('location', '')}
+- **Stat Block:** {d.get('statBlock', '')}
+- **Faction:** {d.get('faction', '')}
+
+## Appearance
+{d.get('description', d.get('appearance', ''))}
+
+## Voice & Manner
+- **Voice Quirk:** {d.get('voiceQuirk', '')}
+- **Physical Tell:** {d.get('physicalTell', '')}
+
+## Motivations
+- **Want (immediate):** {d.get('immediateWant', d.get('want_immediate', ''))}
+- **Want (deep):** {d.get('deepWant', d.get('want_deep', ''))}
+- **Secret:** {d.get('secret', '')}
+
+## Relationships
+{d.get('relationships', '')}
+
+## Sample Dialogue
+"""
+        dialogue = d.get('dialogue', [])
+        if isinstance(dialogue, list):
+            for line in dialogue:
+                content += f"> \"{line}\"\n\n"
+        
+        content += f"\n## DM Notes\n{d.get('notes', d.get('dm_notes', ''))}\n"
+        
+    elif req.type == "location":
+        d = req.data
+        content = f"""# {name}
+
+## Overview
+{d.get('overview', '')}
+
+## Sensory Details
+- **Sights:** {d.get('sights', '')}
+- **Sounds:** {d.get('sounds', '')}
+- **Smells:** {d.get('smells', '')}
+
+## Key Features
+{d.get('features', '')}
+
+## NPCs Present
+{d.get('npcs', '')}
+
+## DM Notes
+{d.get('notes', '')}
+"""
+    
+    file_path.write_text(content.strip() + "\n")
+    
+    # Refresh BM25 cache for this campaign
+    try:
+        from utils.bm25_index import _indices
+        if req.campaign in _indices:
+            _indices[req.campaign]._refresh_index()
+    except Exception:
+        pass
+        
+    return {"ok": True, "path": str(file_path)}
+
+
 # Serve tool HTML files directly at /tools/<name>.html
 app.mount("/tools", StaticFiles(directory=str(TOOLS_DIR), html=False), name="tools")
 
 
 @app.get("/")
 async def root():
-    return FileResponse(str(TOOLS_DIR / "npc_forge.html"))
+    return FileResponse(str(TOOLS_DIR / "session_companion.html"))
 
 def find_available_port(start_port=8000, max_attempts=10):
     import socket
