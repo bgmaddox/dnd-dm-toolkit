@@ -400,6 +400,75 @@
 
   [x-cloak] { display: none !important; }
 
+  /* ORACLE */
+  .oracle-section { margin-top: 24px; }
+  .oracle-cats {
+    display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px;
+  }
+  .oracle-cat {
+    background: var(--bg-card); border: 1px solid var(--border);
+    color: var(--text-muted); padding: 4px 10px; border-radius: 12px;
+    font-size: 11px; font-family: var(--serif); cursor: pointer;
+    letter-spacing: 0.05em; transition: all 0.15s;
+  }
+  .oracle-cat:hover { border-color: var(--gold-dim); color: var(--gold); }
+  .oracle-cat.active { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.08); }
+  .oracle-subcats {
+    display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px;
+  }
+  .oracle-subcat {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-dim); padding: 3px 8px; border-radius: 10px;
+    font-size: 10px; font-family: var(--serif); cursor: pointer;
+    letter-spacing: 0.04em; transition: all 0.15s;
+  }
+  .oracle-subcat:hover { border-color: var(--gold-dim); color: var(--text-muted); }
+  .oracle-subcat.active { border-color: var(--gold-dim); color: var(--gold-dim); }
+  .oracle-result {
+    background: rgba(201,168,76,0.06); border: 1px solid var(--border-glow);
+    border-radius: var(--radius); padding: 12px 14px; font-size: 14px;
+    color: var(--text); line-height: 1.5; min-height: 52px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .oracle-result-text { flex: 1; font-style: italic; color: var(--text-muted); }
+  .oracle-result-text.has-result { font-style: normal; color: var(--text); }
+  .oracle-roll-btn {
+    background: none; border: 1px solid var(--border); color: var(--text-dim);
+    width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+    font-size: 14px; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: all 0.15s;
+  }
+  .oracle-roll-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+  /* CAMPAIGN SEARCH */
+  .search-section { margin-top: 24px; }
+  .search-input-wrap { position: relative; }
+  .search-input-wrap input { padding-right: 34px; font-size: 13px; }
+  .search-icon {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    color: var(--text-dim); font-size: 13px; pointer-events: none;
+  }
+  .search-results { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .search-result-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 10px 12px;
+  }
+  .search-result-name {
+    font-family: var(--serif); font-size: 12px; color: var(--gold);
+    letter-spacing: 0.05em; margin-bottom: 4px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .search-result-type {
+    font-size: 10px; color: var(--text-dim); text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .search-result-excerpt {
+    font-size: 12px; color: var(--text-muted); line-height: 1.5;
+    display: -webkit-box; -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .search-empty { font-size: 12px; color: var(--text-dim); font-style: italic; text-align: center; padding: 8px 0; }
+
   .context-summary { margin-bottom: 20px; }
   .context-item {
     display: flex;
@@ -463,6 +532,7 @@
   
   <nav class="nav-menu" x-show="view === 'live'" x-cloak>
     <a class="nav-link active">Session</a>
+    <a href="/tools/lore_builder.html" class="nav-link" target="_blank">Lore Builder</a>
     <a href="/tools/combat_companion.html" class="nav-link" target="_blank">Combat</a>
     <a href="/tools/npc_forge.html" class="nav-link" target="_blank">NPC Forge</a>
     <a href="/tools/scene_painter.html" class="nav-link" target="_blank">Scene Paint</a>
@@ -559,7 +629,32 @@
           </template>
         </div>
 
-        <div class="panel-title" style="margin-top: 30px;">Quick NPC</div>
+        <div class="search-section">
+          <div class="panel-title">Campaign Search</div>
+          <div class="search-input-wrap">
+            <input type="text" x-model="searchQuery"
+              @input.debounce.400ms="searchCampaign"
+              @keydown.escape="searchQuery=''; searchResults=[]"
+              placeholder="Search NPCs, locations..." />
+            <span class="search-icon" x-text="searching ? '…' : '⌕'"></span>
+          </div>
+          <div class="search-results" x-show="searchResults.length > 0 || (searchQuery.length > 1 && !searching)" x-cloak>
+            <template x-if="searchResults.length === 0 && searchQuery.length > 1 && !searching">
+              <div class="search-empty">No matches found.</div>
+            </template>
+            <template x-for="r in searchResults" :key="r.name">
+              <div class="search-result-card">
+                <div class="search-result-name">
+                  <span x-text="r.name"></span>
+                  <span class="search-result-type" x-text="r.type"></span>
+                </div>
+                <div class="search-result-excerpt" x-text="r.excerpt"></div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <div class="panel-title" style="margin-top: 24px;">Quick NPC</div>
         <button class="btn btn-outline" style="font-size: 11px; padding: 10px;" @click="handoff('NPC', 'random villager')">Random Commoner</button>
         <button class="btn btn-outline" style="font-size: 11px; padding: 10px; margin-top: 8px;" @click="handoff('NPC', 'shady contact')">Shady Contact</button>
       </div>
@@ -603,7 +698,34 @@
             <button class="btn log-btn" @click="promptLog('Event')">🎭 Log Plot Point</button>
           </div>
         </template>
-        <div style="margin-top: auto;">
+        <template x-if="!prepMode">
+          <div class="oracle-section">
+            <div class="panel-title">Oracle</div>
+            <div class="oracle-cats">
+              <template x-for="cat in ['Name','Motive','Trouble','Weather','Hook']" :key="cat">
+                <button class="oracle-cat" :class="oracleCat === cat ? 'active' : ''"
+                  @click="oracleCat = cat; oracleResult = ''"
+                  x-text="cat"></button>
+              </template>
+            </div>
+            <template x-if="oracleCat === 'Name'">
+              <div class="oracle-subcats">
+                <template x-for="race in ['Human','Elf','Dwarf','Halfling','Tiefling']" :key="race">
+                  <button class="oracle-subcat" :class="oracleRace === race ? 'active' : ''"
+                    @click="oracleRace = race"
+                    x-text="race"></button>
+                </template>
+              </div>
+            </template>
+            <div class="oracle-result">
+              <span class="oracle-result-text" :class="oracleResult ? 'has-result' : ''"
+                x-text="oracleResult || 'Press ⟳ to roll...'"></span>
+              <button class="oracle-roll-btn" @click="rollOracle()" title="Roll">⟳</button>
+            </div>
+          </div>
+        </template>
+
+        <div style="margin-top: auto; padding-top: 16px;">
           <button class="btn btn-outline" @click="finalizeSession" x-text="prepMode ? 'Save Prep' : 'Finalize Session'"></button>
         </div>
       </div>
@@ -612,6 +734,54 @@
 </div>
 
 <script>
+const ORACLE_TABLES = {
+  Name: {
+    Human:    ["Aldric","Mira","Corvus","Sera","Balt","Isolde","Gareth","Lyra","Dorin","Vesper","Edric","Nessa","Harlan","Petra","Colm"],
+    Elf:      ["Aerindel","Caladwen","Thranduvar","Silmarien","Arannis","Naivara","Quarion","Erevan","Adran","Leshanna","Riardon","Shava"],
+    Dwarf:    ["Thorek","Brunhilde","Gimrak","Dagny","Borin","Kathra","Veit","Marta","Brottor","Hilda","Tordek","Vistra"],
+    Halfling: ["Merric","Rosie","Cade","Lidda","Paxton","Mirt","Sheela","Andry","Alton","Kithri","Eldon","Vani"],
+    Tiefling: ["Krix","Mordai","Velvet","Cairn","Raven","Zariel","Phlegas","Nemeia","Akmenos","Damaia","Leucis","Makaria"],
+  },
+  Motive: [
+    "Protect a family secret","Earn enough coin to leave town","Seek revenge on a local noble",
+    "Find a missing relative","Prove themselves to their guild","Hide from a past crime",
+    "Fulfill a dying promise","Gain favor with the local lord","Reclaim stolen property",
+    "Escape an arranged marriage","Pay off a dangerous debt","Find a cure for an illness",
+    "Impress someone they love","Serve a higher power faithfully","Outlive a bitter rival",
+  ],
+  Trouble: [
+    "A witness saw them","The wrong person was blamed","Something valuable went missing",
+    "An unexpected ally appeared","The plan worked — but now there's a worse problem",
+    "Someone is lying about their identity","A deadline is about to expire",
+    "The map or key is a fake","Weather changed everything","A third party wants in",
+    "They're being watched","The target knows they're coming",
+    "The contact never showed up","The reward was already claimed","It was a setup",
+  ],
+  Weather: [
+    "Clear and cold, frost on the stones","Overcast with a bitter wind from the north",
+    "Light fog, visibility poor past 60 feet","Heavy rain, roads churned to mud",
+    "Unseasonable heat, tempers running short","Thick fog — eerie quiet, no birdsong",
+    "Sleet and ice, footing treacherous","Sunny and pleasant (suspiciously so)",
+    "A storm rolling in fast from the north","Light drizzle, grey skies all day",
+    "Unnaturally still — no wind at all","First snow of the season",
+    "Warm for the season, flowers blooming late","Hail, brief but intense",
+  ],
+  Hook: [
+    "A stranger collapses at the party's feet","A coded letter arrives under the door",
+    "Smoke rises from somewhere it shouldn't","An old name appears on the wanted board",
+    "Someone from the past turns up asking for help",
+    "A child follows the party — says they're the only ones who can help",
+    "A merchant offers triple price for something mundane",
+    "The innkeeper seems terrified of a quiet guest",
+    "An animal is clearly trying to lead them somewhere",
+    "A corpse is found bearing only the party's sigil",
+    "Two rival factions both ask for help with the same problem",
+    "Someone paid for the party's rooms — no note left",
+    "A map is slipped into a pack without anyone noticing",
+    "The local festival is cancelled, no explanation given",
+  ],
+};
+
 document.addEventListener('alpine:init', () => {
   Alpine.data('companion', () => ({
     view: 'start',
@@ -628,6 +798,12 @@ document.addEventListener('alpine:init', () => {
     history: [],
     prepHistory: [],
     party: [],
+    oracleCat: 'Name',
+    oracleRace: 'Human',
+    oracleResult: '',
+    searchQuery: '',
+    searchResults: [],
+    searching: false,
 
     async init() {
       const res = await fetch('/api/campaigns');
@@ -720,6 +896,28 @@ document.addEventListener('alpine:init', () => {
       this.chatLoading = false;
       this.scrollToBottom();
       await this.saveChatHistory();
+    },
+
+    rollOracle() {
+      const table = ORACLE_TABLES[this.oracleCat];
+      const list = this.oracleCat === 'Name' ? (table[this.oracleRace] || table.Human) : table;
+      this.oracleResult = list[Math.floor(Math.random() * list.length)];
+    },
+
+    async searchCampaign() {
+      if (!this.campaign || this.searchQuery.trim().length < 2) {
+        this.searchResults = [];
+        return;
+      }
+      this.searching = true;
+      try {
+        const res = await fetch(`/api/campaign/search?campaign=${encodeURIComponent(this.campaign)}&q=${encodeURIComponent(this.searchQuery)}`);
+        if (res.ok) {
+          const data = await res.json();
+          this.searchResults = data.results || [];
+        }
+      } catch(e) { /* non-fatal */ }
+      this.searching = false;
     },
 
     handoff(type, content) {

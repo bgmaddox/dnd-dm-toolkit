@@ -53,7 +53,7 @@
 </head>
 <body>
 <div id="root"></div>
-<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="/tools/tweaks-panel.jsx"></script>
 <script type="text/babel">
 
 const { useState, useEffect, useRef, useCallback } = React;
@@ -395,7 +395,7 @@ function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeCh
   );
 }
 
-function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks, onOpenAdd, onOpenInitiatives, portraits, encName, setEncName, encNote, setEncNote, roundNumber, setRoundNumber, onOpenSessions }) {
+function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks, onOpenAdd, onOpenInitiatives, portraits, encName, setEncName, encNote, setEncNote, roundNumber, setRoundNumber, onOpenSessions, onOpenEncounterBuilder }) {
   const [editingEnc, setEditingEnc] = useState(null); // "name" | "note" | null
 
   function nextTurn() {
@@ -444,13 +444,22 @@ function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks,
           <div style={{ fontFamily: "var(--font-head)", fontSize: 11, color: "var(--gold)", letterSpacing: "0.1em" }}>
             ACTIVE ENCOUNTER
           </div>
-          <button
-            onClick={onOpenSessions}
-            title="Save / Load session"
-            style={{ background: "none", border: "none", cursor: "pointer", padding: "1px 3px", fontSize: 14, opacity: 0.55, transition: "opacity 0.15s" }}
-            onMouseEnter={e => e.currentTarget.style.opacity = "1"}
-            onMouseLeave={e => e.currentTarget.style.opacity = "0.55"}
-          >💾</button>
+          <div style={{ display:"flex", gap:4 }}>
+            <button
+              onClick={onOpenEncounterBuilder}
+              title="Encounter Builder"
+              style={{ background: "none", border: "none", cursor: "pointer", padding: "1px 3px", fontSize: 14, opacity: 0.55, transition: "opacity 0.15s" }}
+              onMouseEnter={e => e.currentTarget.style.opacity = "1"}
+              onMouseLeave={e => e.currentTarget.style.opacity = "0.55"}
+            >⚔</button>
+            <button
+              onClick={onOpenSessions}
+              title="Save / Load session"
+              style={{ background: "none", border: "none", cursor: "pointer", padding: "1px 3px", fontSize: 14, opacity: 0.55, transition: "opacity 0.15s" }}
+              onMouseEnter={e => e.currentTarget.style.opacity = "1"}
+              onMouseLeave={e => e.currentTarget.style.opacity = "0.55"}
+            >💾</button>
+          </div>
         </div>
         {editingEnc === "name" ? (
           <input
@@ -2008,6 +2017,156 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "aiProvider": "claude"
 }/*EDITMODE-END*/;
 
+// ─── ENCOUNTER BUILDER ───────────────────────────────────────────────────────
+
+const XP_THRESHOLDS = {
+  1:[25,50,75,100],       2:[50,100,150,200],     3:[75,150,225,400],
+  4:[125,250,375,500],    5:[250,500,750,1100],    6:[300,600,900,1400],
+  7:[350,750,1100,1700],  8:[450,900,1400,2100],   9:[550,1100,1600,2400],
+  10:[600,1200,1900,2800],11:[800,1600,2400,3600], 12:[1000,2000,3000,4500],
+  13:[1100,2200,3400,5100],14:[1250,2500,3800,5700],15:[1400,2800,4300,6400],
+  16:[1600,3200,4800,7200],17:[2000,3900,5900,8800],18:[2100,4200,6300,9500],
+  19:[2400,4900,7300,10900],20:[2800,5700,8500,12700],
+};
+const MONSTER_MULT = [[1,1],[2,1.5],[3,2],[7,2.5],[11,3],[15,4]];
+const DIFFICULTY = ["Easy","Medium","Hard","Deadly"];
+const DIFF_COLORS = ["#5aab6a","#c9a84c","#e0883a","#c44a4a"];
+
+function getMultiplier(count) {
+  let mult = 1;
+  for (const [threshold, m] of MONSTER_MULT) {
+    if (count >= threshold) mult = m;
+  }
+  return mult;
+}
+
+function getDifficulty(adjustedXp, thresholds) {
+  if (adjustedXp < thresholds[0]) return -1;
+  for (let i = 3; i >= 0; i--) {
+    if (adjustedXp >= thresholds[i]) return i;
+  }
+  return 0;
+}
+
+function EncounterBuilderModal({ onClose, combatants }) {
+  const monsters = combatants.filter(c => c.type === "Monster");
+  const pcs = combatants.filter(c => c.type === "PC");
+
+  const [partySize, setPartySize] = useState(Math.max(pcs.length, 4));
+  const [partyLevel, setPartyLevel] = useState(1);
+
+  const thresholds = (XP_THRESHOLDS[partyLevel] || XP_THRESHOLDS[1]).map(t => t * partySize);
+
+  const rawXp = monsters.reduce((sum, c) => {
+    const cr = c.statBlock?.cr ?? c.cr ?? "0";
+    return sum + (CR_XP[String(cr)] || 0);
+  }, 0);
+
+  const mult = getMultiplier(monsters.length);
+  const adjustedXp = Math.round(rawXp * mult);
+  const diffIdx = getDifficulty(adjustedXp, thresholds);
+  const diffLabel = diffIdx < 0 ? "Trivial" : DIFFICULTY[diffIdx];
+  const diffColor = diffIdx < 0 ? "var(--text-faint)" : DIFF_COLORS[diffIdx];
+
+  useEffect(() => {
+    const h = e => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, []);
+
+  const inputStyle2 = { background:"var(--bg)", border:"1px solid var(--border)", borderRadius:5, color:"var(--text)", padding:"6px 10px", width:"100%", fontSize:15, fontFamily:"var(--font-body)" };
+  const labelStyle = { display:"block", fontSize:11, color:"var(--text-dim)", fontFamily:"var(--font-head)", letterSpacing:"0.06em", marginBottom:5 };
+
+  function XpBar({ label, xp, color, isDeadly }) {
+    const pct = thresholds[3] > 0 ? Math.min(100, (xp / thresholds[3]) * 100) : 0;
+    return (
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
+          <span style={{ fontSize:11, fontFamily:"var(--font-head)", color, letterSpacing:"0.06em" }}>{label}</span>
+          <span style={{ fontSize:11, color:"var(--text-dim)" }}>{xp.toLocaleString()} XP</span>
+        </div>
+        <div style={{ height:4, background:"var(--border)", borderRadius:2, overflow:"hidden" }}>
+          <div style={{ width: pct+"%", height:"100%", background: color, borderRadius:2, transition:"width 0.3s" }} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div onClick={e => e.target === e.currentTarget && onClose()} style={{
+      position:"fixed", inset:0, background:"rgba(0,0,0,0.72)",
+      display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000,
+    }}>
+      <div style={{ background:"var(--card)", border:"1px solid var(--border)", borderRadius:8, width:380, maxWidth:"92vw", boxShadow:"0 8px 40px rgba(0,0,0,0.6)", overflow:"hidden" }}>
+        <div style={{ padding:"14px 16px", borderBottom:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <div style={{ fontFamily:"var(--font-head)", fontSize:13, color:"var(--gold)", letterSpacing:"0.1em" }}>⚔ ENCOUNTER BUILDER</div>
+          <button onClick={onClose} style={{ background:"none", border:"none", color:"var(--text-faint)", cursor:"pointer", fontSize:16 }}>✕</button>
+        </div>
+
+        <div style={{ padding:16, display:"flex", flexDirection:"column", gap:14 }}>
+          <div style={{ display:"flex", gap:12 }}>
+            <div style={{ flex:1 }}>
+              <label style={labelStyle}>PARTY SIZE</label>
+              <input type="number" min="1" max="8" value={partySize}
+                onChange={e => setPartySize(Math.max(1, Math.min(8, parseInt(e.target.value)||1)))}
+                style={inputStyle2} />
+            </div>
+            <div style={{ flex:1 }}>
+              <label style={labelStyle}>PARTY LEVEL</label>
+              <input type="number" min="1" max="20" value={partyLevel}
+                onChange={e => setPartyLevel(Math.max(1, Math.min(20, parseInt(e.target.value)||1)))}
+                style={inputStyle2} />
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize:11, fontFamily:"var(--font-head)", color:"var(--text-dim)", letterSpacing:"0.06em", marginBottom:10 }}>XP THRESHOLDS (party total)</div>
+            {DIFFICULTY.map((label, i) => (
+              <XpBar key={label} label={label} xp={thresholds[i]} color={DIFF_COLORS[i]} />
+            ))}
+          </div>
+
+          <div style={{ background:"rgba(0,0,0,0.3)", border:"1px solid var(--border)", borderRadius:6, padding:"12px 14px" }}>
+            <div style={{ fontSize:11, fontFamily:"var(--font-head)", color:"var(--text-dim)", letterSpacing:"0.06em", marginBottom:8 }}>CURRENT ENCOUNTER</div>
+            {monsters.length === 0 ? (
+              <div style={{ fontSize:13, color:"var(--text-faint)", fontStyle:"italic" }}>No monsters in combat yet.</div>
+            ) : (
+              <>
+                <div style={{ display:"flex", flexDirection:"column", gap:4, marginBottom:10 }}>
+                  {monsters.map((c,i) => {
+                    const cr = c.statBlock?.cr ?? c.cr ?? "0";
+                    const xp = CR_XP[String(cr)] || 0;
+                    return (
+                      <div key={i} style={{ display:"flex", justifyContent:"space-between", fontSize:13 }}>
+                        <span style={{ color:"var(--text)" }}>{c.name}</span>
+                        <span style={{ color:"var(--text-faint)" }}>CR {cr} · {xp.toLocaleString()} XP</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ borderTop:"1px solid var(--border)", paddingTop:10, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <div>
+                    <div style={{ fontSize:11, color:"var(--text-dim)" }}>
+                      {rawXp.toLocaleString()} XP × {mult} multiplier ({monsters.length} monster{monsters.length !== 1 ? "s" : ""})
+                    </div>
+                    <div style={{ fontSize:18, fontWeight:600, color:"var(--text)", marginTop:2 }}>
+                      {adjustedXp.toLocaleString()} adjusted XP
+                    </div>
+                  </div>
+                  <div style={{ textAlign:"right" }}>
+                    <div style={{ fontSize:11, color:"var(--text-dim)", fontFamily:"var(--font-head)", letterSpacing:"0.06em" }}>DIFFICULTY</div>
+                    <div style={{ fontSize:20, fontWeight:700, color: diffColor, fontFamily:"var(--font-head)" }}>{diffLabel}</div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── SESSIONS MODAL ──────────────────────────────────────────────────────────
 
 function SessionsModal({ onClose, encName, onSave, onLoad }) {
@@ -2284,6 +2443,7 @@ function App() {
   const [roundNumber, setRoundNumber] = useState(1);
   const [showSessionModal, setShowSessionModal] = useState(false);
   const [showInitModal, setShowInitModal] = useState(false);
+  const [showEncounterBuilder, setShowEncounterBuilder] = useState(false);
 
   useEffect(() => {
     fetch("/tools/monsters.json")
@@ -2380,6 +2540,7 @@ function App() {
           tweaks={tweaks}
           onOpenAdd={handleOpenAdd}
           onOpenInitiatives={() => setShowInitModal(true)}
+          onOpenEncounterBuilder={() => setShowEncounterBuilder(true)}
           portraits={portraits}
           encName={encName} setEncName={setEncName}
           encNote={encNote} setEncNote={setEncNote}
@@ -2418,6 +2579,13 @@ function App() {
           combatants={combatants}
           onClose={() => setShowInitModal(false)}
           onApply={handleApplyInitiatives}
+        />
+      )}
+
+      {showEncounterBuilder && (
+        <EncounterBuilderModal
+          combatants={combatants}
+          onClose={() => setShowEncounterBuilder(false)}
         />
       )}
 

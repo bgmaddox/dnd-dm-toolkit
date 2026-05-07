@@ -597,6 +597,28 @@ async def get_campaign_context(campaign: str, hints: str = ""):
     return {"context": context, "campaign": campaign}
 
 
+@app.get("/api/campaign/search")
+async def search_campaign(campaign: str, q: str):
+    if not q.strip():
+        return {"results": []}
+    try:
+        from utils.bm25_index import get_campaign_index
+        index = get_campaign_index(campaign)
+        files = index.get_top_matches(q, n=3)
+        results = []
+        for f in files:
+            content = f.read_text(encoding="utf-8")
+            name = f.stem.replace("_", " ").title()
+            results.append({
+                "name": name,
+                "type": f.parent.name,
+                "excerpt": content[:300].strip(),
+            })
+        return {"results": results}
+    except Exception as e:
+        return {"results": [], "error": str(e)}
+
+
 def _parse_int(text, pattern):
     import re
     m = re.search(pattern, text)
