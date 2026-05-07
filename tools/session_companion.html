@@ -523,6 +523,71 @@
     color: var(--gold-dim);
     text-align: center;
   }
+  .new-campaign-link {
+    background: none;
+    border: none;
+    color: var(--gold-dim);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 0 0;
+    text-align: left;
+    text-decoration: underline;
+  }
+  .new-campaign-link:hover { color: var(--gold); }
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  .modal-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border-glow);
+    border-radius: var(--radius);
+    width: 480px;
+    max-width: 95vw;
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-title { font-family: var(--serif); font-size: 18px; color: var(--gold); }
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 16px;
+    cursor: pointer;
+  }
+  .modal-close:hover { color: var(--text); }
+  .modal-body { padding: 20px; overflow-y: auto; }
+  .modal-body textarea {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    padding: 8px 10px;
+    font-size: 13px;
+    resize: vertical;
+    font-family: inherit;
+  }
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+  }
 </style>
 </head>
 <body x-data="companion">
@@ -565,6 +630,7 @@
               <option :value="c" x-text="c"></option>
             </template>
           </select>
+          <button type="button" class="new-campaign-link" @click="showNewCampaign = true">+ New Campaign</button>
         </div>
         <div class="form-group">
           <label>Session Number</label>
@@ -611,6 +677,47 @@
             ↩ Resume Conversation
           </button>
         </template>
+      </div>
+    </div>
+  </template>
+
+  <!-- NEW CAMPAIGN MODAL -->
+  <template x-if="showNewCampaign">
+    <div class="modal-overlay" @click.self="showNewCampaign = false">
+      <div class="modal-box">
+        <div class="modal-header">
+          <span class="modal-title">New Campaign</span>
+          <button class="modal-close" @click="showNewCampaign = false">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Campaign Name <span style="color:var(--gold)">*</span></label>
+            <input type="text" x-model="newCampName" placeholder="e.g. Lost Mine of Phandelver" @keydown.enter="createCampaign" />
+          </div>
+          <div class="form-group">
+            <label>World Description</label>
+            <textarea x-model="newCampWorld" rows="3" placeholder="Brief description of the setting, region, or premise…"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Tone</label>
+            <input type="text" x-model="newCampTone" placeholder="e.g. Dark and gritty, Classic high fantasy…" />
+          </div>
+          <div class="form-group">
+            <label>Themes</label>
+            <input type="text" x-model="newCampThemes" placeholder="e.g. Redemption, political intrigue…" />
+          </div>
+          <div class="form-group">
+            <label>Schedule</label>
+            <input type="text" x-model="newCampSchedule" placeholder="e.g. Bi-weekly Saturdays" />
+          </div>
+          <p x-show="createError" x-text="createError" style="color:#e74c3c;font-size:13px;margin-top:4px;"></p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" @click="showNewCampaign = false">Cancel</button>
+          <button class="btn" :disabled="!newCampName.trim() || creating" @click="createCampaign">
+            <span x-text="creating ? 'Creating…' : 'Create Campaign'"></span>
+          </button>
+        </div>
       </div>
     </div>
   </template>
@@ -804,11 +911,50 @@ document.addEventListener('alpine:init', () => {
     searchQuery: '',
     searchResults: [],
     searching: false,
+    showNewCampaign: false,
+    newCampName: '',
+    newCampWorld: '',
+    newCampTone: '',
+    newCampThemes: '',
+    newCampSchedule: '',
+    creating: false,
+    createError: '',
 
     async init() {
       const res = await fetch('/api/campaigns');
       const data = await res.json();
       this.campaigns = data.campaigns;
+    },
+
+    async createCampaign() {
+      if (!this.newCampName.trim()) return;
+      this.creating = true;
+      this.createError = '';
+      try {
+        const res = await fetch('/api/campaigns/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: this.newCampName.trim(),
+            world: this.newCampWorld.trim(),
+            tone: this.newCampTone.trim(),
+            themes: this.newCampThemes.trim(),
+            schedule: this.newCampSchedule.trim()
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) { this.createError = data.detail || 'Creation failed'; return; }
+        const listRes = await fetch('/api/campaigns');
+        this.campaigns = (await listRes.json()).campaigns;
+        this.campaign = data.campaign;
+        this.showNewCampaign = false;
+        this.newCampName = this.newCampWorld = this.newCampTone = this.newCampThemes = this.newCampSchedule = '';
+        this.checkContext();
+      } catch (e) {
+        this.createError = 'Network error';
+      } finally {
+        this.creating = false;
+      }
     },
 
     async checkContext() {

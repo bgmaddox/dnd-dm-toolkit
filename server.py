@@ -590,6 +590,57 @@ async def get_campaigns():
     return {"campaigns": list_campaigns()}
 
 
+class NewCampaignRequest(BaseModel):
+    name: str
+    world: str = ""
+    tone: str = ""
+    themes: str = ""
+    schedule: str = ""
+
+
+@app.post("/api/campaigns/create")
+async def create_campaign(req: NewCampaignRequest):
+    safe_name = _re.sub(r"[^\w\s-]", "", req.name).strip().replace(" ", "_")
+    if not safe_name:
+        raise HTTPException(400, "Invalid campaign name")
+    camp_dir = CAMPAIGN_DIR / safe_name
+    if camp_dir.exists():
+        raise HTTPException(409, f"Campaign '{safe_name}' already exists")
+
+    camp_dir.mkdir(parents=True)
+    for sub in ("pcs", "npcs", "locations", "sessions"):
+        (camp_dir / sub).mkdir()
+
+    world_lines = [f"# World: {req.name}\n"]
+    if req.world:
+        world_lines.append(f"\n{req.world}\n")
+    (camp_dir / "WORLD.md").write_text("".join(world_lines))
+
+    (camp_dir / "FACTIONS.md").write_text(f"# Factions: {req.name}\n\n")
+
+    dm_ref_lines = [
+        f"# DM Reference: {req.name}\n\n",
+        "## House Rules\n- \n\n",
+        f"## Session Schedule / Player Info\n",
+    ]
+    if req.schedule:
+        dm_ref_lines.append(f"- **Schedule:** {req.schedule}\n")
+    else:
+        dm_ref_lines.append("- **Schedule:** \n")
+    dm_ref_lines.append("- **Players:**\n  - \n\n")
+    if req.tone or req.themes:
+        dm_ref_lines.append("## Campaign Tone & Themes\n")
+        if req.tone:
+            dm_ref_lines.append(f"- **Tone:** {req.tone}\n")
+        if req.themes:
+            dm_ref_lines.append(f"- **Themes:** {req.themes}\n")
+        dm_ref_lines.append("\n")
+    dm_ref_lines.append("## Important Decisions Made\n- \n")
+    (camp_dir / "DM_REFERENCE.md").write_text("".join(dm_ref_lines))
+
+    return {"campaign": safe_name}
+
+
 @app.get("/api/campaign/factions")
 async def get_campaign_factions(campaign: str):
     factions_path = CAMPAIGN_DIR / campaign / "FACTIONS.md"
