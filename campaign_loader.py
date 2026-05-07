@@ -27,20 +27,27 @@ def _get_lean_pc_stats(campaign_path: Path) -> str:
     lines = []
     for f in sorted(pcs_dir.glob("*.md")):
         text = _read(f)
-        name = f.stem.replace("_", " ").title()
+
+        header_m = re.search(r"^#\s+(.+)", text)
+        name = header_m.group(1).strip() if header_m else f.stem.replace("_", " ").title()
+
         char_class = "Unknown"
         pp = "10"
         langs = "Common"
-        
-        class_m = re.search(r"\*\*Class:\*\*\s*(.+)", text)
-        if class_m: char_class = class_m.group(1).split(",")[0].strip()
-        
-        pp_m = re.search(r"\*\*Passive Perception:\*\*\s*(\d+)", text)
+
+        class_m = re.search(r"(?:^|[-*]\s+)\**Class:\**\s*(.+)", text, re.IGNORECASE | re.MULTILINE)
+        if class_m:
+            char_class = re.sub(r"\**$", "", class_m.group(1).split(",")[0]).strip()
+
+        pp_m = re.search(r"(?:^|[-*]\s+)\**Passive Perception:\**\s*(\d+)", text, re.IGNORECASE | re.MULTILINE)
         if pp_m: pp = pp_m.group(1)
-        
-        lang_m = re.search(r"## Languages\n(.+)", text)
-        if lang_m: langs = lang_m.group(1).strip()
-        
+
+        lang_m = re.search(r"## Languages\s*(?:\n\s*)?(.+)", text, re.IGNORECASE)
+        if lang_m:
+            langs = lang_m.group(1).strip()
+            if langs.startswith("#") or not langs:
+                langs = "Common"
+
         lines.append(f"- {name} ({char_class}, PP:{pp}, {langs})")
     
     if not lines:
@@ -69,6 +76,13 @@ def _get_recent_summaries(campaign_path: Path, count=3) -> str:
     return "### Recent Session History\n\n" + "\n\n---\n\n".join(output)
 
 
+def _matching_files(path: Path, hints: list[str]) -> list[Path]:
+    """Return .md files in path whose stem matches any hint (case-insensitive)."""
+    if not path.exists():
+        return []
+    return [f for f in path.glob("*.md") if any(h.lower() in f.stem.lower() for h in hints)]
+
+
 def load_campaign_context(
     campaign: str,
     hints: list[str] | None = None,
@@ -93,7 +107,7 @@ def load_campaign_context(
 
     # Tier 1: Base Layer (Rules, World, Factions)
     base_files = [
-        Path(__file__).parent / "DM_REFERENCE.md",
+        base / "DM_REFERENCE.md",
         base / "WORLD.md",
         base / "FACTIONS.md"
     ]

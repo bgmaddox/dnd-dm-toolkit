@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import anthropic
+import asyncio
 import json
 import os
 import time
@@ -15,14 +16,15 @@ from campaign_loader import load_campaign_context, list_campaigns
 from setup_wizard import setup_wizard
 
 # Versioning
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 
 # PORTABLE=1 activates desktop-launcher mode: dynamic port, browser auto-open, setup wizard.
 # On Pi, this env var is never set — server starts on PORT (default 8502) with no wizard.
 PORTABLE = os.environ.get("PORTABLE", "").lower() in ("1", "true", "yes")
 PORT = int(os.environ.get("PORT", 8502))
 
-# Only run setup wizard for desktop/portable deployments
+load_dotenv()  # always load .env if present; systemd env vars take precedence on Pi
+
 if PORTABLE:
     setup_wizard()
 
@@ -37,9 +39,9 @@ async def check_updates():
     repo = "bgmaddox/dnd-dm-toolkit"
     try:
         import requests
-        # Use a short timeout to prevent blocking startup if no internet
-        response = requests.get(
-            f"https://api.github.com/repos/{repo}/releases/latest", 
+        response = await asyncio.to_thread(
+            requests.get,
+            f"https://api.github.com/repos/{repo}/releases/latest",
             timeout=2,
             headers={"Accept": "application/vnd.github.v3+json"}
         )
@@ -257,7 +259,7 @@ async def chat(req: ChatRequest):
 
     normalized.append({"role": "user", "content": req.query})
 
-    # 3. System Prompt
+    # 3. System Prompt — campaign context is static per session, so cache it
     system_prompt = f"""You are an expert D&D Dungeon Master Assistant.
 Use the provided campaign context to help the DM run the session.
 Be concise, helpful, and creative.
@@ -268,7 +270,7 @@ Be concise, helpful, and creative.
         message = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=1000,
-            system=system_prompt,
+            system=[{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}],
             messages=normalized,
         )
         return {"content": message.content[0].text, "provider": "claude"}
@@ -359,6 +361,23 @@ async def save_chat_history(campaign: str, session_number: int, body: dict):
     return {"ok": True}
 
 
+@app.get("/api/session/prep/{campaign}/{session_number}")
+async def get_prep_history(campaign: str, session_number: int):
+    chat_path = CAMPAIGN_BASE / campaign / "sessions" / f"chat_{session_number}_prep.json"
+    if not chat_path.exists():
+        return {"history": []}
+    return {"history": json.loads(chat_path.read_text())}
+
+
+@app.post("/api/session/prep/{campaign}/{session_number}")
+async def save_prep_history(campaign: str, session_number: int, body: dict):
+    sessions_dir = CAMPAIGN_BASE / campaign / "sessions"
+    sessions_dir.mkdir(parents=True, exist_ok=True)
+    chat_path = sessions_dir / f"chat_{session_number}_prep.json"
+    chat_path.write_text(json.dumps(body.get("history", []), indent=2))
+    return {"ok": True}
+
+
 class FinalizeRequest(BaseModel):
     campaign: str
     sessionNumber: int
@@ -366,16 +385,25 @@ class FinalizeRequest(BaseModel):
 @app.post("/api/session/finalize")
 async def finalize_session(req: FinalizeRequest):
     camp_dir = CAMPAIGN_BASE / req.campaign
-    transcripts_dir = camp_dir / "sessions" / "transcripts"
-    
-    # Find most recent transcript or notes for today
+    raw_text = None
+
+    # Try transcript file first (note-append workflow)
     date_str = time.strftime("%Y-%m-%d")
-    raw_path = transcripts_dir / f"raw_{date_str}.txt"
-    
-    if not raw_path.exists():
-        raise HTTPException(status_code=404, detail="No raw notes found for today")
-    
-    raw_text = raw_path.read_text()
+    raw_path = camp_dir / "sessions" / "transcripts" / f"raw_{date_str}.txt"
+    if raw_path.exists():
+        raw_text = raw_path.read_text()
+
+    # Fallback: reconstruct from saved chat history
+    if not raw_text:
+        chat_path = camp_dir / "sessions" / f"chat_{req.sessionNumber}.json"
+        if chat_path.exists():
+            history = json.loads(chat_path.read_text())
+            raw_text = "\n\n".join(
+                f"[{m['role'].upper()}]: {m['content']}" for m in history
+            )
+
+    if not raw_text:
+        raise HTTPException(status_code=404, detail="No session notes or chat history found")
     
     # AI Processing (Claude Sonnet recommended for reasoning)
     system_prompt = f"""You are an expert D&D assistant. Summarize the following raw session notes into a structured Markdown log.
@@ -531,6 +559,13 @@ async def delete_npc(npc_id: str):
     return {"ok": True}
 
 
+def _download_portrait(image_url: str, dest_path: Path):
+    import urllib.request
+    req = urllib.request.Request(image_url, headers={"User-Agent": "DMToolkit/1.0"})
+    with urllib.request.urlopen(req, timeout=20) as resp:
+        dest_path.write_bytes(resp.read())
+
+
 @app.post("/api/npcs/{npc_id}/portrait")
 async def save_portrait(npc_id: str, body: dict):
     if not _re.match(r"^[a-z0-9\-]+$", npc_id):
@@ -539,13 +574,9 @@ async def save_portrait(npc_id: str, body: dict):
     if not image_url:
         raise HTTPException(status_code=400, detail="imageUrl required")
     PORTRAITS_DIR.mkdir(parents=True, exist_ok=True)
+    portrait_path = PORTRAITS_DIR / f"{npc_id}.png"
     try:
-        import urllib.request
-        req = urllib.request.Request(image_url, headers={"User-Agent": "DMToolkit/1.0"})
-        with urllib.request.urlopen(req, timeout=20) as resp:
-            image_data = resp.read()
-        portrait_path = PORTRAITS_DIR / f"{npc_id}.png"
-        portrait_path.write_bytes(image_data)
+        await asyncio.to_thread(_download_portrait, image_url, portrait_path)
         return {"ok": True, "portraitUrl": f"/tools/npcs/portraits/{npc_id}.png"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Portrait download failed: {e}")
@@ -557,6 +588,57 @@ CAMPAIGN_DIR = Path(__file__).parent / "campaign"
 @app.get("/api/campaigns")
 async def get_campaigns():
     return {"campaigns": list_campaigns()}
+
+
+class NewCampaignRequest(BaseModel):
+    name: str
+    world: str = ""
+    tone: str = ""
+    themes: str = ""
+    schedule: str = ""
+
+
+@app.post("/api/campaigns/create")
+async def create_campaign(req: NewCampaignRequest):
+    safe_name = _re.sub(r"[^\w\s-]", "", req.name).strip().replace(" ", "_")
+    if not safe_name:
+        raise HTTPException(400, "Invalid campaign name")
+    camp_dir = CAMPAIGN_DIR / safe_name
+    if camp_dir.exists():
+        raise HTTPException(409, f"Campaign '{safe_name}' already exists")
+
+    camp_dir.mkdir(parents=True)
+    for sub in ("pcs", "npcs", "locations", "sessions"):
+        (camp_dir / sub).mkdir()
+
+    world_lines = [f"# World: {req.name}\n"]
+    if req.world:
+        world_lines.append(f"\n{req.world}\n")
+    (camp_dir / "WORLD.md").write_text("".join(world_lines))
+
+    (camp_dir / "FACTIONS.md").write_text(f"# Factions: {req.name}\n\n")
+
+    dm_ref_lines = [
+        f"# DM Reference: {req.name}\n\n",
+        "## House Rules\n- \n\n",
+        f"## Session Schedule / Player Info\n",
+    ]
+    if req.schedule:
+        dm_ref_lines.append(f"- **Schedule:** {req.schedule}\n")
+    else:
+        dm_ref_lines.append("- **Schedule:** \n")
+    dm_ref_lines.append("- **Players:**\n  - \n\n")
+    if req.tone or req.themes:
+        dm_ref_lines.append("## Campaign Tone & Themes\n")
+        if req.tone:
+            dm_ref_lines.append(f"- **Tone:** {req.tone}\n")
+        if req.themes:
+            dm_ref_lines.append(f"- **Themes:** {req.themes}\n")
+        dm_ref_lines.append("\n")
+    dm_ref_lines.append("## Important Decisions Made\n- \n")
+    (camp_dir / "DM_REFERENCE.md").write_text("".join(dm_ref_lines))
+
+    return {"campaign": safe_name}
 
 
 @app.get("/api/campaign/factions")
@@ -595,6 +677,28 @@ async def get_campaign_context(campaign: str, hints: str = ""):
     hint_list = [h.strip() for h in hints.split(",") if h.strip()] if hints else []
     context = load_campaign_context(campaign, hint_list)
     return {"context": context, "campaign": campaign}
+
+
+@app.get("/api/campaign/search")
+async def search_campaign(campaign: str, q: str):
+    if not q.strip():
+        return {"results": []}
+    try:
+        from utils.bm25_index import get_campaign_index
+        index = get_campaign_index(campaign)
+        files = index.get_top_matches(q, n=3)
+        results = []
+        for f in files:
+            content = f.read_text(encoding="utf-8")
+            name = f.stem.replace("_", " ").title()
+            results.append({
+                "name": name,
+                "type": f.parent.name,
+                "excerpt": content[:300].strip(),
+            })
+        return {"results": results}
+    except Exception as e:
+        return {"results": [], "error": str(e)}
 
 
 def _parse_int(text, pattern):
@@ -690,13 +794,131 @@ async def get_players():
     return {"players": players}
 
 
+class CreateCampaignRequest(BaseModel):
+    name: str
+
+@app.post("/api/campaign/create")
+async def create_campaign(req: CreateCampaignRequest):
+    # Sanitize name for folder
+    folder_name = _re.sub(r"[^a-z0-9]+", "_", req.name.lower()).strip("_")
+    if not folder_name:
+        raise HTTPException(status_code=400, detail="Invalid campaign name")
+    
+    camp_dir = CAMPAIGN_BASE / folder_name
+    if camp_dir.exists():
+        raise HTTPException(status_code=400, detail="Campaign already exists")
+    
+    # Scaffold structure
+    camp_dir.mkdir(parents=True)
+    (camp_dir / "npcs").mkdir()
+    (camp_dir / "locations").mkdir()
+    (camp_dir / "pcs").mkdir()
+    (camp_dir / "sessions").mkdir()
+    (camp_dir / "sessions" / "transcripts").mkdir()
+    
+    # Create base files
+    (camp_dir / "WORLD.md").write_text(f"# {req.name}\n\n## Overview\n[Add your campaign overview here]")
+    (camp_dir / "FACTIONS.md").write_text("# Factions\n\n## [Faction Name]\nDescription here.")
+    
+    return {"ok": True, "campaign": folder_name}
+
+
+class SaveEntityRequest(BaseModel):
+    campaign: str
+    type: str  # "npc" or "location"
+    data: dict
+
+@app.post("/api/campaign/save_entity")
+async def save_campaign_entity(req: SaveEntityRequest):
+    camp_dir = CAMPAIGN_BASE / req.campaign
+    if not camp_dir.exists():
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    
+    target_dir = camp_dir / (req.type + "s")
+    target_dir.mkdir(exist_ok=True)
+    
+    name = req.data.get("name", "Unnamed").strip()
+    file_name = _re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_") + ".md"
+    file_path = target_dir / file_name
+    
+    content = ""
+    if req.type == "npc":
+        d = req.data
+        # Format NPC Markdown
+        content = f"""# {name}
+
+## At a Glance
+- **Role:** {d.get('role', '')}
+- **Location:** {d.get('location', '')}
+- **Stat Block:** {d.get('statBlock', '')}
+- **Faction:** {d.get('faction', '')}
+
+## Appearance
+{d.get('description', d.get('appearance', ''))}
+
+## Voice & Manner
+- **Voice Quirk:** {d.get('voiceQuirk', '')}
+- **Physical Tell:** {d.get('physicalTell', '')}
+
+## Motivations
+- **Want (immediate):** {d.get('immediateWant', d.get('want_immediate', ''))}
+- **Want (deep):** {d.get('deepWant', d.get('want_deep', ''))}
+- **Secret:** {d.get('secret', '')}
+
+## Relationships
+{d.get('relationships', '')}
+
+## Sample Dialogue
+"""
+        dialogue = d.get('dialogue', [])
+        if isinstance(dialogue, list):
+            for line in dialogue:
+                content += f"> \"{line}\"\n\n"
+        
+        content += f"\n## DM Notes\n{d.get('notes', d.get('dm_notes', ''))}\n"
+        
+    elif req.type == "location":
+        d = req.data
+        content = f"""# {name}
+
+## Overview
+{d.get('overview', '')}
+
+## Sensory Details
+- **Sights:** {d.get('sights', '')}
+- **Sounds:** {d.get('sounds', '')}
+- **Smells:** {d.get('smells', '')}
+
+## Key Features
+{d.get('features', '')}
+
+## NPCs Present
+{d.get('npcs', '')}
+
+## DM Notes
+{d.get('notes', '')}
+"""
+    
+    file_path.write_text(content.strip() + "\n")
+    
+    # Refresh BM25 cache for this campaign
+    try:
+        from utils.bm25_index import _indices
+        if req.campaign in _indices:
+            _indices[req.campaign]._refresh_index()
+    except Exception:
+        pass
+        
+    return {"ok": True, "path": str(file_path)}
+
+
 # Serve tool HTML files directly at /tools/<name>.html
 app.mount("/tools", StaticFiles(directory=str(TOOLS_DIR), html=False), name="tools")
 
 
 @app.get("/")
 async def root():
-    return FileResponse(str(TOOLS_DIR / "npc_forge.html"))
+    return FileResponse(str(TOOLS_DIR / "session_companion.html"))
 
 def find_available_port(start_port=8000, max_attempts=10):
     import socket

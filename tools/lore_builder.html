@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lore Builder — DM Toolkit</title>
+<link rel="icon" type="image/png" href="/tools/DnDIcon-Small.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --bg:          #111318;
+    --bg-panel:    #16191f;
+    --bg-card:     #1c2028;
+    --bg-input:    #13161c;
+    --border:      #2a2f3d;
+    --gold:        #c9a84c;
+    --gold-dim:    #9e7c2e;
+    --text:        #dde3f0;
+    --text-muted:  #8a92a8;
+    --text-dim:    #555d72;
+    --success:     #5e8a4c;
+    --serif:       'Cinzel', serif;
+    --body:        'Crimson Pro', Georgia, serif;
+    --radius:      6px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  header {
+    height: 48px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+  }
+
+  .logo {
+    font-family: var(--serif);
+    color: var(--gold);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+  }
+
+  .container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .sidebar {
+    width: 260px;
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .main-content {
+    flex: 1;
+    padding: 40px;
+    overflow-y: auto;
+    background: var(--bg);
+  }
+
+  h2 { font-family: var(--serif); color: var(--gold); margin-bottom: 20px; }
+  h3 { font-family: var(--serif); font-size: 16px; margin-bottom: 12px; }
+
+  .form-group { margin-bottom: 16px; }
+  label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; font-family: var(--serif); }
+  
+  input, select, textarea {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px;
+    border-radius: var(--radius);
+    font-family: var(--body);
+    font-size: 15px;
+    outline: none;
+  }
+
+  input:focus, textarea:focus { border-color: var(--gold-dim); }
+
+  .btn {
+    background: var(--gold-dim);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: var(--radius);
+    font-family: var(--serif);
+    cursor: pointer;
+    transition: background 0.2s;
+    font-weight: 600;
+  }
+
+  .btn:hover { background: var(--gold); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 24px;
+    border-radius: var(--radius);
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .tab {
+    padding: 8px 16px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-family: var(--serif);
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .tab.active {
+    background: var(--gold-dim);
+    color: white;
+    border-color: var(--gold);
+  }
+
+  .message {
+    padding: 10px;
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+    font-size: 14px;
+  }
+
+  .message.success { background: rgba(94, 138, 76, 0.2); color: #8ac870; border: 1px solid #5e8a4c; }
+  .message.error { background: rgba(160, 64, 64, 0.2); color: #d08080; border: 1px solid #a04040; }
+</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+function App() {
+  const [activeTab, setActiveTab] = useState('npc');
+  const [campaigns, setCampaigns] = useState([]);
+  const [activeCampaign, setActiveCampaign] = useState('');
+  const [newCampaignName, setNewCampaignName] = useState('');
+  const [message, setMessage] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const [npcData, setNpcData] = useState({
+    name: '', role: '', location: '', statBlock: '', faction: '',
+    description: '', voiceQuirk: '', physicalTell: '',
+    immediateWant: '', deepWant: '', secret: '',
+    relationships: '', dialogue: ['', '', ''], notes: ''
+  });
+
+  const [locData, setLocData] = useState({
+    name: '', overview: '', sights: '', sounds: '', smells: '',
+    features: '', npcs: '', notes: ''
+  });
+
+  useEffect(() => {
+    fetchCampaigns();
+  }, []);
+
+  const fetchCampaigns = async () => {
+    try {
+      const res = await fetch('/api/campaigns');
+      const data = await res.json();
+      setCampaigns(data.campaigns || []);
+      if (data.campaigns && data.campaigns.length > 0 && !activeCampaign) {
+        setActiveCampaign(data.campaigns[0]);
+      }
+    } catch (e) {
+      console.error('Failed to fetch campaigns', e);
+    }
+  };
+
+  const handleCreateCampaign = async () => {
+    if (!newCampaignName) return;
+    setLoading(true);
+    try {
+      const res = await fetch('/api/campaign/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newCampaignName })
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setMessage({ type: 'success', text: `Campaign "${newCampaignName}" created!` });
+      setNewCampaignName('');
+      fetchCampaigns();
+      setActiveCampaign(data.campaign);
+    } catch (e) {
+      setMessage({ type: 'error', text: e.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveEntity = async () => {
+    if (!activeCampaign) {
+      setMessage({ type: 'error', text: 'Please select or create a campaign first.' });
+      return;
+    }
+    const data = activeTab === 'npc' ? npcData : locData;
+    if (!data.name) {
+      setMessage({ type: 'error', text: 'Name is required.' });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/campaign/save_entity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          campaign: activeCampaign,
+          type: activeTab,
+          data: data
+        })
+      });
+      if (!res.ok) throw new Error(await res.text());
+      setMessage({ type: 'success', text: `${activeTab.toUpperCase()} "${data.name}" saved to ${activeCampaign}!` });
+      
+      // Clear form
+      if (activeTab === 'npc') {
+        setNpcData({
+          name: '', role: '', location: '', statBlock: '', faction: '',
+          description: '', voiceQuirk: '', physicalTell: '',
+          immediateWant: '', deepWant: '', secret: '',
+          relationships: '', dialogue: ['', '', ''], notes: ''
+        });
+      } else {
+        setLocData({
+          name: '', overview: '', sights: '', sounds: '', smells: '',
+          features: '', npcs: '', notes: ''
+        });
+      }
+    } catch (e) {
+      setMessage({ type: 'error', text: e.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <header className="header" style={{
+        height: '48px',
+        background: 'var(--bg-panel)',
+        borderBottom: '1px solid var(--border)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 28px',
+        flexShrink: 0
+      }}>
+        <div style={{display:'flex', alignItems:'center', gap: 16}}>
+          <div className="header-logo" style={{
+            fontFamily: 'var(--serif)',
+            fontSize: '13px',
+            fontWeight: 600,
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            color: 'var(--gold)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px'
+          }}>DM Toolkit</div>
+          <nav style={{display:'flex', gap: 12, marginLeft: 8}}>
+            <a href="/tools/npc_forge.html" style={{fontSize:11, color:'var(--text-dim)', textDecoration:'none', textTransform:'uppercase', fontWeight:600, letterSpacing:'0.1em'}}>🎭 NPC Forge</a>
+            <a href="/tools/session_companion.html" style={{fontSize:11, color:'var(--text-dim)', textDecoration:'none', textTransform:'uppercase', fontWeight:600, letterSpacing:'0.1em'}}>📜 Session</a>
+            <a href="/tools/combat_companion.html" style={{fontSize:11, color:'var(--text-dim)', textDecoration:'none', textTransform:'uppercase', fontWeight:600, letterSpacing:'0.1em'}}>⚔️ Combat</a>
+            <a href="/tools/scene_painter.html" style={{fontSize:11, color:'var(--text-dim)', textDecoration:'none', textTransform:'uppercase', fontWeight:600, letterSpacing:'0.1em'}}>🎨 Scene Paint</a>
+          </nav>
+        </div>
+        <div style={{fontSize: 12, color: 'var(--text-dim)', letterSpacing: '0.05em'}}>Lore Builder v1.0.0</div>
+      </header>
+      
+      <div className="container">
+        <div className="sidebar">
+          <div>
+            <h3>Active Campaign</h3>
+            <select value={activeCampaign} onChange={e => setActiveCampaign(e.target.value)}>
+              <option value="">-- Select Campaign --</option>
+              {campaigns.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          
+          <div style={{marginTop: 10}}>
+            <h3>New Campaign</h3>
+            <input 
+              type="text" 
+              placeholder="Campaign Name" 
+              value={newCampaignName}
+              onChange={e => setNewCampaignName(e.target.value)}
+              style={{marginBottom: 8}}
+            />
+            <button className="btn" onClick={handleCreateCampaign} disabled={loading || !newCampaignName}>Create</button>
+          </div>
+
+          <div style={{marginTop: 'auto', fontSize: 11, color: 'var(--text-dim)'}}>
+            Entities are saved as Markdown files in your campaign folder.
+          </div>
+        </div>
+
+        <div className="main-content">
+          <div className="card">
+            <h2>Campaign Lore Forge</h2>
+            
+            {message && (
+              <div className={`message ${message.type}`}>
+                {message.text}
+                <button 
+                  onClick={() => setMessage(null)} 
+                  style={{float:'right',background:'none',border:'none',color:'inherit',cursor:'pointer'}}
+                >×</button>
+              </div>
+            )}
+
+            <div className="tabs">
+              <div className={`tab ${activeTab === 'npc' ? 'active' : ''}`} onClick={() => setActiveTab('npc')}>NPC</div>
+              <div className={`tab ${activeTab === 'location' ? 'active' : ''}`} onClick={() => setActiveTab('location')}>Location</div>
+            </div>
+
+            {activeTab === 'npc' ? (
+              <div className="form">
+                <div style={{display:'flex', gap:20}}>
+                  <div className="form-group" style={{flex:2}}>
+                    <label>NPC Name</label>
+                    <input type="text" value={npcData.name} onChange={e => setNpcData({...npcData, name: e.target.value})} placeholder="e.g. Elara Moonwhisper" />
+                  </div>
+                  <div className="form-group" style={{flex:1}}>
+                    <label>Role</label>
+                    <input type="text" value={npcData.role} onChange={e => setNpcData({...npcData, role: e.target.value})} placeholder="e.g. Innkeeper" />
+                  </div>
+                </div>
+
+                <div style={{display:'flex', gap:20}}>
+                  <div className="form-group" style={{flex:1}}>
+                    <label>Location</label>
+                    <input type="text" value={npcData.location} onChange={e => setNpcData({...npcData, location: e.target.value})} />
+                  </div>
+                  <div className="form-group" style={{flex:1}}>
+                    <label>Faction</label>
+                    <input type="text" value={npcData.faction} onChange={e => setNpcData({...npcData, faction: e.target.value})} />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Appearance (1-2 sentences)</label>
+                  <textarea rows="2" value={npcData.description} onChange={e => setNpcData({...npcData, description: e.target.value})} />
+                </div>
+
+                <div style={{display:'flex', gap:20}}>
+                  <div className="form-group" style={{flex:1}}>
+                    <label>Voice Quirk</label>
+                    <input type="text" value={npcData.voiceQuirk} onChange={e => setNpcData({...npcData, voiceQuirk: e.target.value})} />
+                  </div>
+                  <div className="form-group" style={{flex:1}}>
+                    <label>Physical Tell</label>
+                    <input type="text" value={npcData.physicalTell} onChange={e => setNpcData({...npcData, physicalTell: e.target.value})} />
+                  </div>
+                </div>
+
+                <div style={{display:'flex', gap:20}}>
+                  <div className="form-group" style={{flex:1}}>
+                    <label>Immediate Want</label>
+                    <input type="text" value={npcData.immediateWant} onChange={e => setNpcData({...npcData, immediateWant: e.target.value})} />
+                  </div>
+                  <div className="form-group" style={{flex:1}}>
+                    <label>Deep Want</label>
+                    <input type="text" value={npcData.deepWant} onChange={e => setNpcData({...npcData, deepWant: e.target.value})} />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Sample Dialogue</label>
+                  {npcData.dialogue.map((line, i) => (
+                    <input 
+                      key={i} 
+                      type="text" 
+                      value={line} 
+                      onChange={e => {
+                        const newD = [...npcData.dialogue];
+                        newD[i] = e.target.value;
+                        setNpcData({...npcData, dialogue: newD});
+                      }} 
+                      placeholder={`Line ${i+1}`}
+                      style={{marginBottom: 8}}
+                    />
+                  ))}
+                </div>
+
+                <div className="form-group">
+                  <label>DM Notes / Secrets</label>
+                  <textarea rows="3" value={npcData.notes} onChange={e => setNpcData({...npcData, notes: e.target.value})} />
+                </div>
+
+                <button className="btn" style={{width:'100%', padding:14}} onClick={handleSaveEntity} disabled={loading || !activeCampaign}>Save NPC to Campaign</button>
+              </div>
+            ) : (
+              <div className="form">
+                <div className="form-group">
+                  <label>Location Name</label>
+                  <input type="text" value={locData.name} onChange={e => setLocData({...locData, name: e.target.value})} placeholder="e.g. The Drunken Dragon Inn" />
+                </div>
+
+                <div className="form-group">
+                  <label>Overview</label>
+                  <textarea rows="2" value={locData.overview} onChange={e => setLocData({...locData, overview: e.target.value})} />
+                </div>
+
+                <div style={{display:'flex', gap:10}}>
+                  <div className="form-group" style={{flex:1}}><label>Sights</label><input type="text" value={locData.sights} onChange={e => setLocData({...locData, sights: e.target.value})} /></div>
+                  <div className="form-group" style={{flex:1}}><label>Sounds</label><input type="text" value={locData.sounds} onChange={e => setLocData({...locData, sounds: e.target.value})} /></div>
+                  <div className="form-group" style={{flex:1}}><label>Smells</label><input type="text" value={locData.smells} onChange={e => setLocData({...locData, smells: e.target.value})} /></div>
+                </div>
+
+                <div className="form-group">
+                  <label>Key Features / Landmarks</label>
+                  <textarea rows="3" value={locData.features} onChange={e => setLocData({...locData, features: e.target.value})} />
+                </div>
+
+                <div className="form-group">
+                  <label>NPCs Usually Present</label>
+                  <input type="text" value={locData.npcs} onChange={e => setLocData({...locData, npcs: e.target.value})} />
+                </div>
+
+                <div className="form-group">
+                  <label>DM Notes / Secrets</label>
+                  <textarea rows="3" value={locData.notes} onChange={e => setLocData({...locData, notes: e.target.value})} />
+                </div>
+
+                <button className="btn" style={{width:'100%', padding:14}} onClick={handleSaveEntity} disabled={loading || !activeCampaign}>Save Location to Campaign</button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>

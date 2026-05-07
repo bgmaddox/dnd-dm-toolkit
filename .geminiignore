@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+.git/
+.DS_Store
+archive/
+dist/
+*.zip
+*.numbers
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg

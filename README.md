@@ -2,24 +2,19 @@
 
 A suite of AI-powered tools to help with learning to DM, running sessions, and building campaigns in D&D 5e (2024 rules).
 
+## 🚀 Quick Start
+If you just want to run the tools, see the **[USER_GUIDE.md](./USER_GUIDE.md)** for one-click launcher instructions.
+
 ## Project Status
-
-**Phase 1 — In Progress:** Core session tools
-- NPC Forge — built, deployed to Pi
-- Combat Companion — built, deployed to Pi
-- Scene Painter, Session Companion — planned
-
-## Tools
+**Phase 1 — Complete:** Core session tools are built, tested, and ready for use.
 
 | Tool | Status | Purpose |
 |------|--------|---------|
-| DM Learning Guide | Done | Curated HTML reference: mindset, skills, tools, resources, checklists |
-| NPC Forge | Done | Build distinct NPCs with voice, quirks, motivations, sample dialogue |
-| Combat Companion | Done | Live combat tracker + monster reference + AI assist |
-| Scene Painter | Planned | Generate atmospheric read-aloud descriptions from location/mood inputs |
-| Session Companion | Planned | Pre-session prep workflow with AI batch generation; in-session one-click reference |
-| Campaign Wiki | Planned | Track NPCs, locations, factions, session notes |
-| Encounter Builder | Future | Design balanced encounters with narrative hooks |
+| NPC Forge | ✅ Done | Build distinct NPCs with voice, quirks, motivations, sample dialogue |
+| Combat Companion | ✅ Done | Live combat tracker + monster reference + AI assist |
+| Scene Painter | ✅ Done | Generate atmospheric read-aloud descriptions from location/mood inputs |
+| Session Companion | ✅ Done | AI chat with campaign context; session history persistence |
+| DM Learning Guide | ✅ Done | Curated HTML reference: mindset, skills, tools, resources |
 
 ## Tech Stack
 

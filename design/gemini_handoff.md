@@ -1,20 +1,4 @@
-# Gemini Handoff — DM Toolkit
-
-**Prepared by:** Claude Sonnet 4.6  
-**Date:** 2026-05-05  
-**Branch to work on:** `main` (or a new feature branch off main)
-
----
-
-## Project Overview
-
-This is a personal D&D Dungeon Master toolkit running as a FastAPI server with plain HTML/JS frontends. It is deployed on a **Raspberry Pi** at `rachett.local:8502` (always-on, headless, systemd service) and is also distributed as a **portable desktop launcher** (`run_toolkit.command` / `run_toolkit.bat`) for a friend's Mac/Windows machine.
-
-**The two deployment modes are controlled by a single env var:**
-- Pi: `PORTABLE` is never set → uses `PORT=8502`, no setup wizard, no browser auto-open
-- Desktop: launcher sets `PORTABLE=1` → dynamic port, tkinter setup wizard, browser auto-opens
-
-**Tech stack:** FastAPI · Python 3.13 · Alpine.js (Session Companion) · React/JSX-in-HTML (NPC Forge, Combat Companion) · plain JS (Scene Painter, DM Learning Guide) · Anthropic Claude API · optional Gemini free tier
+## Status — All Priority 1, 2, & 3 tasks completed.
 
 ---
 
@@ -23,89 +7,41 @@ This is a personal D&D Dungeon Master toolkit running as a FastAPI server with p
 ### Tools (all in `tools/`)
 | File | Status |
 |------|--------|
-| `npc_forge.html` | ✅ Complete — Class, Level Tier, Disposition, Story Role fields; portrait generation (Pollinations.ai) with server-side persistence; two-tier NPC library; tool hand-off bus |
-| `combat_companion.html` | ✅ Working — HP tracking, initiative, encounter management |
-| `scene_painter.html` | ✅ Working — reads `localStorage['dm_toolkit_handoff']` on mount for auto-fill |
-| `session_companion.html` | ✅ Complete — AI chat with tiered campaign context, raw notes, session finalize/summarize, past sessions list, resume conversation |
-| `dm_learning_guide.html` | ✅ Static reference tool |
+| `npc_forge.html` | ✅ Complete |
+| `combat_companion.html` | ✅ Complete |
+| `scene_painter.html` | ✅ Complete |
+| `session_companion.html` | ✅ Complete |
+| `dm_learning_guide.html` | ✅ Complete |
+
+### Packaging & Distribution (Priority 3)
+- `scripts/package.py` — ✅ Complete. Generates a clean distribution ZIP in `dist/`.
+- `tools/build_macos_app.sh` — ✅ Complete. Creates a native macOS `.app` wrapper.
+- `scripts/generate_icons.py` — ✅ Complete. Generates `.ico` for Windows.
+- `campaign/Example/` — ✅ Complete. A full "Oakhaven" example campaign.
+- `run_toolkit.command` / `.bat` — ✅ Complete. Portable launchers.
 
 ### Backend (`server.py`)
-All endpoints working. Key additions from this cycle:
-- `POST /api/ai/chat` — Session Companion chat with role-alternation enforcement
-- `POST /api/session/start|notes/append|finalize` — session lifecycle
-- `GET /api/session/summaries/{campaign}` — lists finalized session `.md` files
-- `GET/POST /api/session/chat/{campaign}/{n}` — persists chat history per session
-- `POST /api/npcs/{id}/portrait` — downloads portrait from Pollinations and saves locally
-- `PORTABLE`/`PORT` env var separation
-- All `client.messages.create()` calls guarded against `None` client
-- Model updated from hardcoded `claude-3-5-sonnet-20241022` → `claude-sonnet-4-6`
+- `POST /api/session/prep/{campaign}/{n}` — Added for Prep history persistence.
+- `GET /api/updates/check` — GitHub release version check implemented.
+- `BM25Plus` — Switched to `BM25Plus` for better keyword relevance with low-density files.
+- `PORTABLE` mode verified (tkinter wizard + fixed ports on Pi).
 
-### Icons
-All 5 tools have tab favicons. Assets in `tools/`:
-- `DnDIcon-Small.png` — red dragon (NPC Forge, Session Companion)
-- `DnDIcon-Green.png` — green dragon (Scene Painter, DM Learning Guide)
-- `DnDIcon-Blue.png` — blue dragon (Combat Companion)
-- `DnDIcon-Computer.png` — open tome app icon (setup wizard window, future .app packaging)
-- `DnDIconSet.png` — source file with all 3 badges side-by-side
-
-### Campaign Loader (`campaign_loader.py`)
-Tiered context system:
-1. `WORLD.md` + `FACTIONS.md` + `DM_REFERENCE.md` (base layer)
-2. Lean PC stats from `pcs/*.md`
-3. BM25-matched NPC/location files (`utils/bm25_index.py`) — top 2 matches per query
-4. Recent session summaries (`sessions/session_N.md`)
-
-Token budget: 4,000. Context header includes token count.
-
-### Portable Launcher
-- `run_toolkit.command` (macOS) / `run_toolkit.bat` (Windows) — sets up `.venv`, installs deps, runs server with `PORTABLE=1`
-- `setup_wizard.py` — tkinter GUI for first-time API key entry, uses `DnDIcon-Computer.png` as window icon, fully headless-safe (skips silently on Pi)
+### Campaign Context
+- **Flexible PC Parsing:** Regex updated in `campaign_loader.py` to handle various markdown styles (e.g., fairy bard sheets).
+- **DM Reference:** `campaign/lmop/DM_REFERENCE.md` created with House Rules and Player Info sections.
+- **BM25 Tuning:** Verified baseline threshold of `0.1` for `BM25Plus` matches.
 
 ---
 
-## Pending Work
+## Deploy to Pi
 
-### Priority 1 — Small, clearly-scoped fixes
-
-**1. Prep Mode Save (Session Companion)**  
-`finalizeSession()` in `tools/session_companion.html` line ~745 currently just alerts "Prep notes saved." with no actual persistence. Should save `prepHistory` to `campaign/{name}/sessions/chat_{sessionNumber}_prep.json` using the existing `/api/session/chat/{campaign}/{session_number}` endpoint pattern (or a new `/api/session/prep/{campaign}/{n}` endpoint).
-
-**2. `DM_REFERENCE.md` creation**  
-`campaign_loader.py` loads `campaign/{campaign}/DM_REFERENCE.md` as part of the base layer. This file does not exist yet. Create a template at `campaign/lmop/DM_REFERENCE.md` with sections for:
-- House Rules
-- Session Schedule / Player Info
-- Campaign Tone & Themes
-- Important Decisions Made
-
-**3. PC sheet regex fragility (`_get_lean_pc_stats` in `campaign_loader.py`)**  
-The lean PC stats function uses `\*\*Class:\*\*` patterns to extract info. This silently returns empty if the PC markdown files use different formatting. Check the actual format of the PC files in `campaign/lmop/pcs/` and update the regex (or make it more flexible) to match them correctly.
-
----
-
-### Priority 2 — Feature completions
-
-**4. NPC Forge header provider toggle — cleanup**  
-There are two AI provider toggles in NPC Forge: one in the Tweaks panel (right side) and a duplicate pill in the header. Both are wired to the same `tweaks.aiProvider` state and work correctly. The header one is more visible and convenient; remove the one from the Tweaks panel to eliminate the duplicate. In `tools/npc_forge.html`, find `TweakRadio label="AI Provider"` and remove it.
-
-**5. Portrait generation — cooldown UX**  
-Portrait generation hits Pollinations.ai (free, no key needed). No hard rate limit, but back-to-back requests for a full NPC roster can be slow. Add a brief cooldown state after generation: disable the Generate button for ~5 seconds and show "Cooling down..." to prevent rapid-fire requests. In `tools/npc_forge.html`, the `generatePortrait` function at line ~1200 sets `setPortraitLoading`. After the `img.onload` callback, add a short `setTimeout` before re-enabling.
-
-**6. BM25 score threshold tuning**  
-`utils/bm25_index.py` uses a hardcoded threshold of `0.1`. This has never been tested against real campaign files. Once actual NPC/location markdown files exist in `campaign/lmop/`, run test queries and adjust the threshold. It may need to be lower (more permissive) or higher (more selective) depending on file density. The threshold is at line ~47 of `utils/bm25_index.py`.
-
----
-
-### Priority 3 — macOS app packaging (aspirational)
-
-**7. macOS `.app` bundle**  
-`design/packaging_plan.md` describes this in detail. The goal is a double-clickable `.app` for macOS using PyInstaller. The `DnDIcon-Computer.png` is the intended icon — convert it to `.icns` format first:
+When changes are ready:
 ```bash
-# macOS icon conversion:
-mkdir MyIcon.iconset
-sips -z 1024 1024 tools/DnDIcon-Computer.png --out MyIcon.iconset/icon_512x2.png
-iconutil -c icns MyIcon.iconset
+git push origin main
+ssh rachett 'bash ~/deploy.sh dnd'
 ```
-Then reference the `.icns` in the PyInstaller spec. See `design/packaging_plan.md` for the full spec.
+
+The Pi pulls from `origin/main`, restarts the `dnd-toolkit.service`, and serves on port 8502.
 
 ---
 
