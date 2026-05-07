@@ -34,9 +34,11 @@ Your personal co-DM that knows your world.
 - **Campaign Context:** Select your campaign from the dropdown. The AI will read your files in the `campaign/` folder to answer questions about your lore.
 - **Session History:** It remembers what happened in previous sessions if you've finalized your notes.
 
-### 🎨 Scene Painter
-Generate atmospheric read-aloud descriptions.
-- Use the mood sliders to adjust the tone (e.g., more "Grim" or more "Ethereal").
+### 🏰 Lore Builder
+Create your own campaigns and lore without ever opening a text editor.
+- **New Campaign:** Type a name and hit "Create" to scaffold a new world folder.
+- **Form-Based Entry:** Fill out fields for NPCs and Locations, and hit "Save" to automatically generate the Markdown files in the right place.
+- **Markdown Powered:** Everything you save is stored as a simple `.md` file, so it's easy to back up or edit manually later if you want.
 
 ---
 
@@ -58,7 +60,32 @@ The toolkit reads simple text files (Markdown) from the `campaign/` folder.
 
 - **To start a new campaign:** Create a new folder inside `campaign/` (e.g., `campaign/Strahd/`).
 - **Templates:** Use the files in `campaign/templates/` as a guide for your NPCs, locations, and session notes.
-- **D&D Beyond:** If you use D&D Beyond, you can use the `fetch_character.py` script (for technical users) to import your players' sheets automatically.
+### Importing Characters from D&D Beyond
+
+The `scripts/fetch_character.py` script converts a D&D Beyond character sheet into a Markdown file the toolkit can read. D&D Beyond blocks automated fetches, so you first export the JSON via a browser bookmarklet, then run the script.
+
+**Step 1 — Install the bookmarklet (one time)**
+
+1. Right-click your browser bookmarks bar → **Add page** (Chrome) or **Add bookmark** (Firefox/Safari)
+2. Name it something like `⬇ DDB Export`
+3. Paste the following as the **URL** (the entire line):
+
+```
+javascript:(function(){var m=location.pathname.match(/\/characters?\/(\d+)/);if(!m)return alert('Open a D&D Beyond character page first.');fetch('/api/character/v5/character/'+m[1]).then(function(r){return r.json()}).then(function(d){var name=(d.data&&d.data.name?d.data.name:'character').replace(/\s+/g,'_');var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(d)],{type:'application/json'}));a.download=name+'.json';a.click()}).catch(function(e){alert('Error: '+e.message)})})();
+```
+
+**Step 2 — Export a character sheet**
+
+1. Open the character's sheet on D&D Beyond (you must be logged in)
+2. Click the `⬇ DDB Export` bookmark — a `.json` file downloads automatically
+
+**Step 3 — Import into the toolkit**
+
+```bash
+python scripts/fetch_character.py --file ~/Downloads/Aria_Vex.json --campaign LMoP
+```
+
+Replace `Aria_Vex.json` with the downloaded filename and `LMoP` with your campaign folder name. The script writes a Markdown file to `campaign/<name>/pcs/` automatically. Repeat whenever a character levels up or changes gear.
 
 ---
 
