@@ -836,7 +836,7 @@
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
-<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="/tools/tweaks-panel.jsx"></script>
 
 <div id="root"></div>
 
@@ -1285,14 +1285,31 @@ Make it gritty, specific, and immediately playable. Avoid clichés. Each field s
     if (!npc || savedCurrent) return;
     setSaveError('');
     try {
-      const res = await fetch('/api/npcs', {
+      let data = { ...npc };
+      let endpoint = '/api/npcs';
+      let payload = npc;
+
+      if (activeCampaign) {
+        endpoint = '/api/campaign/save_entity';
+        payload = {
+          campaign: activeCampaign,
+          type: 'npc',
+          data: npc
+        };
+      }
+
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(npc),
+        body: JSON.stringify(payload),
       });
+
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
-      const data = await res.json();
-      const saved = { ...npc, _id: data.id };
+      const dataRes = await res.json();
+      
+      const savedId = activeCampaign ? dataRes.path : dataRes.id;
+      const saved = { ...npc, _id: savedId };
+      
       const addToList = (prev) => {
         if (prev.find(n => n.name === npc.name)) return prev;
         return [saved, ...prev.filter(n => n.name !== EXAMPLE_NPC.name)];
@@ -1304,8 +1321,9 @@ Make it gritty, specific, and immediately playable. Avoid clichés. Each field s
 
       // Save portrait server-side if one was generated (external URL → local file)
       const portraitUrl = portraits[npc.name];
-      if (portraitUrl && !portraitUrl.startsWith('/')) {
-        fetch(`/api/npcs/${data.id}/portrait`, {
+      if (portraitUrl && !portraitUrl.startsWith('/') && !activeCampaign) {
+        // Portrait saving currently only implemented for global NPCs
+        fetch(`/api/npcs/${dataRes.id}/portrait`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ imageUrl: portraitUrl }),
@@ -1350,7 +1368,15 @@ Make it gritty, specific, and immediately playable. Avoid clichés. Each field s
       </TweaksPanel>
 
       <header className="header">
-        <div className="header-logo">DM Toolkit</div>
+        <div style={{display:'flex', alignItems:'center', gap: 16}}>
+          <div className="header-logo">DM Toolkit</div>
+          <nav style={{display:'flex', gap: 12, marginLeft: 8}}>
+            <a href="/tools/lore_builder.html" style={{fontSize:11, color:'var(--gold-dim)', textDecoration:'none', textTransform:'uppercase', fontWeight:600, letterSpacing:'0.1em'}}>🏰 Lore Builder</a>
+            <a href="/tools/session_companion.html" style={{fontSize:11, color:'var(--text-dim)', textDecoration:'none', textTransform:'uppercase', fontWeight:600, letterSpacing:'0.1em'}}>📜 Session</a>
+            <a href="/tools/combat_companion.html" style={{fontSize:11, color:'var(--text-dim)', textDecoration:'none', textTransform:'uppercase', fontWeight:600, letterSpacing:'0.1em'}}>⚔️ Combat</a>
+            <a href="/tools/scene_painter.html" style={{fontSize:11, color:'var(--text-dim)', textDecoration:'none', textTransform:'uppercase', fontWeight:600, letterSpacing:'0.1em'}}>🎨 Scene Paint</a>
+          </nav>
+        </div>
         <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
           {/* Visible AI provider toggle */}
           <div className="provider-toggle">
