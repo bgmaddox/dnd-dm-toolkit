@@ -1055,6 +1055,7 @@ function App() {
   const [factionMode, setFactionMode] = useState('pill');
   const [portraits, setPortraits] = useState({});
   const [portraitLoading, setPortraitLoading] = useState(false);
+  const [portraitCooldown, setPortraitCooldown] = useState(false);
   const [portraitError, setPortraitError] = useState('');
 
   // On mount: load saved campaign preference and fetch server-side data
@@ -1207,7 +1208,7 @@ Make it gritty, specific, and immediately playable. Avoid clichés. Each field s
 
   const generatePortrait = useCallback((targetNpc) => {
     const target = targetNpc || npc;
-    if (!target || portraitLoading) return;
+    if (!target || portraitLoading || portraitCooldown) return;
     setPortraitLoading(true);
     setPortraitError('');
 
@@ -1219,13 +1220,15 @@ Make it gritty, specific, and immediately playable. Avoid clichés. Each field s
     img.onload = () => {
       setPortraits(prev => ({ ...prev, [target.name]: url }));
       setPortraitLoading(false);
+      setPortraitCooldown(true);
+      setTimeout(() => setPortraitCooldown(false), 5000);
     };
     img.onerror = () => {
       setPortraitError('Portrait failed — Pollinations.ai may be temporarily unavailable.');
       setPortraitLoading(false);
     };
     img.src = url;
-  }, [npc, portraitLoading, tweaks.portraitStyle]);
+  }, [npc, portraitLoading, portraitCooldown, tweaks.portraitStyle]);
 
   const handleForge = () => generateNPC();
   const handleRegen = useCallback(
@@ -1355,9 +1358,6 @@ Make it gritty, specific, and immediately playable. Avoid clichés. Each field s
     <>
       <TweaksPanel>
         <TweakSection label="AI Settings" />
-        <TweakRadio label="AI Provider" value={tweaks.aiProvider}
-          options={[{value:'claude',label:'Claude'},{value:'gemini',label:'Gemini'}]}
-          onChange={v => setTweak('aiProvider', v)} />
         <TweakRadio label="Portrait Style" value={tweaks.portraitStyle}
           options={[{value:'illustrated',label:'Illustrated'},{value:'painterly',label:'Painterly'},{value:'gritty',label:'Gritty'}]}
           onChange={v => setTweak('portraitStyle', v)} />

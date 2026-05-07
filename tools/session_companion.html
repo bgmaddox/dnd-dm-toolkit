@@ -813,23 +813,21 @@ document.addEventListener('alpine:init', () => {
 
     async checkContext() {
       if (!this.campaign) return;
-      const [startRes, summariesRes, chatRes] = await Promise.all([
+      const [startRes, summariesRes, chatRes, prepRes] = await Promise.all([
         fetch('/api/session/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ campaign: this.campaign, sessionNumber: parseInt(this.sessionNumber) })
         }),
         fetch(`/api/session/summaries/${this.campaign}`),
-        fetch(`/api/session/chat/${this.campaign}/${this.sessionNumber}`)
+        fetch(`/api/session/chat/${this.campaign}/${this.sessionNumber}`),
+        fetch(`/api/session/prep/${this.campaign}/${this.sessionNumber}`)
       ]);
       if (startRes.ok) this.activeContext = (await startRes.json()).activeContext;
       if (summariesRes.ok) this.pastSessions = (await summariesRes.json()).sessions || [];
-      if (chatRes.ok) {
-        const chatData = await chatRes.json();
-        this.resumeAvailable = (chatData.history || []).length > 0;
-      } else {
-        this.resumeAvailable = false;
-      }
+      const chatHistory = chatRes.ok ? ((await chatRes.json()).history || []) : [];
+      const prepHistory = prepRes.ok ? ((await prepRes.json()).history || []) : [];
+      this.resumeAvailable = chatHistory.length > 0 || prepHistory.length > 0;
     },
 
     async loadSession(num) {
@@ -840,10 +838,17 @@ document.addEventListener('alpine:init', () => {
     async beginSession(resume = false) {
       this.loading = true;
       if (resume) {
-        const chatRes = await fetch(`/api/session/chat/${this.campaign}/${this.sessionNumber}`);
+        const [chatRes, prepRes] = await Promise.all([
+          fetch(`/api/session/chat/${this.campaign}/${this.sessionNumber}`),
+          fetch(`/api/session/prep/${this.campaign}/${this.sessionNumber}`)
+        ]);
         if (chatRes.ok) {
           const chatData = await chatRes.json();
           this.history = (chatData.history || []).map((m, i) => ({ id: Date.now() + i, ...m }));
+        }
+        if (prepRes.ok) {
+          const prepData = await prepRes.json();
+          this.prepHistory = (prepData.history || []).map((m, i) => ({ id: Date.now() + 1000 + i, ...m }));
         }
       } else {
         this.history = [];
@@ -859,8 +864,9 @@ document.addEventListener('alpine:init', () => {
     async saveChatHistory() {
       const active = this.prepMode ? this.prepHistory : this.history;
       const toSave = active.map(({ role, content }) => ({ role, content }));
+      const endpoint = this.prepMode ? 'prep' : 'chat';
       try {
-        await fetch(`/api/session/chat/${this.campaign}/${this.sessionNumber}`, {
+        await fetch(`/api/session/${endpoint}/${this.campaign}/${this.sessionNumber}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ history: toSave })
@@ -940,7 +946,11 @@ document.addEventListener('alpine:init', () => {
     },
 
     async finalizeSession() {
-      if (this.prepMode) { alert("Prep notes saved."); return; }
+      if (this.prepMode) {
+        await this.saveChatHistory();
+        alert("Prep notes saved.");
+        return;
+      }
       if (!confirm("End session and generate summary?")) return;
       const res = await fetch('/api/session/finalize', {
         method: 'POST',

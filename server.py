@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import anthropic
+import asyncio
 import json
 import os
 import time
@@ -22,7 +23,8 @@ VERSION = "1.0.1"
 PORTABLE = os.environ.get("PORTABLE", "").lower() in ("1", "true", "yes")
 PORT = int(os.environ.get("PORT", 8502))
 
-# Only run setup wizard for desktop/portable deployments
+load_dotenv()  # always load .env if present; systemd env vars take precedence on Pi
+
 if PORTABLE:
     setup_wizard()
 
@@ -37,9 +39,9 @@ async def check_updates():
     repo = "bgmaddox/dnd-dm-toolkit"
     try:
         import requests
-        # Use a short timeout to prevent blocking startup if no internet
-        response = requests.get(
-            f"https://api.github.com/repos/{repo}/releases/latest", 
+        response = await asyncio.to_thread(
+            requests.get,
+            f"https://api.github.com/repos/{repo}/releases/latest",
             timeout=2,
             headers={"Accept": "application/vnd.github.v3+json"}
         )
@@ -257,7 +259,7 @@ async def chat(req: ChatRequest):
 
     normalized.append({"role": "user", "content": req.query})
 
-    # 3. System Prompt
+    # 3. System Prompt — campaign context is static per session, so cache it
     system_prompt = f"""You are an expert D&D Dungeon Master Assistant.
 Use the provided campaign context to help the DM run the session.
 Be concise, helpful, and creative.
@@ -268,7 +270,7 @@ Be concise, helpful, and creative.
         message = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=1000,
-            system=system_prompt,
+            system=[{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}],
             messages=normalized,
         )
         return {"content": message.content[0].text, "provider": "claude"}
@@ -359,6 +361,23 @@ async def save_chat_history(campaign: str, session_number: int, body: dict):
     return {"ok": True}
 
 
+@app.get("/api/session/prep/{campaign}/{session_number}")
+async def get_prep_history(campaign: str, session_number: int):
+    chat_path = CAMPAIGN_BASE / campaign / "sessions" / f"chat_{session_number}_prep.json"
+    if not chat_path.exists():
+        return {"history": []}
+    return {"history": json.loads(chat_path.read_text())}
+
+
+@app.post("/api/session/prep/{campaign}/{session_number}")
+async def save_prep_history(campaign: str, session_number: int, body: dict):
+    sessions_dir = CAMPAIGN_BASE / campaign / "sessions"
+    sessions_dir.mkdir(parents=True, exist_ok=True)
+    chat_path = sessions_dir / f"chat_{session_number}_prep.json"
+    chat_path.write_text(json.dumps(body.get("history", []), indent=2))
+    return {"ok": True}
+
+
 class FinalizeRequest(BaseModel):
     campaign: str
     sessionNumber: int
@@ -366,16 +385,25 @@ class FinalizeRequest(BaseModel):
 @app.post("/api/session/finalize")
 async def finalize_session(req: FinalizeRequest):
     camp_dir = CAMPAIGN_BASE / req.campaign
-    transcripts_dir = camp_dir / "sessions" / "transcripts"
-    
-    # Find most recent transcript or notes for today
+    raw_text = None
+
+    # Try transcript file first (note-append workflow)
     date_str = time.strftime("%Y-%m-%d")
-    raw_path = transcripts_dir / f"raw_{date_str}.txt"
-    
-    if not raw_path.exists():
-        raise HTTPException(status_code=404, detail="No raw notes found for today")
-    
-    raw_text = raw_path.read_text()
+    raw_path = camp_dir / "sessions" / "transcripts" / f"raw_{date_str}.txt"
+    if raw_path.exists():
+        raw_text = raw_path.read_text()
+
+    # Fallback: reconstruct from saved chat history
+    if not raw_text:
+        chat_path = camp_dir / "sessions" / f"chat_{req.sessionNumber}.json"
+        if chat_path.exists():
+            history = json.loads(chat_path.read_text())
+            raw_text = "\n\n".join(
+                f"[{m['role'].upper()}]: {m['content']}" for m in history
+            )
+
+    if not raw_text:
+        raise HTTPException(status_code=404, detail="No session notes or chat history found")
     
     # AI Processing (Claude Sonnet recommended for reasoning)
     system_prompt = f"""You are an expert D&D assistant. Summarize the following raw session notes into a structured Markdown log.
@@ -531,6 +559,13 @@ async def delete_npc(npc_id: str):
     return {"ok": True}
 
 
+def _download_portrait(image_url: str, dest_path: Path):
+    import urllib.request
+    req = urllib.request.Request(image_url, headers={"User-Agent": "DMToolkit/1.0"})
+    with urllib.request.urlopen(req, timeout=20) as resp:
+        dest_path.write_bytes(resp.read())
+
+
 @app.post("/api/npcs/{npc_id}/portrait")
 async def save_portrait(npc_id: str, body: dict):
     if not _re.match(r"^[a-z0-9\-]+$", npc_id):
@@ -539,13 +574,9 @@ async def save_portrait(npc_id: str, body: dict):
     if not image_url:
         raise HTTPException(status_code=400, detail="imageUrl required")
     PORTRAITS_DIR.mkdir(parents=True, exist_ok=True)
+    portrait_path = PORTRAITS_DIR / f"{npc_id}.png"
     try:
-        import urllib.request
-        req = urllib.request.Request(image_url, headers={"User-Agent": "DMToolkit/1.0"})
-        with urllib.request.urlopen(req, timeout=20) as resp:
-            image_data = resp.read()
-        portrait_path = PORTRAITS_DIR / f"{npc_id}.png"
-        portrait_path.write_bytes(image_data)
+        await asyncio.to_thread(_download_portrait, image_url, portrait_path)
         return {"ok": True, "portraitUrl": f"/tools/npcs/portraits/{npc_id}.png"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Portrait download failed: {e}")
