@@ -3002,7 +3002,7 @@ const inputStyleC = {
   fontFamily: "var(--font-body)", transition: "border-color 0.15s",
 };
 
-function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeChange, onDelete, portrait }) {
+function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeChange, onDelete, onRename, portrait }) {
   const { name, type, hp, maxHp, conditions } = combatant;
   const pct = hpPct(hp, maxHp);
   const color = hpColor(hp, maxHp);
@@ -3011,6 +3011,8 @@ function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeCh
   const [editingInit, setEditingInit] = useState(false);
   const [initInput, setInitInput] = useState("");
   const [hovered, setHovered] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState("");
   function startHpEdit(e) { e.stopPropagation(); setHpInput(String(hp)); setEditingHp(true); }
   function commitHpEdit() { const v = parseInt(hpInput); if (!isNaN(v)) onHpChange(combatant.id, v); setEditingHp(false); }
   function startInitEdit(e) { e.stopPropagation(); setInitInput(String(combatant.initiative ?? "")); setEditingInit(true); }
@@ -3037,9 +3039,23 @@ function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeCh
             <span style={{ fontSize: 14, opacity: 0.4 }}>{isDead ? "☠" : type === "PC" ? "⚔" : "👾"}</span>
           )}
         </div>
-        <span style={{ fontFamily: "var(--font-head)", fontSize: type === "Monster" ? 13 : 14, fontWeight: 600,
-          color: isActive ? "var(--gold)" : "var(--text)", flex: 1, lineHeight: 1.3,
-          textDecoration: isDead ? "line-through" : "none" }}>{name}</span>
+        {editingName ? (
+          <input autoFocus value={nameInput}
+            onChange={e => setNameInput(e.target.value)}
+            onBlur={() => { if (nameInput.trim()) onRename(combatant.id, nameInput.trim()); setEditingName(false); }}
+            onKeyDown={e => { if (e.key === "Enter") { if (nameInput.trim()) onRename(combatant.id, nameInput.trim()); setEditingName(false); } if (e.key === "Escape") setEditingName(false); }}
+            onClick={e => e.stopPropagation()}
+            style={{ flex: 1, fontFamily: "var(--font-head)", fontSize: type === "Monster" ? 13 : 14, fontWeight: 600, background: "#0d1017", border: "1px solid var(--gold-dim)", borderRadius: 3, color: "var(--text)", padding: "1px 5px", outline: "none" }} />
+        ) : (
+          <span style={{ fontFamily: "var(--font-head)", fontSize: type === "Monster" ? 13 : 14, fontWeight: 600,
+            color: isActive ? "var(--gold)" : "var(--text)", flex: 1, lineHeight: 1.3,
+            textDecoration: isDead ? "line-through" : "none" }}>{name}</span>
+        )}
+        {hovered && !editingName && (
+          <button onClick={e => { e.stopPropagation(); setNameInput(name); setEditingName(true); }}
+            title="Rename"
+            style={{ background: "none", border: "none", cursor: "pointer", padding: "0 2px", fontSize: 11, opacity: 0.5, lineHeight: 1, color: "var(--text-muted)" }}>✏</button>
+        )}
         <span style={{
           fontSize: 9, fontWeight: 600, padding: "1px 7px", borderRadius: 20,
           background: type === "PC" ? "rgba(74,120,196,0.25)" : "rgba(196,74,74,0.25)",
@@ -3209,6 +3225,9 @@ function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks,
       return next;
     });
   }
+  function renameCombatant(id, newName) {
+    setCombatants(prev => prev.map(c => c.id === id ? { ...c, name: newName } : c));
+  }
   return (
     <div style={{ width: tweaks.leftPanelWidth || 240, minWidth: tweaks.leftPanelWidth || 240, borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <div style={{ padding: "14px 14px 10px", borderBottom: "1px solid var(--border)" }}>
@@ -3244,7 +3263,7 @@ function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks,
           {combatants.map((c, i) => (
             <CombatantRow key={c.id} combatant={c} isActive={i === activeIdx} onClick={() => setActiveIdx(i)}
               onHpChange={hpChange} onInitiativeChange={initiativeChange}
-              onDelete={deleteCombatant} portrait={portraits && portraits[c.id]} />
+              onDelete={deleteCombatant} onRename={renameCombatant} portrait={portraits && portraits[c.id]} />
           ))}
         </div>
       </div>
