@@ -3002,8 +3002,8 @@ const inputStyleC = {
   fontFamily: "var(--font-body)", transition: "border-color 0.15s",
 };
 
-function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeChange, onDelete, onRename, onDuplicate, portrait }) {
-  const { name, type, hp, maxHp, conditions } = combatant;
+function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeChange, onDelete, onRename, onDuplicate, onLootChange, portrait }) {
+  const { name, type, hp, maxHp, conditions, loot } = combatant;
   const pct = hpPct(hp, maxHp);
   const color = hpColor(hp, maxHp);
   const [editingHp, setEditingHp] = useState(false);
@@ -3013,6 +3013,7 @@ function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeCh
   const [hovered, setHovered] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
+  const [lootOpen, setLootOpen] = useState(false);
   function startHpEdit(e) { e.stopPropagation(); setHpInput(String(hp)); setEditingHp(true); }
   function commitHpEdit() { const v = parseInt(hpInput); if (!isNaN(v)) onHpChange(combatant.id, v); setEditingHp(false); }
   function startInitEdit(e) { e.stopPropagation(); setInitInput(String(combatant.initiative ?? "")); setEditingInit(true); }
@@ -3107,8 +3108,24 @@ function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeCh
           })}
         </div>
       )}
+      {type === "Monster" && loot && !lootOpen && (
+        <div style={{ fontSize: 11, color: "var(--text-dim)", fontStyle: "italic", marginTop: 4, paddingLeft: 2 }}>{loot}</div>
+      )}
+      {type === "Monster" && lootOpen && (
+        <div onClick={e => e.stopPropagation()} style={{ marginTop: 5 }}>
+          <textarea value={loot || ""} placeholder="Loot notes (e.g. 12 gp, shortsword…)"
+            onChange={e => onLootChange(combatant.id, e.target.value)}
+            rows={2}
+            style={{ width: "100%", fontSize: 11, background: "#0d1017", border: "1px solid var(--border)", borderRadius: 4, color: "var(--text-muted)", padding: "4px 6px", resize: "none", outline: "none", fontFamily: "var(--body)" }} />
+        </div>
+      )}
       {hovered && (
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 5 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 5 }}>
+          {type === "Monster" ? (
+            <button onClick={e => { e.stopPropagation(); setLootOpen(v => !v); }}
+              style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: loot ? "var(--gold-dim)" : "var(--text-faint)", padding: "0 2px", fontFamily: "var(--body)" }}
+              title="Loot notes">💰 {lootOpen ? "close" : "loot"}</button>
+          ) : <span />}
           <button onClick={e => { e.stopPropagation(); onDelete(combatant.id); }}
             style={{ background: "rgba(196,74,74,0.12)", border: "1px solid rgba(196,74,74,0.35)", borderRadius: 4, color: "#e06868", cursor: "pointer", fontSize: 10, fontFamily: "var(--font-head)", letterSpacing: "0.06em", padding: "2px 8px", lineHeight: 1.4 }}>✕ REMOVE</button>
         </div>
@@ -3233,6 +3250,9 @@ function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks,
   function renameCombatant(id, newName) {
     setCombatants(prev => prev.map(c => c.id === id ? { ...c, name: newName } : c));
   }
+  function lootChange(id, val) {
+    setCombatants(prev => prev.map(c => c.id === id ? { ...c, loot: val } : c));
+  }
   function duplicateCombatant(id) {
     setCombatants(prev => {
       const idx = prev.findIndex(c => c.id === id);
@@ -3281,7 +3301,7 @@ function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks,
           {combatants.map((c, i) => (
             <CombatantRow key={c.id} combatant={c} isActive={i === activeIdx} onClick={() => setActiveIdx(i)}
               onHpChange={hpChange} onInitiativeChange={initiativeChange}
-              onDelete={deleteCombatant} onRename={renameCombatant} onDuplicate={duplicateCombatant} portrait={portraits && portraits[c.id]} />
+              onDelete={deleteCombatant} onRename={renameCombatant} onDuplicate={duplicateCombatant} onLootChange={lootChange} portrait={portraits && portraits[c.id]} />
           ))}
         </div>
       </div>
@@ -3797,7 +3817,7 @@ function AddCombatantModal({ onClose, onAdd, onAddMultiple, prefill, allMonsters
     onAdd({
       id: Date.now(), name: monsterName.trim(),
       _monsterName: selectedMonsterData ? selectedMonsterData.name : monsterName.trim(),
-      type: "Monster", hp: hpVal, maxHp: hpVal, conditions: [],
+      type: "Monster", hp: hpVal, maxHp: hpVal, conditions: [], loot: "",
       initiative: parseInt(monsterInitiative) || 0,
     });
     onClose();
@@ -3807,7 +3827,7 @@ function AddCombatantModal({ onClose, onAdd, onAddMultiple, prefill, allMonsters
     const hpVal = parseInt(hp) || 10;
     const c = {
       id: Date.now(), name: name.trim(), type,
-      hp: hpVal, maxHp: hpVal, conditions: [],
+      hp: hpVal, maxHp: hpVal, conditions: [], loot: "",
       initiative: parseInt(initiative) || 0,
     };
     if (type === "PC" && selectedPlayerData) c.pcData = selectedPlayerData;
