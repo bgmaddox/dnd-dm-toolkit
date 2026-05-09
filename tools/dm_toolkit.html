@@ -3002,7 +3002,7 @@ const inputStyleC = {
   fontFamily: "var(--font-body)", transition: "border-color 0.15s",
 };
 
-function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeChange, onDelete, onRename, portrait }) {
+function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeChange, onDelete, onRename, onDuplicate, portrait }) {
   const { name, type, hp, maxHp, conditions } = combatant;
   const pct = hpPct(hp, maxHp);
   const color = hpColor(hp, maxHp);
@@ -3055,6 +3055,11 @@ function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeCh
           <button onClick={e => { e.stopPropagation(); setNameInput(name); setEditingName(true); }}
             title="Rename"
             style={{ background: "none", border: "none", cursor: "pointer", padding: "0 2px", fontSize: 11, opacity: 0.5, lineHeight: 1, color: "var(--text-muted)" }}>✏</button>
+        )}
+        {hovered && !editingName && type === "Monster" && (
+          <button onClick={e => { e.stopPropagation(); onDuplicate(combatant.id); }}
+            title="Duplicate"
+            style={{ background: "none", border: "none", cursor: "pointer", padding: "0 2px", fontSize: 13, opacity: 0.5, lineHeight: 1, color: "var(--text-muted)" }}>⧉</button>
         )}
         <span style={{
           fontSize: 9, fontWeight: 600, padding: "1px 7px", borderRadius: 20,
@@ -3228,6 +3233,19 @@ function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks,
   function renameCombatant(id, newName) {
     setCombatants(prev => prev.map(c => c.id === id ? { ...c, name: newName } : c));
   }
+  function duplicateCombatant(id) {
+    setCombatants(prev => {
+      const idx = prev.findIndex(c => c.id === id);
+      if (idx === -1) return prev;
+      const src = prev[idx];
+      const base = src.name.replace(/\s+\d+$/, "");
+      const nums = prev.filter(c => c.name === base || c.name.match(new RegExp(`^${base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+\\d+$`))).length;
+      const copy = { ...src, id: Date.now() + Math.random(), name: `${base} ${nums + 1}`, hp: src.maxHp, conditions: [] };
+      const next = [...prev];
+      next.splice(idx + 1, 0, copy);
+      return next;
+    });
+  }
   return (
     <div style={{ width: tweaks.leftPanelWidth || 240, minWidth: tweaks.leftPanelWidth || 240, borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <div style={{ padding: "14px 14px 10px", borderBottom: "1px solid var(--border)" }}>
@@ -3263,7 +3281,7 @@ function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks,
           {combatants.map((c, i) => (
             <CombatantRow key={c.id} combatant={c} isActive={i === activeIdx} onClick={() => setActiveIdx(i)}
               onHpChange={hpChange} onInitiativeChange={initiativeChange}
-              onDelete={deleteCombatant} onRename={renameCombatant} portrait={portraits && portraits[c.id]} />
+              onDelete={deleteCombatant} onRename={renameCombatant} onDuplicate={duplicateCombatant} portrait={portraits && portraits[c.id]} />
           ))}
         </div>
       </div>
