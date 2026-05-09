@@ -3002,8 +3002,8 @@ const inputStyleC = {
   fontFamily: "var(--font-body)", transition: "border-color 0.15s",
 };
 
-function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeChange, onDelete, onRename, onDuplicate, onLootChange, onModifierChange, onAdvDisadvChange, portrait }) {
-  const { name, type, hp, maxHp, conditions, loot, diceModifiers = {}, advDisadv = {} } = combatant;
+function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeChange, onDelete, onRename, onDuplicate, onLootChange, onModifierChange, onAdvDisadvChange, onBoomingBladeChange, portrait }) {
+  const { name, type, hp, maxHp, conditions, loot, diceModifiers = {}, advDisadv = {}, boomingBlade = false } = combatant;
   const pct = hpPct(hp, maxHp);
   const color = hpColor(hp, maxHp);
   const [editingHp, setEditingHp] = useState(false);
@@ -3017,7 +3017,7 @@ function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeCh
   const [diceModOpen, setDiceModOpen] = useState(false);
   const [advOpen, setAdvOpen] = useState(false);
 
-  const anyDiceMod = diceModifiers.bless || diceModifiers.bane || diceModifiers.guidance;
+  const anyDiceMod = diceModifiers.bless || diceModifiers.bane || diceModifiers.guidance || boomingBlade;
   const anyAdv = ["attackOut","attackIn","saves","abilityCheck"].some(k => advDisadv[k]?.state);
 
   function toggleDiceMod(key) {
@@ -3156,6 +3156,7 @@ function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeCh
           {diceModifiers.bless && <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 20, background: "#c9a84c22", border: "1px solid #c9a84c66", color: "var(--gold)", fontFamily: "var(--font-head)" }}>+1d4 ATK/SAV</span>}
           {diceModifiers.bane  && <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 20, background: "#c44a4a22", border: "1px solid #c44a4a66", color: "#e06868", fontFamily: "var(--font-head)" }}>-1d4 ATK/SAV</span>}
           {diceModifiers.guidance && <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 20, background: "#3da89422", border: "1px solid #3da89466", color: "var(--teal)", fontFamily: "var(--font-head)" }}>+1d4 CHK</span>}
+          {boomingBlade && <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 20, background: "#4a3d9022", border: "1px solid #7a6ac066", color: "#a08ad0", fontFamily: "var(--font-head)" }}>☈ Booming</span>}
           {advDisadv.attackOut?.state    && <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 20, background: advDisadv.attackOut.state === "adv" ? "#5aab6a22" : "#c44a4a22", border: `1px solid ${advDisadv.attackOut.state === "adv" ? "#5aab6a66" : "#c44a4a66"}`, color: advDisadv.attackOut.state === "adv" ? "#5aab6a" : "#e06868", fontFamily: "var(--font-head)" }}>{advDisadv.attackOut.state === "adv" ? "▲" : "▼"} ATK↑{advDisadv.attackOut.turns ? ` ${advDisadv.attackOut.turns}t` : ""}</span>}
           {advDisadv.attackIn?.state     && <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 20, background: advDisadv.attackIn.state === "adv" ? "#5aab6a22" : "#c44a4a22", border: `1px solid ${advDisadv.attackIn.state === "adv" ? "#5aab6a66" : "#c44a4a66"}`, color: advDisadv.attackIn.state === "adv" ? "#5aab6a" : "#e06868", fontFamily: "var(--font-head)" }}>{advDisadv.attackIn.state === "adv" ? "▲" : "▼"} ATK↓{advDisadv.attackIn.turns ? ` ${advDisadv.attackIn.turns}t` : ""}</span>}
           {advDisadv.saves?.state        && <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 20, background: advDisadv.saves.state === "adv" ? "#5aab6a22" : "#c44a4a22", border: `1px solid ${advDisadv.saves.state === "adv" ? "#5aab6a66" : "#c44a4a66"}`, color: advDisadv.saves.state === "adv" ? "#5aab6a" : "#e06868", fontFamily: "var(--font-head)" }}>{advDisadv.saves.state === "adv" ? "▲" : "▼"} SAV{advDisadv.saves.turns ? ` ${advDisadv.saves.turns}t` : ""}</span>}
@@ -3169,6 +3170,7 @@ function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeCh
             {chipBtn("+1d4 ATK/SAV", diceModifiers.bless, "var(--gold)", () => toggleDiceMod("bless"))}
             {chipBtn("-1d4 ATK/SAV", diceModifiers.bane,  "#c44a4a",     () => toggleDiceMod("bane"))}
             {chipBtn("+1d4 CHECK",   diceModifiers.guidance, "var(--teal)", () => toggleDiceMod("guidance"))}
+            {chipBtn("☈ Booming Blade", boomingBlade, "#a08ad0", () => onBoomingBladeChange(combatant.id, !boomingBlade))}
           </div>
         </div>
       )}
@@ -3321,6 +3323,7 @@ function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks,
   const [editingEnc, setEditingEnc] = useState(null);
   const [combatLog, setCombatLog] = useState([]);
   const [logOpen, setLogOpen] = useState(false);
+  const [boomingPrompt, setBoomingPrompt] = useState(null); // { name, id }
 
   function nextTurn() {
     // Decrement adv/disadv turn counters for the combatant whose turn just ended
@@ -3346,6 +3349,7 @@ function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks,
         setCombatLog(prev => [...newEntries, ...prev].slice(0, 20));
       }
     }
+    let nextIdx = activeIdx;
     setActiveIdx(prev => {
       if (combatants.length === 0) return prev;
       let next = (prev + 1) % combatants.length;
@@ -3357,8 +3361,22 @@ function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks,
         checked++;
       }
       if (passedZero) setRoundNumber(r => r + 1);
+      nextIdx = next;
       return next;
     });
+    // Show booming blade prompt when it's that combatant's turn
+    setTimeout(() => {
+      const incoming = combatants[nextIdx];
+      if (incoming?.boomingBlade) setBoomingPrompt({ name: incoming.name, id: incoming.id });
+    }, 0);
+  }
+
+  function resolveBoomingBlade(tookDamage) {
+    if (!boomingPrompt) return;
+    const entry = { msg: `${boomingPrompt.name} ${tookDamage ? "moved and took Booming Blade damage (1d8 thunder)" : "didn't move — Booming Blade expired"}`, round: roundNumber };
+    setCombatLog(prev => [entry, ...prev].slice(0, 20));
+    setCombatants(prev => prev.map(c => c.id === boomingPrompt.id ? { ...c, boomingBlade: false } : c));
+    setBoomingPrompt(null);
   }
   function hpChange(id, newHp) {
     setCombatants(prev => prev.map(c => c.id === id ? { ...c, hp: Math.max(0, Math.min(c.maxHp, newHp)) } : c));
@@ -3386,6 +3404,9 @@ function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks,
   function lootChange(id, val) {
     setCombatants(prev => prev.map(c => c.id === id ? { ...c, loot: val } : c));
   }
+  function boomingBladeChange(id, val) {
+    setCombatants(prev => prev.map(c => c.id === id ? { ...c, boomingBlade: val } : c));
+  }
   function modifierChange(id, newMods) {
     setCombatants(prev => prev.map(c => c.id === id ? { ...c, diceModifiers: newMods } : c));
   }
@@ -3399,7 +3420,7 @@ function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks,
       const src = prev[idx];
       const base = src.name.replace(/\s+\d+$/, "");
       const nums = prev.filter(c => c.name === base || c.name.match(new RegExp(`^${base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+\\d+$`))).length;
-      const copy = { ...src, id: Date.now() + Math.random(), name: `${base} ${nums + 1}`, hp: src.maxHp, conditions: [], loot: "", diceModifiers: { bless: false, bane: false, guidance: false }, advDisadv: { attackOut: null, attackIn: null, saves: null, abilityCheck: null, hexAbility: "" } };
+      const copy = { ...src, id: Date.now() + Math.random(), name: `${base} ${nums + 1}`, hp: src.maxHp, conditions: [], loot: "", boomingBlade: false, diceModifiers: { bless: false, bane: false, guidance: false }, advDisadv: { attackOut: null, attackIn: null, saves: null, abilityCheck: null, hexAbility: "" } };
       const next = [...prev];
       next.splice(idx + 1, 0, copy);
       return next;
@@ -3435,13 +3456,23 @@ function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks,
         <span style={{ fontSize: 13, color: "var(--gold)", fontFamily: "var(--font-head)", fontWeight: 600 }}>{roundNumber}</span>
         <span style={{ fontSize: 10, color: "var(--text-faint)" }}>Initiative Order</span>
       </div>
+      {boomingPrompt && (
+        <div style={{ margin: "6px 10px", padding: "8px 10px", background: "#2a1e4a", border: "1px solid #7a6ac066", borderRadius: 6 }}>
+          <div style={{ fontSize: 11, color: "#a08ad0", fontFamily: "var(--font-head)", marginBottom: 5 }}>☈ {boomingPrompt.name} — Booming Blade</div>
+          <div style={{ fontSize: 10, color: "var(--text-dim)", marginBottom: 6 }}>Did they willingly move this turn?</div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button onClick={() => resolveBoomingBlade(true)} style={{ flex: 1, padding: "3px 0", fontSize: 10, fontFamily: "var(--font-head)", background: "#c44a4a22", border: "1px solid #c44a4a66", borderRadius: 4, color: "#e06868", cursor: "pointer" }}>Yes — Took Damage</button>
+            <button onClick={() => resolveBoomingBlade(false)} style={{ flex: 1, padding: "3px 0", fontSize: 10, fontFamily: "var(--font-head)", background: "#3a3a3a22", border: "1px solid var(--border)", borderRadius: 4, color: "var(--text-dim)", cursor: "pointer" }}>No — Expired</button>
+          </div>
+        </div>
+      )}
       <div style={{ flex: 1, overflowY: "auto", padding: "10px 10px 0" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {combatants.map((c, i) => (
             <CombatantRow key={c.id} combatant={c} isActive={i === activeIdx} onClick={() => setActiveIdx(i)}
               onHpChange={hpChange} onInitiativeChange={initiativeChange}
               onDelete={deleteCombatant} onRename={renameCombatant} onDuplicate={duplicateCombatant}
-              onLootChange={lootChange} onModifierChange={modifierChange} onAdvDisadvChange={advDisadvChange}
+              onLootChange={lootChange} onModifierChange={modifierChange} onAdvDisadvChange={advDisadvChange} onBoomingBladeChange={boomingBladeChange}
               portrait={portraits && portraits[c.id]} />
           ))}
         </div>
@@ -3983,6 +4014,7 @@ function AddCombatantModal({ onClose, onAdd, onAddMultiple, prefill, allMonsters
       type: "Monster", hp: hpVal, maxHp: hpVal, conditions: [], loot: "",
       diceModifiers: { bless: false, bane: false, guidance: false },
       advDisadv: { attackOut: null, attackIn: null, saves: null, abilityCheck: null, hexAbility: "" },
+      boomingBlade: false,
       initiative: parseInt(monsterInitiative) || 0,
     });
     onClose();
@@ -3995,6 +4027,7 @@ function AddCombatantModal({ onClose, onAdd, onAddMultiple, prefill, allMonsters
       hp: hpVal, maxHp: hpVal, conditions: [], loot: "",
       diceModifiers: { bless: false, bane: false, guidance: false },
       advDisadv: { attackOut: null, attackIn: null, saves: null, abilityCheck: null, hexAbility: "" },
+      boomingBlade: false,
       initiative: parseInt(initiative) || 0,
     };
     if (type === "PC" && selectedPlayerData) c.pcData = selectedPlayerData;
