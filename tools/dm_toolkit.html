@@ -3002,8 +3002,8 @@ const inputStyleC = {
   fontFamily: "var(--font-body)", transition: "border-color 0.15s",
 };
 
-function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeChange, onDelete, onRename, onDuplicate, onLootChange, portrait }) {
-  const { name, type, hp, maxHp, conditions, loot } = combatant;
+function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeChange, onDelete, onRename, onDuplicate, onLootChange, onModifierChange, onAdvDisadvChange, portrait }) {
+  const { name, type, hp, maxHp, conditions, loot, diceModifiers = {}, advDisadv = {} } = combatant;
   const pct = hpPct(hp, maxHp);
   const color = hpColor(hp, maxHp);
   const [editingHp, setEditingHp] = useState(false);
@@ -3014,6 +3014,44 @@ function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeCh
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [lootOpen, setLootOpen] = useState(false);
+  const [diceModOpen, setDiceModOpen] = useState(false);
+  const [advOpen, setAdvOpen] = useState(false);
+
+  const anyDiceMod = diceModifiers.bless || diceModifiers.bane || diceModifiers.guidance;
+  const anyAdv = advDisadv.attackOut || advDisadv.attackIn || advDisadv.saves || advDisadv.abilityCheck;
+
+  function toggleDiceMod(key) {
+    const next = { ...diceModifiers };
+    if (key === "bless" && !next.bless) next.bane = false;
+    if (key === "bane" && !next.bane) next.bless = false;
+    next[key] = !next[key];
+    onModifierChange(combatant.id, next);
+  }
+  function toggleAdv(key, val) {
+    const next = { ...(combatant.advDisadv || {}) };
+    next[key] = next[key] === val ? null : val;
+    onAdvDisadvChange(combatant.id, next);
+  }
+  function setHexAbility(val) {
+    onAdvDisadvChange(combatant.id, { ...(combatant.advDisadv || {}), hexAbility: val });
+  }
+
+  const chipBtn = (label, active, color, onClick) => (
+    <button onClick={e => { e.stopPropagation(); onClick(); }} style={{
+      padding: "2px 8px", borderRadius: 20, fontSize: 10, cursor: "pointer", fontFamily: "var(--font-head)",
+      letterSpacing: "0.04em", border: `1px solid ${active ? color : "var(--border)"}`,
+      background: active ? `${color}22` : "transparent", color: active ? color : "var(--text-dim)",
+      transition: "all 0.15s",
+    }}>{label}</button>
+  );
+  const advBtn = (label, key, val) => (
+    <button onClick={e => { e.stopPropagation(); toggleAdv(key, val); }} style={{
+      padding: "1px 7px", borderRadius: 4, fontSize: 10, cursor: "pointer", fontFamily: "var(--font-head)",
+      border: `1px solid ${advDisadv[key] === val ? (val === "adv" ? "#5aab6a" : "#c44a4a") : "var(--border)"}`,
+      background: advDisadv[key] === val ? (val === "adv" ? "#5aab6a22" : "#c44a4a22") : "transparent",
+      color: advDisadv[key] === val ? (val === "adv" ? "#5aab6a" : "#e06868") : "var(--text-dim)",
+    }}>{val === "adv" ? "▲ ADV" : "▼ DIS"}</button>
+  );
   function startHpEdit(e) { e.stopPropagation(); setHpInput(String(hp)); setEditingHp(true); }
   function commitHpEdit() { const v = parseInt(hpInput); if (!isNaN(v)) onHpChange(combatant.id, v); setEditingHp(false); }
   function startInitEdit(e) { e.stopPropagation(); setInitInput(String(combatant.initiative ?? "")); setEditingInit(true); }
@@ -3108,6 +3146,46 @@ function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeCh
           })}
         </div>
       )}
+      {(anyDiceMod || anyAdv) && (
+        <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 4 }}>
+          {diceModifiers.bless && <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 20, background: "#c9a84c22", border: "1px solid #c9a84c66", color: "var(--gold)", fontFamily: "var(--font-head)" }}>+1d4 ATK/SAV</span>}
+          {diceModifiers.bane  && <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 20, background: "#c44a4a22", border: "1px solid #c44a4a66", color: "#e06868", fontFamily: "var(--font-head)" }}>-1d4 ATK/SAV</span>}
+          {diceModifiers.guidance && <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 20, background: "#3da89422", border: "1px solid #3da89466", color: "var(--teal)", fontFamily: "var(--font-head)" }}>+1d4 CHK</span>}
+          {advDisadv.attackOut    && <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 20, background: advDisadv.attackOut === "adv" ? "#5aab6a22" : "#c44a4a22", border: `1px solid ${advDisadv.attackOut === "adv" ? "#5aab6a66" : "#c44a4a66"}`, color: advDisadv.attackOut === "adv" ? "#5aab6a" : "#e06868", fontFamily: "var(--font-head)" }}>{advDisadv.attackOut === "adv" ? "▲" : "▼"} ATK↑</span>}
+          {advDisadv.attackIn     && <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 20, background: advDisadv.attackIn === "adv" ? "#5aab6a22" : "#c44a4a22", border: `1px solid ${advDisadv.attackIn === "adv" ? "#5aab6a66" : "#c44a4a66"}`, color: advDisadv.attackIn === "adv" ? "#5aab6a" : "#e06868", fontFamily: "var(--font-head)" }}>{advDisadv.attackIn === "adv" ? "▲" : "▼"} ATK↓</span>}
+          {advDisadv.saves        && <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 20, background: advDisadv.saves === "adv" ? "#5aab6a22" : "#c44a4a22", border: `1px solid ${advDisadv.saves === "adv" ? "#5aab6a66" : "#c44a4a66"}`, color: advDisadv.saves === "adv" ? "#5aab6a" : "#e06868", fontFamily: "var(--font-head)" }}>{advDisadv.saves === "adv" ? "▲" : "▼"} SAV</span>}
+          {advDisadv.abilityCheck && <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 20, background: advDisadv.abilityCheck === "adv" ? "#5aab6a22" : "#c44a4a22", border: `1px solid ${advDisadv.abilityCheck === "adv" ? "#5aab6a66" : "#c44a4a66"}`, color: advDisadv.abilityCheck === "adv" ? "#5aab6a" : "#e06868", fontFamily: "var(--font-head)" }}>{advDisadv.abilityCheck === "adv" ? "▲" : "▼"} CHK{advDisadv.hexAbility ? ` ${advDisadv.hexAbility.slice(0,3)}` : ""}</span>}
+        </div>
+      )}
+      {diceModOpen && (
+        <div onClick={e => e.stopPropagation()} style={{ marginTop: 6, padding: "8px 10px", background: "#0d1017", borderRadius: 5, border: "1px solid var(--border)" }}>
+          <div style={{ fontSize: 9, color: "var(--text-dim)", fontFamily: "var(--font-head)", letterSpacing: "0.1em", marginBottom: 6 }}>DICE MODIFIERS</div>
+          <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+            {chipBtn("+1d4 ATK/SAV", diceModifiers.bless, "var(--gold)", () => toggleDiceMod("bless"))}
+            {chipBtn("-1d4 ATK/SAV", diceModifiers.bane,  "#c44a4a",     () => toggleDiceMod("bane"))}
+            {chipBtn("+1d4 CHECK",   diceModifiers.guidance, "var(--teal)", () => toggleDiceMod("guidance"))}
+          </div>
+        </div>
+      )}
+      {advOpen && (
+        <div onClick={e => e.stopPropagation()} style={{ marginTop: 6, padding: "8px 10px", background: "#0d1017", borderRadius: 5, border: "1px solid var(--border)" }}>
+          <div style={{ fontSize: 9, color: "var(--text-dim)", fontFamily: "var(--font-head)", letterSpacing: "0.1em", marginBottom: 6 }}>ADV / DISADVANTAGE</div>
+          {[["attackOut","Attacks Out"],["attackIn","Attacks In (incoming)"],["saves","Saving Throws"],["abilityCheck","Ability Checks"]].map(([key, label]) => (
+            <div key={key} style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 5 }}>
+              <span style={{ fontSize: 10, color: "var(--text-dim)", flex: 1, fontFamily: "var(--body)" }}>{label}</span>
+              {advBtn(label, key, "adv")}
+              {advBtn(label, key, "dis")}
+            </div>
+          ))}
+          {advDisadv.abilityCheck && (
+            <input placeholder="Which ability? (e.g. Strength)"
+              value={advDisadv.hexAbility || ""}
+              onChange={e => setHexAbility(e.target.value)}
+              onClick={e => e.stopPropagation()}
+              style={{ width: "100%", fontSize: 10, background: "#13161c", border: "1px solid var(--border)", borderRadius: 3, color: "var(--text-muted)", padding: "2px 6px", outline: "none", fontFamily: "var(--body)", marginTop: 2 }} />
+          )}
+        </div>
+      )}
       {type === "Monster" && loot && !lootOpen && (
         <div style={{ fontSize: 11, color: "var(--text-dim)", fontStyle: "italic", marginTop: 4, paddingLeft: 2 }}>{loot}</div>
       )}
@@ -3120,12 +3198,20 @@ function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeCh
         </div>
       )}
       {hovered && (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 5 }}>
-          {type === "Monster" ? (
-            <button onClick={e => { e.stopPropagation(); setLootOpen(v => !v); }}
-              style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: loot ? "var(--gold-dim)" : "var(--text-faint)", padding: "0 2px", fontFamily: "var(--body)" }}
-              title="Loot notes">💰 {lootOpen ? "close" : "loot"}</button>
-          ) : <span />}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 5, gap: 4 }}>
+          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+            <button onClick={e => { e.stopPropagation(); setDiceModOpen(v => !v); }}
+              title="Dice modifiers (Bless/Bane/Guidance)"
+              style={{ background: anyDiceMod ? "#c9a84c18" : "none", border: `1px solid ${anyDiceMod ? "var(--gold-dim)" : "var(--border)"}`, borderRadius: 4, cursor: "pointer", fontSize: 11, color: anyDiceMod ? "var(--gold)" : "var(--text-faint)", padding: "1px 6px", fontFamily: "var(--font-head)" }}>±</button>
+            <button onClick={e => { e.stopPropagation(); setAdvOpen(v => !v); }}
+              title="Advantage / Disadvantage"
+              style={{ background: anyAdv ? "#5aab6a18" : "none", border: `1px solid ${anyAdv ? "#5aab6a66" : "var(--border)"}`, borderRadius: 4, cursor: "pointer", fontSize: 11, color: anyAdv ? "#5aab6a" : "var(--text-faint)", padding: "1px 6px", fontFamily: "var(--font-head)" }}>▲▼</button>
+            {type === "Monster" && (
+              <button onClick={e => { e.stopPropagation(); setLootOpen(v => !v); }}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: loot ? "var(--gold-dim)" : "var(--text-faint)", padding: "0 2px", fontFamily: "var(--body)" }}
+                title="Loot notes">💰</button>
+            )}
+          </div>
           <button onClick={e => { e.stopPropagation(); onDelete(combatant.id); }}
             style={{ background: "rgba(196,74,74,0.12)", border: "1px solid rgba(196,74,74,0.35)", borderRadius: 4, color: "#e06868", cursor: "pointer", fontSize: 10, fontFamily: "var(--font-head)", letterSpacing: "0.06em", padding: "2px 8px", lineHeight: 1.4 }}>✕ REMOVE</button>
         </div>
@@ -3253,6 +3339,12 @@ function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks,
   function lootChange(id, val) {
     setCombatants(prev => prev.map(c => c.id === id ? { ...c, loot: val } : c));
   }
+  function modifierChange(id, newMods) {
+    setCombatants(prev => prev.map(c => c.id === id ? { ...c, diceModifiers: newMods } : c));
+  }
+  function advDisadvChange(id, newAdv) {
+    setCombatants(prev => prev.map(c => c.id === id ? { ...c, advDisadv: newAdv } : c));
+  }
   function duplicateCombatant(id) {
     setCombatants(prev => {
       const idx = prev.findIndex(c => c.id === id);
@@ -3260,7 +3352,7 @@ function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks,
       const src = prev[idx];
       const base = src.name.replace(/\s+\d+$/, "");
       const nums = prev.filter(c => c.name === base || c.name.match(new RegExp(`^${base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+\\d+$`))).length;
-      const copy = { ...src, id: Date.now() + Math.random(), name: `${base} ${nums + 1}`, hp: src.maxHp, conditions: [] };
+      const copy = { ...src, id: Date.now() + Math.random(), name: `${base} ${nums + 1}`, hp: src.maxHp, conditions: [], loot: "", diceModifiers: { bless: false, bane: false, guidance: false }, advDisadv: { attackOut: null, attackIn: null, saves: null, abilityCheck: null, hexAbility: "" } };
       const next = [...prev];
       next.splice(idx + 1, 0, copy);
       return next;
@@ -3301,7 +3393,9 @@ function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks,
           {combatants.map((c, i) => (
             <CombatantRow key={c.id} combatant={c} isActive={i === activeIdx} onClick={() => setActiveIdx(i)}
               onHpChange={hpChange} onInitiativeChange={initiativeChange}
-              onDelete={deleteCombatant} onRename={renameCombatant} onDuplicate={duplicateCombatant} onLootChange={lootChange} portrait={portraits && portraits[c.id]} />
+              onDelete={deleteCombatant} onRename={renameCombatant} onDuplicate={duplicateCombatant}
+              onLootChange={lootChange} onModifierChange={modifierChange} onAdvDisadvChange={advDisadvChange}
+              portrait={portraits && portraits[c.id]} />
           ))}
         </div>
       </div>
@@ -3818,6 +3912,8 @@ function AddCombatantModal({ onClose, onAdd, onAddMultiple, prefill, allMonsters
       id: Date.now(), name: monsterName.trim(),
       _monsterName: selectedMonsterData ? selectedMonsterData.name : monsterName.trim(),
       type: "Monster", hp: hpVal, maxHp: hpVal, conditions: [], loot: "",
+      diceModifiers: { bless: false, bane: false, guidance: false },
+      advDisadv: { attackOut: null, attackIn: null, saves: null, abilityCheck: null, hexAbility: "" },
       initiative: parseInt(monsterInitiative) || 0,
     });
     onClose();
@@ -3828,6 +3924,8 @@ function AddCombatantModal({ onClose, onAdd, onAddMultiple, prefill, allMonsters
     const c = {
       id: Date.now(), name: name.trim(), type,
       hp: hpVal, maxHp: hpVal, conditions: [], loot: "",
+      diceModifiers: { bless: false, bane: false, guidance: false },
+      advDisadv: { attackOut: null, attackIn: null, saves: null, abilityCheck: null, hexAbility: "" },
       initiative: parseInt(initiative) || 0,
     };
     if (type === "PC" && selectedPlayerData) c.pcData = selectedPlayerData;
