@@ -187,15 +187,15 @@ body::before {
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 .scene-tool .section-label { font-size: 15px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
 .scene-tool .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-.read-aloud-block { background: #0e1016; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; position: relative; border-left: 3px solid var(--gold-dim); }
+.read-aloud-block { padding: 8px 0 16px 20px; position: relative; border-left: 3px solid var(--gold-dim); }
 .read-aloud-block::before { content: '\201C'; position: absolute; top: -15px; left: 15px; font-family: Georgia, serif; font-size: 80px; color: var(--gold); opacity: 0.06; pointer-events: none; }
 .output-textarea { background: transparent; border: none; padding: 0; margin: 0; width: 100%; resize: none; overflow: hidden; color: var(--text); font-style: italic; line-height: 1.8; font-size: 25px; box-shadow: none; }
 .output-textarea:focus { border: none; box-shadow: none; }
 .details-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
-.detail-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; display: flex; gap: 12px; transition: all 0.2s; }
-.detail-card:hover { border-color: var(--border-glow); box-shadow: 0 4px 12px #00000040; }
+.detail-card { padding: 10px 0; display: flex; gap: 12px; border-bottom: 1px solid var(--border); }
+.detail-card:last-child { border-bottom: none; }
 .detail-bullet { color: var(--teal); font-size: 16px; margin-top: 2px; }
-.dm-note-block { background: rgba(122,48,48,0.05); border: 1px solid rgba(122,48,48,0.2); border-radius: var(--radius); padding: 18px 22px; }
+.dm-note-block { padding: 8px 0 8px 20px; border-left: 3px solid rgba(122,48,48,0.4); }
 .dm-note-label { font-size: 15px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--red-text); margin-bottom: 8px; }
 .action-row { display: flex; gap: 12px; }
 .loading-state { display: flex; flex-direction: column; gap: 20px; animation: fadeIn 0.3s ease; }
