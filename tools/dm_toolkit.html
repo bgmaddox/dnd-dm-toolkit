@@ -490,63 +490,63 @@ input:focus, select:focus { border-color: var(--gold-dim); outline: none; }
 /* ── Encounter Helper ── */
 .enc-tool { display: flex; gap: 16px; padding: 20px; height: 100%; overflow: hidden; box-sizing: border-box; }
 .enc-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; overflow-y: auto; }
-.enc-panel-left { flex: 0 0 220px; }
+.enc-panel-left { flex: 0 0 240px; }
 .enc-panel-center { flex: 1; }
-.enc-panel-right { flex: 0 0 240px; }
-.enc-threshold-chip { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 1rem; font-weight: 600; margin: 3px 3px 3px 0; }
-.enc-monster-result { padding: 8px 10px; cursor: pointer; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 1.05rem; }
+.enc-panel-right { flex: 0 0 260px; }
+.enc-threshold-chip { display: inline-block; padding: 5px 12px; border-radius: 12px; font-size: 1.2rem; font-weight: 600; margin: 3px 3px 3px 0; }
+.enc-monster-result { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 1.25rem; }
 .enc-monster-result:hover { background: rgba(255,255,255,0.04); }
-.enc-entry { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 1.05rem; }
-.enc-difficulty-label { font-size: 2.5rem; font-weight: 700; margin: 10px 0 6px; }
-.enc-flavor { font-size: 1.05rem; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5; }
+.enc-entry { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 1.25rem; }
+.enc-difficulty-label { font-size: 3rem; font-weight: 700; margin: 10px 0 6px; }
+.enc-flavor { font-size: 1.25rem; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5; }
 
 /* ── Loot Calculator ── */
 .loot-tool { display: flex; gap: 16px; padding: 20px; height: 100%; overflow: hidden; box-sizing: border-box; }
 .loot-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; overflow-y: auto; }
-.loot-panel-left { flex: 0 0 220px; }
+.loot-panel-left { flex: 0 0 240px; }
 .loot-panel-center { flex: 1; }
-.loot-panel-right { flex: 0 0 240px; }
-.loot-mode-btn { padding: 7px 16px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 1.05rem; background: none; color: var(--text-dim); margin-right: 6px; }
+.loot-panel-right { flex: 0 0 260px; }
+.loot-mode-btn { padding: 8px 18px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 1.25rem; background: none; color: var(--text-dim); margin-right: 6px; }
 .loot-mode-btn.active { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.1); }
-.loot-tier-pill { display: block; width: 100%; text-align: left; padding: 7px 12px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 1rem; background: none; color: var(--text-dim); margin-bottom: 5px; }
+.loot-tier-pill { display: block; width: 100%; text-align: left; padding: 9px 14px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 1.2rem; background: none; color: var(--text-dim); margin-bottom: 5px; }
 .loot-tier-pill.active { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.1); }
-.loot-coin-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 1.1rem; }
-.loot-log-entry { font-size: 0.95rem; padding: 7px 0; border-bottom: 1px solid var(--border); color: var(--text-muted); line-height: 1.4; }
+.loot-coin-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 1.3rem; }
+.loot-log-entry { font-size: 1.1rem; padding: 8px 0; border-bottom: 1px solid var(--border); color: var(--text-muted); line-height: 1.4; }
 
 /* ── Calendar Tool ── */
 .cal-tool { display: flex; gap: 16px; padding: 20px; height: 100%; overflow: hidden; box-sizing: border-box; }
 .cal-left { flex: 3; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; overflow-y: auto; }
 .cal-right { flex: 2; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; overflow-y: auto; }
 .cal-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-top: 12px; }
-.cal-cell { border: 1px solid var(--border); border-radius: 4px; padding: 6px 4px 4px; min-height: 52px; cursor: pointer; position: relative; font-size: 0.95rem; }
+.cal-cell { border: 1px solid var(--border); border-radius: 4px; padding: 8px 6px 6px; min-height: 60px; cursor: pointer; position: relative; font-size: 1.1rem; }
 .cal-cell:hover { border-color: var(--gold); }
 .cal-cell.today { border-color: var(--gold); border-width: 2px; }
 .cal-cell.selected { border-color: #5aabcd; border-width: 2px; }
-.cal-cell .day-num { color: var(--text-muted); font-size: 0.88rem; display: block; }
-.cal-cell .weather-icon { font-size: 1.1rem; display: block; text-align: center; margin-top: 2px; }
+.cal-cell .day-num { color: var(--text-muted); font-size: 1.0rem; display: block; }
+.cal-cell .weather-icon { font-size: 1.35rem; display: block; text-align: center; margin-top: 2px; }
 .cal-month-nav { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.cal-month-name { flex: 1; text-align: center; font-weight: 600; font-size: 1rem; }
-.cal-save-msg { font-size: 1rem; color: var(--green); margin-top: 6px; }
+.cal-month-name { flex: 1; text-align: center; font-weight: 600; font-size: 1.25rem; }
+.cal-save-msg { font-size: 1.2rem; color: var(--green); margin-top: 6px; }
 
 /* ── AmbianceTool ── */
 .amb-tool { display: flex; gap: 16px; padding: 20px; height: 100%; overflow: hidden; box-sizing: border-box; }
-.amb-left { flex: 0 0 200px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+.amb-left { flex: 0 0 220px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
 .amb-center { flex: 1; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-.amb-right { flex: 0 0 220px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; overflow-y: auto; }
+.amb-right { flex: 0 0 240px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; overflow-y: auto; }
 .amb-preset-card { padding: 14px 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; text-align: center; transition: border-color 0.15s; }
 .amb-preset-card:hover { border-color: var(--text-dim); }
 .amb-preset-card.active { border-color: var(--gold); background: rgba(201,168,76,0.08); }
-.amb-preset-icon { font-size: 1.8rem; display: block; margin-bottom: 4px; }
-.amb-preset-label { font-size: 1rem; color: var(--text-dim); }
-.amb-play-btn { width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--gold); background: none; color: var(--gold); font-size: 1.6rem; cursor: pointer; margin: 16px 0; display: flex; align-items: center; justify-content: center; }
+.amb-preset-icon { font-size: 2.2rem; display: block; margin-bottom: 4px; }
+.amb-preset-label { font-size: 1.2rem; color: var(--text-dim); }
+.amb-play-btn { width: 72px; height: 72px; border-radius: 50%; border: 2px solid var(--gold); background: none; color: var(--gold); font-size: 2rem; cursor: pointer; margin: 16px 0; display: flex; align-items: center; justify-content: center; }
 .amb-play-btn:hover { background: rgba(201,168,76,0.1); }
 .amb-play-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.amb-track-name { font-size: 1.2rem; font-weight: 600; margin-bottom: 4px; }
-.amb-track-artist { font-size: 1rem; color: var(--text-muted); margin-bottom: 8px; }
-.amb-attribution { font-size: 0.88rem; color: var(--text-dim); margin-top: auto; padding-top: 16px; font-style: italic; }
-.amb-sfx-btn { display: block; width: 100%; text-align: left; padding: 9px 12px; background: none; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 1.05rem; color: var(--text-dim); margin-bottom: 6px; }
+.amb-track-name { font-size: 1.5rem; font-weight: 600; margin-bottom: 4px; }
+.amb-track-artist { font-size: 1.2rem; color: var(--text-muted); margin-bottom: 8px; }
+.amb-attribution { font-size: 1.0rem; color: var(--text-dim); margin-top: auto; padding-top: 16px; font-style: italic; }
+.amb-sfx-btn { display: block; width: 100%; text-align: left; padding: 10px 14px; background: none; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 1.25rem; color: var(--text-dim); margin-bottom: 6px; }
 .amb-sfx-btn:hover { border-color: var(--text-dim); color: var(--text); background: rgba(255,255,255,0.03); }
-.amb-volume-row { display: flex; align-items: center; gap: 10px; margin: 12px 0; font-size: 1rem; color: var(--text-muted); width: 100%; }
+.amb-volume-row { display: flex; align-items: center; gap: 10px; margin: 12px 0; font-size: 1.2rem; color: var(--text-muted); width: 100%; }
 .amb-volume-row input[type=range] { flex: 1; }
 
 </style>
@@ -5487,23 +5487,22 @@ const AMBIANCE_PRESETS = [
 ];
 
 const SFX_LIST = [
-  { id:"thunder",       icon:"⚡", label:"Thunder" },
-  { id:"swordClash",    icon:"⚔", label:"Sword Clash" },
-  { id:"magicShimmer",  icon:"✨", label:"Magic Shimmer" },
-  { id:"doorCreak",     icon:"🚪", label:"Door Creak" },
-  { id:"tavernCheer",   icon:"🍺", label:"Tavern Cheer" },
-  { id:"crowdHoots",    icon:"👥", label:"Crowd Hoots" },
-  { id:"cracklingFire", icon:"🔥", label:"Crackling Fire" },
-  { id:"dramaticSting", icon:"🎵", label:"Dramatic Sting" },
+  { id:"thunder",       ext:"wav", icon:"⚡", label:"Thunder" },
+  { id:"swordClash",    ext:"wav", icon:"⚔", label:"Sword Clash" },
+  { id:"magicShimmer",  ext:"wav", icon:"✨", label:"Magic Shimmer" },
+  { id:"doorCreak",     ext:"wav", icon:"🚪", label:"Door Creak" },
+  { id:"tavernCheer",   ext:"wav", icon:"🍺", label:"Tavern Cheer" },
+  { id:"crowdHoots",    ext:"wav", icon:"👥", label:"Crowd Hoots" },
+  { id:"cracklingFire", ext:"mp3", icon:"🔥", label:"Crackling Fire" },
+  { id:"dramaticSting", ext:"wav", icon:"🎵", label:"Dramatic Sting" },
 ];
 
 function playSfx(type, volume = 0.5) {
-  const tryPlay = (ext) => {
-    const audio = new Audio(`/tools/sfx/${type}.${ext}`);
-    audio.volume = volume;
-    return audio.play();
-  };
-  tryPlay('mp3').catch(() => tryPlay('wav').catch(() => {}));
+  const sfx = SFX_LIST.find(s => s.id === type);
+  if (!sfx) return;
+  const audio = new Audio(`/tools/sfx/${type}.${sfx.ext}`);
+  audio.volume = volume;
+  audio.play().catch(() => {});
 }
 
 function AmbianceTool() {
