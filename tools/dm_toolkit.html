@@ -1670,7 +1670,7 @@ Respond with ONLY a valid JSON object, no other text:
     <div className="scene-tool">
       <div className="session-subheader">
         <select value={activeCampaign} onChange={e => setActiveCampaign(e.target.value)}
-          style={{ background: "#13161c", border: "1px solid #2a2f3d", color: activeCampaign ? "var(--gold)" : "#8a92a8", fontSize: 12, padding: "4px 8px", borderRadius: 4, outline: "none", cursor: "pointer" }}>
+          style={{ background: "#13161c", border: "1px solid #2a2f3d", color: activeCampaign ? "var(--gold)" : "#8a92a8", fontSize: 12, padding: "4px 8px", borderRadius: 4, outline: "none", cursor: "pointer", width: "auto" }}>
           <option value="">No Campaign</option>
           {campaigns.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
@@ -4343,6 +4343,87 @@ function InitiativesModal({ combatants, onClose, onApply }) {
   );
 }
 
+const SAVED_ENCOUNTERS_KEY = "dm_toolkit_saved_encounters";
+function loadSavedEncounters() { try { return JSON.parse(localStorage.getItem(SAVED_ENCOUNTERS_KEY)) || []; } catch { return []; } }
+
+function SaveLoadModal({ combatants, encName, encNote, roundNumber, onClose, onLoad }) {
+  const [saved, setSaved] = useState(loadSavedEncounters);
+  const [saveName, setSaveName] = useState(encName || "Encounter");
+
+  useEffect(() => {
+    const h = e => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, []);
+
+  function handleSave() {
+    if (!combatants.length) return;
+    const entry = {
+      id: Date.now(),
+      name: saveName.trim() || "Encounter",
+      note: encNote,
+      round: roundNumber,
+      savedAt: new Date().toLocaleString(),
+      combatants: combatants.map(c => ({ ...c })),
+    };
+    const next = [entry, ...saved].slice(0, 20);
+    localStorage.setItem(SAVED_ENCOUNTERS_KEY, JSON.stringify(next));
+    setSaved(next);
+  }
+
+  function handleDelete(id) {
+    const next = saved.filter(e => e.id !== id);
+    localStorage.setItem(SAVED_ENCOUNTERS_KEY, JSON.stringify(next));
+    setSaved(next);
+  }
+
+  return (
+    <div onClick={e => e.target === e.currentTarget && onClose()} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+      <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, width: 420, maxWidth: "92vw", overflow: "hidden", display: "flex", flexDirection: "column", maxHeight: "80vh" }}>
+        <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+          <div style={{ fontFamily: "var(--font-head)", fontSize: 12, color: "var(--gold)" }}>💾 SAVE / LOAD ENCOUNTER</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-faint)", cursor: "pointer", fontSize: 16 }}>✕</button>
+        </div>
+        <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+          <div style={{ fontSize: 11, color: "var(--text-faint)", fontFamily: "var(--font-head)", letterSpacing: "0.08em", marginBottom: 8 }}>SAVE CURRENT</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input value={saveName} onChange={e => setSaveName(e.target.value)}
+              placeholder="Encounter name…"
+              style={{ flex: 1, background: "#0d1017", border: "1px solid var(--border)", borderRadius: 4, color: "var(--text)", padding: "6px 10px", fontSize: 13, outline: "none", fontFamily: "var(--body)" }} />
+            <button onClick={handleSave} disabled={!combatants.length} style={{
+              padding: "6px 14px", background: combatants.length ? "rgba(201,168,76,0.15)" : "transparent",
+              border: `1px solid ${combatants.length ? "rgba(201,168,76,0.4)" : "var(--border)"}`,
+              borderRadius: 4, color: combatants.length ? "var(--gold)" : "var(--text-faint)",
+              fontFamily: "var(--font-head)", fontSize: 11, cursor: combatants.length ? "pointer" : "default", whiteSpace: "nowrap",
+            }}>SAVE</button>
+          </div>
+          {!combatants.length && <div style={{ fontSize: 11, color: "var(--text-faint)", fontStyle: "italic", marginTop: 6 }}>Add combatants before saving.</div>}
+        </div>
+        <div style={{ flex: 1, overflowY: "auto", padding: "10px 16px 16px" }}>
+          <div style={{ fontSize: 11, color: "var(--text-faint)", fontFamily: "var(--font-head)", letterSpacing: "0.08em", marginBottom: 8 }}>SAVED ENCOUNTERS</div>
+          {saved.length === 0 ? (
+            <div style={{ fontSize: 13, color: "var(--text-faint)", fontStyle: "italic", textAlign: "center", padding: "24px 0" }}>No saved encounters yet.</div>
+          ) : saved.map(enc => (
+            <div key={enc.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: "1px solid var(--border)" }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: "var(--font-head)", fontSize: 13, color: "var(--text)", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{enc.name}</div>
+                <div style={{ fontSize: 11, color: "var(--text-faint)" }}>{enc.combatants.length} combatants · Round {enc.round} · {enc.savedAt}</div>
+              </div>
+              <button onClick={() => { onLoad(enc); onClose(); }} style={{
+                padding: "4px 10px", background: "rgba(201,168,76,0.1)", border: "1px solid rgba(201,168,76,0.3)",
+                borderRadius: 4, color: "var(--gold)", fontFamily: "var(--font-head)", fontSize: 10, cursor: "pointer", whiteSpace: "nowrap",
+              }}>LOAD</button>
+              <button onClick={() => handleDelete(enc.id)} style={{
+                background: "none", border: "none", cursor: "pointer", color: "var(--text-faint)", fontSize: 14, padding: "0 2px", lineHeight: 1,
+              }}>✕</button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CombatTool() {
   const { aiProvider, setAiProvider, resetTool } = useContext(AppContext);
   const [tweaks, setTweak] = useTweaks(COMBAT_TWEAK_DEFAULTS);
@@ -4356,6 +4437,7 @@ function CombatTool() {
   const [encNote, setEncNote] = useState("Add a note about conditions, terrain...");
   const [roundNumber, setRoundNumber] = useState(1);
   const [showInitModal, setShowInitModal] = useState(false);
+  const [showSaveLoadModal, setShowSaveLoadModal] = useState(false);
 
   useEffect(() => {
     fetch("/tools/monsters.json")
@@ -4402,7 +4484,7 @@ function CombatTool() {
           encName={encName} setEncName={setEncName}
           encNote={encNote} setEncNote={setEncNote}
           roundNumber={roundNumber} setRoundNumber={setRoundNumber}
-          onOpenSessions={() => {}} />
+          onOpenSessions={() => setShowSaveLoadModal(true)} />
         <CenterPanel combatants={combatants} activeIdx={activeIdx} setCombatants={setCombatants}
           allMonsters={allMonsters} onOpenAdd={handleOpenAdd} portraits={portraits} />
         <RightPanel combatants={combatants} activeIdx={activeIdx} tweaks={tweaks}
@@ -4415,6 +4497,13 @@ function CombatTool() {
       )}
       {showInitModal && (
         <InitiativesModal combatants={combatants} onClose={() => setShowInitModal(false)} onApply={handleApplyInitiatives} />
+      )}
+      {showSaveLoadModal && (
+        <SaveLoadModal
+          combatants={combatants} encName={encName} encNote={encNote} roundNumber={roundNumber}
+          onClose={() => setShowSaveLoadModal(false)}
+          onLoad={enc => { setCombatants(enc.combatants); setEncName(enc.name); setEncNote(enc.note || ""); setRoundNumber(enc.round || 1); setActiveIdx(0); }}
+        />
       )}
       <TweaksPanel>
         <TweakSection label="Layout" />
