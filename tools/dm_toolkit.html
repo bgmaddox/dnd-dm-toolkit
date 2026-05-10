@@ -3002,7 +3002,7 @@ const inputStyleC = {
   fontFamily: "var(--font-body)", transition: "border-color 0.15s",
 };
 
-function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeChange, onDelete, onRename, onDuplicate, onLootChange, onModifierChange, onAdvDisadvChange, onBoomingBladeChange, portrait }) {
+function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeChange, onDelete, onRename, onDuplicate, onLootChange, portrait }) {
   const { name, type, hp, maxHp, conditions, loot, diceModifiers = {}, advDisadv = {}, boomingBlade = false } = combatant;
   const pct = hpPct(hp, maxHp);
   const color = hpColor(hp, maxHp);
@@ -3014,49 +3014,9 @@ function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeCh
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [lootOpen, setLootOpen] = useState(false);
-  const [diceModOpen, setDiceModOpen] = useState(false);
-  const [advOpen, setAdvOpen] = useState(false);
 
   const anyDiceMod = diceModifiers.bless || diceModifiers.bane || diceModifiers.guidance || boomingBlade;
   const anyAdv = ["attackOut","attackIn","saves","abilityCheck"].some(k => advDisadv[k]?.state);
-
-  function toggleDiceMod(key) {
-    const next = { ...diceModifiers };
-    if (key === "bless" && !next.bless) next.bane = false;
-    if (key === "bane" && !next.bane) next.bless = false;
-    next[key] = !next[key];
-    onModifierChange(combatant.id, next);
-  }
-  function toggleAdv(key, val) {
-    const next = { ...(combatant.advDisadv || {}) };
-    next[key] = next[key]?.state === val ? null : { state: val, turns: null };
-    onAdvDisadvChange(combatant.id, next);
-  }
-  function setAdvTurns(key, turns) {
-    const next = { ...(combatant.advDisadv || {}) };
-    if (next[key]) next[key] = { ...next[key], turns };
-    onAdvDisadvChange(combatant.id, next);
-  }
-  function setHexAbility(val) {
-    onAdvDisadvChange(combatant.id, { ...(combatant.advDisadv || {}), hexAbility: val });
-  }
-
-  const chipBtn = (label, active, color, onClick) => (
-    <button onClick={e => { e.stopPropagation(); onClick(); }} style={{
-      padding: "2px 8px", borderRadius: 20, fontSize: 10, cursor: "pointer", fontFamily: "var(--font-head)",
-      letterSpacing: "0.04em", border: `1px solid ${active ? color : "var(--border)"}`,
-      background: active ? `${color}22` : "transparent", color: active ? color : "var(--text-dim)",
-      transition: "all 0.15s",
-    }}>{label}</button>
-  );
-  const advBtn = (label, key, val) => (
-    <button onClick={e => { e.stopPropagation(); toggleAdv(key, val); }} style={{
-      padding: "1px 7px", borderRadius: 4, fontSize: 10, cursor: "pointer", fontFamily: "var(--font-head)",
-      border: `1px solid ${advDisadv[key]?.state === val ? (val === "adv" ? "#5aab6a" : "#c44a4a") : "var(--border)"}`,
-      background: advDisadv[key]?.state === val ? (val === "adv" ? "#5aab6a22" : "#c44a4a22") : "transparent",
-      color: advDisadv[key]?.state === val ? (val === "adv" ? "#5aab6a" : "#e06868") : "var(--text-dim)",
-    }}>{val === "adv" ? "▲ ADV" : "▼ DIS"}</button>
-  );
   function startHpEdit(e) { e.stopPropagation(); setHpInput(String(hp)); setEditingHp(true); }
   function commitHpEdit() { const v = parseInt(hpInput); if (!isNaN(v)) onHpChange(combatant.id, v); setEditingHp(false); }
   function startInitEdit(e) { e.stopPropagation(); setInitInput(String(combatant.initiative ?? "")); setEditingInit(true); }
@@ -3163,52 +3123,6 @@ function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeCh
           {advDisadv.abilityCheck?.state && <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 20, background: advDisadv.abilityCheck.state === "adv" ? "#5aab6a22" : "#c44a4a22", border: `1px solid ${advDisadv.abilityCheck.state === "adv" ? "#5aab6a66" : "#c44a4a66"}`, color: advDisadv.abilityCheck.state === "adv" ? "#5aab6a" : "#e06868", fontFamily: "var(--font-head)" }}>{advDisadv.abilityCheck.state === "adv" ? "▲" : "▼"} CHK{advDisadv.hexAbility ? ` ${advDisadv.hexAbility.slice(0,3)}` : ""}{advDisadv.abilityCheck.turns ? ` ${advDisadv.abilityCheck.turns}t` : ""}</span>}
         </div>
       )}
-      {diceModOpen && (
-        <div onClick={e => e.stopPropagation()} style={{ marginTop: 6, padding: "8px 10px", background: "#0d1017", borderRadius: 5, border: "1px solid var(--border)" }}>
-          <div style={{ fontSize: 9, color: "var(--text-dim)", fontFamily: "var(--font-head)", letterSpacing: "0.1em", marginBottom: 6 }}>DICE MODIFIERS</div>
-          <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-            {chipBtn("+1d4 ATK/SAV", diceModifiers.bless, "var(--gold)", () => toggleDiceMod("bless"))}
-            {chipBtn("-1d4 ATK/SAV", diceModifiers.bane,  "#c44a4a",     () => toggleDiceMod("bane"))}
-            {chipBtn("+1d4 CHECK",   diceModifiers.guidance, "var(--teal)", () => toggleDiceMod("guidance"))}
-            {chipBtn("☈ Booming Blade", boomingBlade, "#a08ad0", () => onBoomingBladeChange(combatant.id, !boomingBlade))}
-          </div>
-        </div>
-      )}
-      {advOpen && (
-        <div onClick={e => e.stopPropagation()} style={{ marginTop: 6, padding: "8px 10px", background: "#0d1017", borderRadius: 5, border: "1px solid var(--border)" }}>
-          <div style={{ fontSize: 9, color: "var(--text-dim)", fontFamily: "var(--font-head)", letterSpacing: "0.1em", marginBottom: 6 }}>ADV / DISADVANTAGE</div>
-          {[["attackOut","Attacks Out"],["attackIn","Attacks In (incoming)"],["saves","Saving Throws"],["abilityCheck","Ability Checks"]].map(([key, label]) => (
-            <div key={key} style={{ marginBottom: 6 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ fontSize: 10, color: "var(--text-dim)", flex: 1, fontFamily: "var(--body)" }}>{label}</span>
-                {advBtn(label, key, "adv")}
-                {advBtn(label, key, "dis")}
-              </div>
-              {advDisadv[key]?.state && (
-                <div style={{ display: "flex", gap: 3, marginTop: 3, paddingLeft: 2 }}>
-                  <span style={{ fontSize: 9, color: "var(--text-faint)", fontFamily: "var(--font-head)", marginRight: 2, lineHeight: "18px" }}>TURNS:</span>
-                  {[null, 1, 2, 3].map(t => (
-                    <button key={String(t)} onClick={e => { e.stopPropagation(); setAdvTurns(key, t); }} style={{
-                      fontSize: 9, padding: "0 5px", height: 18, borderRadius: 3, cursor: "pointer",
-                      border: `1px solid ${advDisadv[key].turns === t ? "var(--gold-dim)" : "var(--border)"}`,
-                      background: advDisadv[key].turns === t ? "#c9a84c22" : "transparent",
-                      color: advDisadv[key].turns === t ? "var(--gold)" : "var(--text-dim)",
-                      fontFamily: "var(--font-head)",
-                    }}>{t === null ? "∞" : t}</button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-          {advDisadv.abilityCheck && (
-            <input placeholder="Which ability? (e.g. Strength)"
-              value={advDisadv.hexAbility || ""}
-              onChange={e => setHexAbility(e.target.value)}
-              onClick={e => e.stopPropagation()}
-              style={{ width: "100%", fontSize: 10, background: "#13161c", border: "1px solid var(--border)", borderRadius: 3, color: "var(--text-muted)", padding: "2px 6px", outline: "none", fontFamily: "var(--body)", marginTop: 2 }} />
-          )}
-        </div>
-      )}
       {type === "Monster" && loot && !lootOpen && (
         <div style={{ fontSize: 11, color: "var(--text-dim)", fontStyle: "italic", marginTop: 4, paddingLeft: 2 }}>{loot}</div>
       )}
@@ -3223,12 +3137,6 @@ function CombatantRow({ combatant, isActive, onClick, onHpChange, onInitiativeCh
       {hovered && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 5, gap: 4 }}>
           <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-            <button onClick={e => { e.stopPropagation(); setDiceModOpen(v => !v); }}
-              title="Dice modifiers (Bless/Bane/Guidance)"
-              style={{ background: anyDiceMod ? "#c9a84c18" : "none", border: `1px solid ${anyDiceMod ? "var(--gold-dim)" : "var(--border)"}`, borderRadius: 4, cursor: "pointer", fontSize: 11, color: anyDiceMod ? "var(--gold)" : "var(--text-faint)", padding: "1px 6px", fontFamily: "var(--font-head)" }}>±</button>
-            <button onClick={e => { e.stopPropagation(); setAdvOpen(v => !v); }}
-              title="Advantage / Disadvantage"
-              style={{ background: anyAdv ? "#5aab6a18" : "none", border: `1px solid ${anyAdv ? "#5aab6a66" : "var(--border)"}`, borderRadius: 4, cursor: "pointer", fontSize: 11, color: anyAdv ? "#5aab6a" : "var(--text-faint)", padding: "1px 6px", fontFamily: "var(--font-head)" }}>▲▼</button>
             {type === "Monster" && (
               <button onClick={e => { e.stopPropagation(); setLootOpen(v => !v); }}
                 style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: loot ? "var(--gold-dim)" : "var(--text-faint)", padding: "0 2px", fontFamily: "var(--body)" }}
@@ -3404,15 +3312,6 @@ function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks,
   function lootChange(id, val) {
     setCombatants(prev => prev.map(c => c.id === id ? { ...c, loot: val } : c));
   }
-  function boomingBladeChange(id, val) {
-    setCombatants(prev => prev.map(c => c.id === id ? { ...c, boomingBlade: val } : c));
-  }
-  function modifierChange(id, newMods) {
-    setCombatants(prev => prev.map(c => c.id === id ? { ...c, diceModifiers: newMods } : c));
-  }
-  function advDisadvChange(id, newAdv) {
-    setCombatants(prev => prev.map(c => c.id === id ? { ...c, advDisadv: newAdv } : c));
-  }
   function duplicateCombatant(id) {
     setCombatants(prev => {
       const idx = prev.findIndex(c => c.id === id);
@@ -3472,7 +3371,7 @@ function LeftPanel({ combatants, setCombatants, activeIdx, setActiveIdx, tweaks,
             <CombatantRow key={c.id} combatant={c} isActive={i === activeIdx} onClick={() => setActiveIdx(i)}
               onHpChange={hpChange} onInitiativeChange={initiativeChange}
               onDelete={deleteCombatant} onRename={renameCombatant} onDuplicate={duplicateCombatant}
-              onLootChange={lootChange} onModifierChange={modifierChange} onAdvDisadvChange={advDisadvChange} onBoomingBladeChange={boomingBladeChange}
+              onLootChange={lootChange}
               portrait={portraits && portraits[c.id]} />
           ))}
         </div>
@@ -3621,6 +3520,43 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
       return { ...c, conditions: has ? c.conditions.filter(x => x !== condName) : [...(c.conditions || []), condName] };
     }));
   }
+  function toggleDiceMod(key) {
+    if (!activeCombatant) return;
+    setCombatants(prev => prev.map(c => {
+      if (c.id !== activeCombatant.id) return c;
+      const mods = { ...(c.diceModifiers || {}) };
+      if (key === "bless" && !mods.bless) mods.bane = false;
+      if (key === "bane" && !mods.bane) mods.bless = false;
+      mods[key] = !mods[key];
+      return { ...c, diceModifiers: mods };
+    }));
+  }
+  function toggleBoomingBlade() {
+    if (!activeCombatant) return;
+    setCombatants(prev => prev.map(c => c.id === activeCombatant.id ? { ...c, boomingBlade: !c.boomingBlade } : c));
+  }
+  function toggleAdv(key, val) {
+    if (!activeCombatant) return;
+    setCombatants(prev => prev.map(c => {
+      if (c.id !== activeCombatant.id) return c;
+      const adv = { ...(c.advDisadv || {}) };
+      adv[key] = adv[key]?.state === val ? null : { state: val, turns: null };
+      return { ...c, advDisadv: adv };
+    }));
+  }
+  function setAdvTurns(key, turns) {
+    if (!activeCombatant) return;
+    setCombatants(prev => prev.map(c => {
+      if (c.id !== activeCombatant.id) return c;
+      const adv = { ...(c.advDisadv || {}) };
+      if (adv[key]) adv[key] = { ...adv[key], turns };
+      return { ...c, advDisadv: adv };
+    }));
+  }
+  function setHexAbility(val) {
+    if (!activeCombatant) return;
+    setCombatants(prev => prev.map(c => c.id === activeCombatant.id ? { ...c, advDisadv: { ...(c.advDisadv || {}), hexAbility: val } } : c));
+  }
   const isPC = activeCombatant?.type === "PC" && !searchedMonster;
   const isBrowsing = activeCombatant?.type === "PC" && searchedMonster;
   const tabs = isPC
@@ -3659,39 +3595,15 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
           </div>
         )}
         {(combatants.length > 0 || searchedMonster) && isPC ? (
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 12, padding: "12px 14px", background: "rgba(74,120,196,0.07)", border: "1px solid rgba(74,120,196,0.2)", borderRadius: 8 }}>
-              <div style={{ width: 72, height: 72, flexShrink: 0, borderRadius: 8, border: "1px solid var(--border-bright)", background: "var(--bg)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {portraits && portraits[activeCombatant.id] ? (<img src={portraits[activeCombatant.id]} style={{ width: "100%", height: "100%", objectFit: "cover" }} />) : (<span style={{ fontSize: 28, opacity: 0.25 }}>⚔</span>)}
-              </div>
-              <div style={{ flex: 1 }}>
-                <h2 style={{ fontFamily: "var(--font-head)", fontSize: 26, fontWeight: 700, color: "var(--text)", lineHeight: 1.2, marginBottom: 4 }}>{activeCombatant.name}</h2>
-                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 13, padding: "2px 9px", borderRadius: 20, background: "rgba(74,120,196,0.25)", border: "1px solid var(--blue)", color: "#6a9de8", fontFamily: "var(--font-head)" }}>PC</span>
-                  {activeCombatant.pcData?.charClass && <span style={{ fontSize: 14, color: "var(--text-dim)" }}>{activeCombatant.pcData.charClass}{activeCombatant.pcData?.level ? ` ${activeCombatant.pcData.level}` : ""}</span>}
-                </div>
-              </div>
+          <div style={{ marginBottom: 10 }}>
+            <h2 style={{ fontFamily: "var(--font-head)", fontSize: 28, fontWeight: 700, color: "var(--gold)", lineHeight: 1.2, marginBottom: 2 }}>
+              {activeCombatant.name}
+            </h2>
+            <div style={{ color: "var(--text-dim)", fontSize: 18, fontStyle: "italic", marginBottom: 8 }}>
+              {activeCombatant.pcData?.charClass || "Player Character"}{activeCombatant.pcData?.level ? ` ${activeCombatant.pcData.level}` : ""}
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
-              {[
-                { label: "HP", value: `${activeCombatant.hp}/${activeCombatant.maxHp}`, color: "var(--text)" },
-                { label: "AC", value: activeCombatant.ac ?? "—", color: "var(--teal)" },
-                { label: "PASS. PERC", value: activeCombatant.passivePerception ?? "—", color: "var(--gold-dim)" },
-                { label: "SPELL DC", value: activeCombatant.spellSaveDC ?? "—", color: "#a08ad0" },
-              ].map(({ label, value, color }) => (
-                <div key={label} style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 6, padding: "8px 10px", textAlign: "center" }}>
-                  <div style={{ fontSize: 9, color: "var(--text-faint)", fontFamily: "var(--font-head)", letterSpacing: "0.1em", marginBottom: 3 }}>{label}</div>
-                  <div style={{ fontSize: 18, fontFamily: "var(--font-head)", color, fontWeight: 700 }}>{value}</div>
-                </div>
-              ))}
-            </div>
-            <div style={{ padding: "10px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 6 }}>
-              <div style={{ fontSize: 9, color: "var(--text-faint)", fontFamily: "var(--font-head)", letterSpacing: "0.1em", marginBottom: 5 }}>CONCENTRATION</div>
-              <input
-                value={activeCombatant.concentration || ""}
-                onChange={e => setCombatants(prev => prev.map(c => c.id === activeCombatant.id ? { ...c, concentration: e.target.value } : c))}
-                placeholder="e.g. Hypnotic Pattern (round 2)"
-                style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: activeCombatant.concentration ? "#a08ad0" : "var(--text-faint)", fontSize: 14, fontStyle: activeCombatant.concentration ? "normal" : "italic", fontFamily: "var(--body)" }} />
+            <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 15, padding: "3px 10px", border: "1px solid var(--blue)", borderRadius: 20, color: "#6a9de8", fontFamily: "var(--font-head)" }}>PC</span>
             </div>
           </div>
         ) : (combatants.length > 0 || searchedMonster) ? (
@@ -3726,6 +3638,52 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
           </div>
         )}
 
+        {(combatants.length > 0 || searchedMonster) && activeTab === "statblock" && isPC && (() => {
+          const pd = activeCombatant.pcData;
+          const ac = pd?.ac ?? activeCombatant.ac;
+          const pp = pd?.passivePerception ?? activeCombatant.passivePerception;
+          const dc = pd?.spellSaveDC ?? activeCombatant.spellSaveDC;
+          const initBonus = pd?.initiativeBonus;
+          return (
+            <div style={{ paddingBottom: 20 }}>
+              <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap", padding: "10px 12px", background: "rgba(74,120,196,0.07)", border: "1px solid rgba(74,120,196,0.2)", borderRadius: 6 }}>
+                {[
+                  ["AC", ac],
+                  ["Pass. Perc", pp],
+                  ...(dc != null ? [["Spell DC", dc]] : []),
+                  ...(initBonus != null ? [["Initiative", (initBonus >= 0 ? "+" : "") + initBonus]] : []),
+                  ...(pd?.profBonus ? [["Prof", pd.profBonus]] : []),
+                ].map(([k, v]) => (
+                  <div key={k} style={{ display: "flex", gap: 5, alignItems: "baseline" }}>
+                    <span style={{ fontFamily: "var(--font-head)", fontSize: 15, color: "#6a9de8" }}>{k}</span>
+                    <span style={{ fontSize: 21, color: "var(--text)" }}>{v ?? "—"}</span>
+                  </div>
+                ))}
+              </div>
+              {pd?.stats && <div style={{ marginBottom: 14 }}><AbilityGrid stats={pd.stats} /></div>}
+              {(pd?.savingThrows || pd?.skills || pd?.languages) && (
+                <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 6, padding: "10px 12px", marginBottom: 14, fontSize: 19 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "6px 12px" }}>
+                    {[["Saving Throws", pd.savingThrows], ["Skills", pd.skills], ["Languages", pd.languages]].filter(([,v]) => v).map(([k, v]) => (
+                      <React.Fragment key={k}>
+                        <span style={{ color: "#6a9de8", fontFamily: "var(--font-head)", fontSize: 16, whiteSpace: "nowrap" }}>{k}</span>
+                        <span style={{ color: "var(--text-dim)", fontSize: 15, lineHeight: 1.5 }}>{v}</span>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div style={{ padding: "10px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 6 }}>
+                <div style={{ fontSize: 9, color: "var(--text-faint)", fontFamily: "var(--font-head)", letterSpacing: "0.1em", marginBottom: 5 }}>CONCENTRATION</div>
+                <input
+                  value={activeCombatant.concentration || ""}
+                  onChange={e => setCombatants(prev => prev.map(c => c.id === activeCombatant.id ? { ...c, concentration: e.target.value } : c))}
+                  placeholder="e.g. Hypnotic Pattern (round 2)"
+                  style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: activeCombatant.concentration ? "#a08ad0" : "var(--text-faint)", fontSize: 14, fontStyle: activeCombatant.concentration ? "normal" : "italic", fontFamily: "var(--body)" }} />
+              </div>
+            </div>
+          );
+        })()}
         {(combatants.length > 0 || searchedMonster) && activeTab === "statblock" && !isPC && (
           <div style={{ paddingBottom: 20 }}>
             <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap", padding: "10px 12px", background: "rgba(201,168,76,0.07)", border: "1px solid rgba(201,168,76,0.2)", borderRadius: 6 }}>
@@ -3807,6 +3765,84 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
                   })}
                 </div>
               )}
+            </div>
+            <div style={{ marginTop: 18 }}>
+              <div style={{ fontFamily: "var(--font-head)", fontSize: 14, color: "var(--gold)", marginBottom: 8 }}>DICE MODIFIERS</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 5, justifyContent: "center" }}>
+                {[
+                  { key: "bless",    label: "+1d4 ATK/SAV", col: { bg: "rgba(201,168,76,0.2)", border: "#c9a84c88", text: "var(--gold)" } },
+                  { key: "bane",     label: "−1d4 ATK/SAV", col: { bg: "rgba(196,74,74,0.2)",  border: "#c44a4a88", text: "#e06868" } },
+                  { key: "guidance", label: "+1d4 CHECK",    col: { bg: "rgba(61,168,148,0.2)", border: "#3da89488", text: "var(--teal)" } },
+                ].map(({ key, label, col }) => {
+                  const active = (activeCombatant.diceModifiers || {})[key];
+                  return (
+                    <button key={key} onClick={() => toggleDiceMod(key)} style={{
+                      background: active ? col.bg : "transparent",
+                      border: `1px solid ${active ? col.border : "var(--border)"}`,
+                      color: active ? col.text : "var(--text-faint)",
+                      borderRadius: 12, padding: "3px 10px", fontSize: 13,
+                      fontFamily: "var(--font-head)", cursor: "pointer",
+                    }}>{label}</button>
+                  );
+                })}
+                {(() => {
+                  const active = activeCombatant.boomingBlade;
+                  return (
+                    <button onClick={toggleBoomingBlade} style={{
+                      background: active ? "rgba(160,138,208,0.2)" : "transparent",
+                      border: `1px solid ${active ? "#a08ad088" : "var(--border)"}`,
+                      color: active ? "#a08ad0" : "var(--text-faint)",
+                      borderRadius: 12, padding: "3px 10px", fontSize: 13,
+                      fontFamily: "var(--font-head)", cursor: "pointer",
+                    }}>☈ Booming Blade</button>
+                  );
+                })()}
+              </div>
+            </div>
+            <div style={{ marginTop: 18 }}>
+              <div style={{ fontFamily: "var(--font-head)", fontSize: 14, color: "var(--gold)", marginBottom: 8 }}>ADV / DISADVANTAGE</div>
+              {[["attackOut","Attacks Out"],["attackIn","Attacks In"],["saves","Saving Throws"],["abilityCheck","Ability Checks"]].map(([key, label]) => {
+                const adv = (activeCombatant.advDisadv || {})[key];
+                return (
+                  <div key={key} style={{ marginBottom: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontSize: 13, color: "var(--text-dim)", flex: 1, fontFamily: "var(--body)" }}>{label}</span>
+                      <button onClick={() => toggleAdv(key, "adv")} style={{
+                        padding: "2px 9px", borderRadius: 12, fontSize: 12, cursor: "pointer", fontFamily: "var(--font-head)",
+                        border: `1px solid ${adv?.state === "adv" ? "#5aab6a" : "var(--border)"}`,
+                        background: adv?.state === "adv" ? "#5aab6a22" : "transparent",
+                        color: adv?.state === "adv" ? "#5aab6a" : "var(--text-faint)",
+                      }}>▲ ADV</button>
+                      <button onClick={() => toggleAdv(key, "dis")} style={{
+                        padding: "2px 9px", borderRadius: 12, fontSize: 12, cursor: "pointer", fontFamily: "var(--font-head)",
+                        border: `1px solid ${adv?.state === "dis" ? "#c44a4a" : "var(--border)"}`,
+                        background: adv?.state === "dis" ? "#c44a4a22" : "transparent",
+                        color: adv?.state === "dis" ? "#e06868" : "var(--text-faint)",
+                      }}>▼ DIS</button>
+                    </div>
+                    {adv?.state && (
+                      <div style={{ display: "flex", gap: 3, marginTop: 4, paddingLeft: 2 }}>
+                        <span style={{ fontSize: 9, color: "var(--text-faint)", fontFamily: "var(--font-head)", marginRight: 2, lineHeight: "18px" }}>TURNS:</span>
+                        {[null, 1, 2, 3].map(t => (
+                          <button key={String(t)} onClick={() => setAdvTurns(key, t)} style={{
+                            fontSize: 9, padding: "0 5px", height: 18, borderRadius: 3, cursor: "pointer",
+                            border: `1px solid ${adv.turns === t ? "var(--gold-dim)" : "var(--border)"}`,
+                            background: adv.turns === t ? "#c9a84c22" : "transparent",
+                            color: adv.turns === t ? "var(--gold)" : "var(--text-dim)",
+                            fontFamily: "var(--font-head)",
+                          }}>{t === null ? "∞" : t}</button>
+                        ))}
+                      </div>
+                    )}
+                    {key === "abilityCheck" && adv?.state && (
+                      <input placeholder="Which ability? (e.g. Strength)"
+                        value={(activeCombatant.advDisadv || {}).hexAbility || ""}
+                        onChange={e => setHexAbility(e.target.value)}
+                        style={{ width: "100%", fontSize: 11, background: "#13161c", border: "1px solid var(--border)", borderRadius: 3, color: "var(--text-muted)", padding: "4px 8px", outline: "none", fontFamily: "var(--body)", marginTop: 4 }} />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

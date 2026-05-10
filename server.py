@@ -719,6 +719,10 @@ def _parse_pc_full_stats(text: str) -> dict:
     if pp_m:
         result["passivePerception"] = int(pp_m.group(1))
 
+    ac_m = re.search(r"\*\*AC:\*\*\s*(\d+)", text)
+    if ac_m:
+        result["ac"] = int(ac_m.group(1))
+
     # Ability scores — strip markup, then match each stat
     ab_line_m = re.search(r"\*\*STR\*\*.*?\*\*CHA\*\*[^\n]+", text)
     if ab_line_m:

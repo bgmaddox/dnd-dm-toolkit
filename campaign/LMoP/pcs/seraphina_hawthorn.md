@@ -10,7 +10,7 @@
 
 ## Combat Stats
 - **Max HP:** 20
-- **AC:** *(verify on D&D Beyond — depends on equipment and class features)*
+- **AC:** 14
 - **Initiative:** +2
 - **Passive Perception:** 9
 
