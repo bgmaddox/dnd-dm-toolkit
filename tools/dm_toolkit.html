@@ -544,8 +544,12 @@ input:focus, select:focus { border-color: var(--gold-dim); outline: none; }
 .amb-track-name { font-size: 1.5rem; font-weight: 600; margin-bottom: 4px; }
 .amb-track-artist { font-size: 1.2rem; color: var(--text-muted); margin-bottom: 8px; }
 .amb-attribution { font-size: 1.0rem; color: var(--text-dim); margin-top: auto; padding-top: 16px; font-style: italic; }
-.amb-sfx-btn { display: block; width: 100%; text-align: left; padding: 10px 14px; background: none; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 1.25rem; color: var(--text-dim); margin-bottom: 6px; }
-.amb-sfx-btn:hover { border-color: var(--text-dim); color: var(--text); background: rgba(255,255,255,0.03); }
+.amb-sfx-btn { display: flex; align-items: center; width: 100%; border: 1px solid var(--border); border-radius: 6px; font-size: 1.25rem; color: var(--text-dim); margin-bottom: 6px; overflow: hidden; background: none; padding: 0; }
+.amb-sfx-btn.looping { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.08); }
+.amb-sfx-play { flex: 1; text-align: left; padding: 10px 14px; background: none; border: none; cursor: pointer; font-size: inherit; color: inherit; }
+.amb-sfx-play:hover { background: rgba(255,255,255,0.04); }
+.amb-sfx-loop { padding: 10px 13px; background: none; border: none; border-left: 1px solid var(--border); cursor: pointer; color: inherit; font-size: 1rem; flex-shrink: 0; }
+.amb-sfx-loop:hover { background: rgba(255,255,255,0.06); }
 .amb-volume-row { display: flex; align-items: center; gap: 10px; margin: 12px 0; font-size: 1.2rem; color: var(--text-muted); width: 100%; }
 .amb-volume-row input[type=range] { flex: 1; }
 
@@ -5507,24 +5511,46 @@ function playSfx(type, volume = 0.5) {
 
 function AmbianceTool() {
   const audioRef = useRef(null);
+  const loopingAudioRef = useRef(null);
   const [activePreset, setActivePreset] = useState(null);
   const [activeTrack, setActiveTrack] = useState(null);
   const [playing, setPlaying] = useState(false);
   const [musicVolume, setMusicVolume] = useState(70);
   const [sfxVolume, setSfxVolume] = useState(80);
   const [audioError, setAudioError] = useState(false);
+  const [loopingSfxId, setLoopingSfxId] = useState(null);
 
   useEffect(() => {
     if (!audioRef.current) {
       audioRef.current = new Audio();
       audioRef.current.loop = true;
     }
-    return () => { audioRef.current?.pause(); };
+    return () => { audioRef.current?.pause(); loopingAudioRef.current?.pause(); };
   }, []);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = musicVolume / 100;
   }, [musicVolume]);
+
+  useEffect(() => {
+    if (loopingAudioRef.current) loopingAudioRef.current.volume = sfxVolume / 100;
+  }, [sfxVolume]);
+
+  function toggleLoop(id) {
+    if (loopingAudioRef.current) {
+      loopingAudioRef.current.pause();
+      loopingAudioRef.current = null;
+    }
+    if (loopingSfxId === id) { setLoopingSfxId(null); return; }
+    const sfx = SFX_LIST.find(s => s.id === id);
+    if (!sfx) return;
+    const audio = new Audio(`/tools/sfx/${id}.${sfx.ext}`);
+    audio.loop = true;
+    audio.volume = sfxVolume / 100;
+    audio.play().catch(() => {});
+    loopingAudioRef.current = audio;
+    setLoopingSfxId(id);
+  }
 
   function playTrack(preset, track) {
     const audio = audioRef.current;
@@ -5635,9 +5661,14 @@ function AmbianceTool() {
           <span>{sfxVolume}%</span>
         </div>
         {SFX_LIST.map(sfx => (
-          <button key={sfx.id} className="amb-sfx-btn" onClick={() => playSfx(sfx.id, sfxVolume / 100)}>
-            {sfx.icon} {sfx.label}
-          </button>
+          <div key={sfx.id} className={`amb-sfx-btn${loopingSfxId === sfx.id ? ' looping' : ''}`}>
+            <button className="amb-sfx-play" onClick={() => playSfx(sfx.id, sfxVolume / 100)}>
+              {sfx.icon} {sfx.label}
+            </button>
+            <button className="amb-sfx-loop" onClick={() => toggleLoop(sfx.id)} title={loopingSfxId === sfx.id ? 'Stop loop' : 'Loop'}>
+              {loopingSfxId === sfx.id ? '⏹' : '🔁'}
+            </button>
+          </div>
         ))}
       </div>
     </div>
