@@ -49,12 +49,21 @@ cat <<EOF > "$APP_NAME.app/Contents/Info.plist"
 </plist>
 EOF
 
-# 4. Handle Icon (Attempt conversion to .icns if possible, otherwise just copy)
-# Note: Real .icns requires iconutil. For now, we'll just copy the PNG.
-# To properly show an icon, the user usually needs a .icns file.
-if [ -f "$ICON_PATH" ]; then
+# 4. Convert icon PNG → .icns using sips + iconutil (both built into macOS)
+if [ -f "$ICON_PATH" ] && command -v iconutil &>/dev/null && command -v sips &>/dev/null; then
+    ICONSET_DIR="AppIcon.iconset"
+    mkdir -p "$ICONSET_DIR"
+    for SIZE in 16 32 64 128 256 512; do
+        sips -z $SIZE $SIZE "$ICON_PATH" --out "$ICONSET_DIR/icon_${SIZE}x${SIZE}.png" &>/dev/null
+        DOUBLE=$((SIZE * 2))
+        sips -z $DOUBLE $DOUBLE "$ICON_PATH" --out "$ICONSET_DIR/icon_${SIZE}x${SIZE}@2x.png" &>/dev/null
+    done
+    iconutil -c icns "$ICONSET_DIR" -o "$APP_NAME.app/Contents/Resources/AppIcon.icns"
+    rm -rf "$ICONSET_DIR"
+    echo "Icon converted to .icns with alpha channel."
+elif [ -f "$ICON_PATH" ]; then
     cp "$ICON_PATH" "$APP_NAME.app/Contents/Resources/AppIcon.png"
-    echo "Note: Icon copied. For a true dock icon, conversion to .icns is recommended."
+    echo "Note: iconutil not found — PNG copied as fallback."
 fi
 
 echo "Done! You can now move '$APP_NAME.app' to your Applications folder or use it in-place."
