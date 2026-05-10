@@ -5497,9 +5497,12 @@ const SFX_LIST = [
 ];
 
 function playSfx(type, volume = 0.5) {
-  const audio = new Audio(`/tools/sfx/${type}.mp3`);
-  audio.volume = volume;
-  audio.play().catch(() => {});
+  const tryPlay = (ext) => {
+    const audio = new Audio(`/tools/sfx/${type}.${ext}`);
+    audio.volume = volume;
+    return audio.play();
+  };
+  tryPlay('mp3').catch(() => tryPlay('wav').catch(() => {}));
 }
 
 function AmbianceTool() {
