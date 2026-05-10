@@ -543,7 +543,42 @@ async def save_npc(body: dict):
     npc_id = _re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") + "-" + str(int(time.time()))
     body["_id"] = npc_id
     (NPCS_DIR / f"{npc_id}.json").write_text(json.dumps(body, indent=2))
-    return {"id": npc_id}
+
+    md_path = None
+    campaign = body.get("campaign", "").strip()
+    if campaign:
+        camp_npcs_dir = CAMPAIGN_BASE / campaign / "npcs"
+        camp_npcs_dir.mkdir(parents=True, exist_ok=True)
+        slug = _re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+        dialogue_lines = body.get("dialogue", [])
+        if isinstance(dialogue_lines, str):
+            dialogue_lines = [l.strip() for l in dialogue_lines.split("\n") if l.strip()]
+        dialogue_md = "\n".join(f"- {l}" for l in dialogue_lines) if dialogue_lines else "*(none)*"
+        md_content = f"""# {name}
+
+**Role:** {body.get("role", "")}
+**Faction:** {body.get("faction", "None") or "None"}
+**Stat Block:** {body.get("statBlock", "")}
+
+## Description
+{body.get("description", "")}
+
+## Voice & Mannerisms
+- **Voice quirk:** {body.get("voiceQuirk", "")}
+- **Physical tell:** {body.get("physicalTell", "")}
+
+## In This Interaction
+- **Want:** {body.get("want", "")}
+- **Secret:** {body.get("secret", "")}
+
+## Sample Dialogue
+{dialogue_md}
+"""
+        md_file = camp_npcs_dir / f"{slug}.md"
+        md_file.write_text(md_content)
+        md_path = str(md_file.relative_to(Path(__file__).parent))
+
+    return {"id": npc_id, "ok": True, "mdPath": md_path}
 
 
 @app.delete("/api/npcs/{npc_id}")
@@ -564,6 +599,23 @@ def _download_portrait(image_url: str, dest_path: Path):
     req = urllib.request.Request(image_url, headers={"User-Agent": "DMToolkit/1.0"})
     with urllib.request.urlopen(req, timeout=20) as resp:
         dest_path.write_bytes(resp.read())
+
+
+def _fetch_image_bytes(image_url: str) -> bytes:
+    import urllib.request
+    req = urllib.request.Request(image_url, headers={"User-Agent": "DMToolkit/1.0"})
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        return resp.read()
+
+
+@app.get("/api/portrait-proxy")
+async def portrait_proxy(url: str):
+    from fastapi.responses import Response
+    try:
+        data = await asyncio.to_thread(_fetch_image_bytes, url)
+        return Response(content=data, media_type="image/png")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Portrait fetch failed: {e}")
 
 
 @app.post("/api/npcs/{npc_id}/portrait")

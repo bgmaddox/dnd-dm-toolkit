@@ -722,6 +722,7 @@ function DMGuideTool() {
           <a href="#scene-setting">Scene Setting</a>
           <a href="#npc-craft">NPC Craft</a>
           <a href="#combat">Running Combat</a>
+          <a href="#when-to-roll">When to Call for Rolls</a>
           <a href="#improv">Improv & "Yes, And"</a>
           <a href="#pacing">Pacing & Tension</a>
           <div className="section-label">Campaign & Story</div>
@@ -919,6 +920,38 @@ function DMGuideTool() {
           <h3>On Fudging Rolls</h3>
           <p>This is one of the great DM debates. My recommendation: <strong>fudge rarely, and only toward less fun</strong> (i.e., reduce lethality on a kill shot that would feel cheap, never give a player a win they didn't earn). The dice create drama; too much fudging drains the table's investment in outcomes.</p>
           <div className="card danger"><div className="card-title">Avoid</div><p style={{ margin: 0, fontSize: '0.88rem' }}>Fudging to protect the party from all consequences, or fudging to ensure a planned narrative outcome. Players sense when nothing is real. The risk of real failure is what makes success meaningful.</p></div>
+        </section>
+
+        <section className="section" id="when-to-roll">
+          <h2><span className="icon">🎲</span> When to Call for Rolls</h2>
+          <div className="section-rule"></div>
+          <p>The two-part test before calling for any roll: <strong>(1) the outcome is genuinely uncertain</strong>, and <strong>(2) failure has a meaningful consequence</strong>. If either is missing, just narrate the outcome — don't roll.</p>
+          <div className="card gold"><div className="card-title">The Golden Rule</div><p style={{ margin: 0, fontSize: '0.88rem' }}>A roll should always matter. If success and failure lead to the same place, skip the roll. If failure would only mean "the party can't progress," don't roll — find a different obstacle or just let it succeed.</p></div>
+          <h3>By Skill Category</h3>
+          <div className="card">
+            <div className="card-title">Social — Persuasion / Deception / Intimidation</div>
+            <p style={{ margin: '4px 0 6px', fontSize: '0.88rem' }}><strong>Roleplaying comes first.</strong> Let the player make their case, then decide if a roll even applies.</p>
+            <p style={{ margin: 0, fontSize: '0.88rem' }}><strong>Roll when:</strong> The NPC has genuine reason to resist AND the stakes matter. A stubborn gate captain, a suspicious merchant, a terrified informant.<br /><strong>Don't roll when:</strong> The NPC is already friendly, the ask is trivial, or the outcome doesn't matter. A helpful innkeeper doesn't need Persuasion. Avoid PC-vs-PC social rolls entirely.</p>
+          </div>
+          <div className="card">
+            <div className="card-title">Exploration — Athletics / Acrobatics</div>
+            <p style={{ margin: '4px 0 6px', fontSize: '0.88rem' }}>Athletics = strength and power (climbing, swimming, grappling). Acrobatics = balance and agility (tight-rope, tumbling, narrow ledges).</p>
+            <p style={{ margin: 0, fontSize: '0.88rem' }}><strong>Roll when:</strong> The feat is risky and failure is interesting — climbing in a storm, leaping a chasm, crossing a collapsing bridge.<br /><strong>Don't roll when:</strong> It's trivially easy for any trained adventurer. No one rolls to walk up stairs. For shared challenges (the whole party crossing a ravine), consider a <strong>Group Check</strong> — if half succeed, the group succeeds.</p>
+          </div>
+          <div className="card">
+            <div className="card-title">Awareness — Perception / Investigation</div>
+            <p style={{ margin: '4px 0 6px', fontSize: '0.88rem' }}>Perception = noticing things passively (sounds, movement, something out of place). Investigation = actively searching and reasoning (finding a hidden door, deducing a cause).</p>
+            <p style={{ margin: 0, fontSize: '0.88rem' }}><strong>Roll when:</strong> Something is genuinely concealed and missing it creates a meaningful (not blocking) consequence.<br /><strong>Don't roll when:</strong> The information is required for the plot to function. Never lock critical story information behind a single failed check. Use Passive Perception (8 + Perception modifier) for ambient awareness — players don't need to announce "I'm looking for traps" for obvious dangers.</p>
+          </div>
+          <div className="card">
+            <div className="card-title">Stealth</div>
+            <p style={{ margin: 0, fontSize: '0.88rem' }}><strong>Roll when:</strong> Someone is present who could detect them, detection is plausible (not automatic), and being detected changes things. Stealth is a contested check — the sneaking character's roll vs. the guard's Passive Perception. Light conditions and cover matter: dim light grants advantage on Stealth.<br /><strong>Don't roll when:</strong> There's nobody around to notice, or they're in full cover behind a solid wall.</p>
+          </div>
+          <div className="card">
+            <div className="card-title">Combat Creative Actions</div>
+            <p style={{ margin: 0, fontSize: '0.88rem' }}><strong>Roll when:</strong> A player attempts a <em>plausible</em> action outside normal attack mechanics — kicking a bookshelf onto a guard, swinging on a chandelier, collapsing a pillar onto the enemy. Use Strength (Athletics) or Dexterity (Acrobatics) as appropriate.<br /><strong>Don't roll when:</strong> The player is attempting a normal attack. Most combat mechanics already have their own roll built in (attack rolls, saving throws). Don't add an extra skill check on top of them.</p>
+          </div>
+          <div className="card tip"><div className="card-title">Quick DM Reminder</div><p style={{ margin: 0, fontSize: '0.88rem' }}>When in doubt, ask yourself: "What happens on a failure?" If the answer is "nothing interesting" or "the party gets stuck," don't call for the roll. The dice are a dramatic tool, not a permission slip.</p></div>
         </section>
 
         <section className="section" id="improv">
@@ -1481,7 +1514,7 @@ function SceneOutput({ scene, setScene, onRegen, onSave, isSaved, loading }) {
 }
 
 function ScenePainterTool() {
-  const { aiProvider, campaigns, activeCampaign, setActiveCampaign, handoffData, setHandoffData, resetTool } = useContext(AppContext);
+  const { aiProvider, campaigns, activeCampaign, setActiveCampaign, handoffData, setHandoffData, setActiveTab, resetTool } = useContext(AppContext);
   const [location, setLocation] = useState("");
   const [mood, setMood] = useState("tense and foreboding");
   const [lighting, setLighting] = useState("torch / firelight");
@@ -1737,6 +1770,9 @@ Respond with ONLY a valid JSON object, no other text:
             <div style={{marginTop: 10, fontSize: 11, fontStyle: 'normal', letterSpacing: '0.02em'}}>
               Powered by {aiProvider === 'gemini' ? 'Gemini 1.5 Flash · Free Tier' : 'Claude Haiku · ~$0.003 per Scene'}
             </div>
+            <div style={{marginTop: 8, fontSize: 11, fontStyle: 'normal'}}>
+              <button onClick={() => { setActiveTab('guide'); setTimeout(() => { document.getElementById('when-to-roll')?.scrollIntoView({ behavior: 'smooth' }); }, 150); }} style={{background:'none',border:'none',color:'var(--gold-dim)',cursor:'pointer',padding:0,fontSize:11,textDecoration:'underline'}}>Roll guidance →</button>
+            </div>
           </div>
         </div>
         <div className="scene-right">
@@ -1812,7 +1848,7 @@ function NPCLoadingState() {
   );
 }
 
-function NPCOutput({ npc, onSave, onRegen, isSaved, isRegening, saveError, showDialogue, compact, portrait, portraitLoading, portraitError, onGeneratePortrait }) {
+function NPCOutput({ npc, onSave, onRegen, isSaved, isRegening, saveError, savedToCampaign, showDialogue, compact, portrait, portraitLoading, portraitError, onGeneratePortrait }) {
   const nameSize = compact ? 24 : 32;
   const bodySize = compact ? 14 : 17;
   const cardPad  = compact ? '12px 14px' : '16px 18px';
@@ -1893,6 +1929,7 @@ function NPCOutput({ npc, onSave, onRegen, isSaved, isRegening, saveError, showD
         <button className="btn-regen" onClick={onRegen} disabled={isRegening}>{isRegening ? 'Forging…' : '↻ Regenerate'}</button>
       </div>
       {saveError && <div className="field-error" style={{marginTop: 6}}>{saveError}</div>}
+      {savedToCampaign && <div style={{marginTop: 6, color: 'var(--success, #4caf50)', fontSize: '0.85em'}}>✓ Saved to campaign</div>}
     </div>
   );
 }
@@ -1931,6 +1968,7 @@ function NPCForgeTool() {
   const [lastRole, setLastRole] = useState('');
   const [exportCopied, setExportCopied] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [savedToCampaign, setSavedToCampaign] = useState(false);
   const [campaignFactions, setCampaignFactions] = useState([]);
   const [factionMode, setFactionMode] = useState('pill');
   const [portraits, setPortraits] = useState({});
@@ -2056,10 +2094,11 @@ Make it gritty, specific, and immediately playable. Avoid clichés.`;
     setPortraitLoading(true); setPortraitError('');
     const style = PORTRAIT_STYLES[tweaks.portraitStyle] || PORTRAIT_STYLES.illustrated;
     const prompt = `${target.name ? target.name + ', ' : ''}${target.description || 'mysterious fantasy character'}. ${PORTRAIT_BASE}. ${style}.`;
-    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true&model=flux&seed=${Math.floor(Math.random()*99999)}`;
+    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true&model=flux&seed=${Math.floor(Math.random()*99999)}`;
+    const proxyUrl = `/api/portrait-proxy?url=${encodeURIComponent(pollinationsUrl)}`;
     const img = new Image();
     img.onload = () => {
-      setPortraits(prev => ({ ...prev, [target.name]: url }));
+      setPortraits(prev => ({ ...prev, [target.name]: proxyUrl }));
       setPortraitLoading(false); setPortraitCooldown(true);
       setTimeout(() => setPortraitCooldown(false), 5000);
     };
@@ -2067,7 +2106,7 @@ Make it gritty, specific, and immediately playable. Avoid clichés.`;
       setPortraitError('Portrait failed — Pollinations.ai may be temporarily unavailable.');
       setPortraitLoading(false);
     };
-    img.src = url;
+    img.src = proxyUrl;
   }, [npc, portraitLoading, portraitCooldown, tweaks.portraitStyle]);
 
   const handleForge = () => generateNPC();
@@ -2117,30 +2156,28 @@ Make it gritty, specific, and immediately playable. Avoid clichés.`;
 
   const handleSave = async () => {
     if (!npc || savedCurrent) return;
-    setSaveError('');
+    setSaveError(''); setSavedToCampaign(false);
     try {
-      let endpoint = '/api/npcs';
-      let payload = npc;
-      if (activeCampaign) {
-        endpoint = '/api/campaign/save_entity';
-        payload = { campaign: activeCampaign, type: 'npc', data: npc };
-      }
-      const res = await fetch(endpoint, {
+      const payload = { ...npc, campaign: activeCampaign || '' };
+      const res = await fetch('/api/npcs', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
       const dataRes = await res.json();
-      const savedId = activeCampaign ? dataRes.path : dataRes.id;
-      const saved = { ...npc, _id: savedId };
+      const saved = { ...npc, _id: dataRes.id };
       const addToList = (prev) => {
         if (prev.find(n => n.name === npc.name)) return prev;
         return [saved, ...prev.filter(n => n.name !== EXAMPLE_NPC.name)];
       };
       setSavedNpcs(addToList); setSidebarNpcs(addToList);
       setActiveNpcIndex(0); setSavedCurrent(true);
+      if (dataRes.mdPath) {
+        setSavedToCampaign(true);
+        setTimeout(() => setSavedToCampaign(false), 3000);
+      }
       const portraitUrl = portraits[npc.name];
-      if (portraitUrl && !portraitUrl.startsWith('/') && !activeCampaign) {
+      if (portraitUrl && dataRes.id) {
         fetch(`/api/npcs/${dataRes.id}/portrait`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ imageUrl: portraitUrl }),
@@ -2347,6 +2384,7 @@ Make it gritty, specific, and immediately playable. Avoid clichés.`;
           ) : npc ? (
             <NPCOutput npc={npc} onSave={handleSave} onRegen={handleRegen}
               isSaved={savedCurrent} isRegening={loading} saveError={saveError}
+              savedToCampaign={savedToCampaign}
               showDialogue={tweaks.showDialogue} compact={tweaks.compactMode}
               portrait={portraits[npc.name] || null}
               portraitLoading={portraitLoading} portraitError={portraitError}
