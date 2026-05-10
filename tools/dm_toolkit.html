@@ -500,6 +500,19 @@ input:focus, select:focus { border-color: var(--gold-dim); outline: none; }
 .enc-difficulty-label { font-size: 2.5rem; font-weight: 700; margin: 10px 0 6px; }
 .enc-flavor { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5; }
 
+/* ── Loot Calculator ── */
+.loot-tool { display: flex; gap: 16px; padding: 20px; height: 100%; overflow: hidden; box-sizing: border-box; }
+.loot-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; overflow-y: auto; }
+.loot-panel-left { flex: 0 0 220px; }
+.loot-panel-center { flex: 1; }
+.loot-panel-right { flex: 0 0 240px; }
+.loot-mode-btn { padding: 7px 16px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 0.85rem; background: none; color: var(--text-dim); margin-right: 6px; }
+.loot-mode-btn.active { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.1); }
+.loot-tier-pill { display: block; width: 100%; text-align: left; padding: 7px 12px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 0.82rem; background: none; color: var(--text-dim); margin-bottom: 5px; }
+.loot-tier-pill.active { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.1); }
+.loot-coin-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+.loot-log-entry { font-size: 0.78rem; padding: 7px 0; border-bottom: 1px solid var(--border); color: var(--text-muted); line-height: 1.4; }
+
 </style>
 </head>
 <body>
@@ -4833,6 +4846,269 @@ function EncounterHelperTool() {
   );
 }
 
+// ─── Loot Calculator ─────────────────────────────────────────────────────────
+function LootCalculatorTool() {
+  const LOOT_LOG_KEY = 'loot_log';
+
+  const IND_TREASURE = {
+    "0-4":   [{w:30,cp:[5,6],sp:0,ep:0,gp:0,pp:0},{w:60,cp:0,sp:[4,6],ep:0,gp:0,pp:0},{w:70,cp:0,sp:0,ep:[3,6],gp:0,pp:0},{w:95,cp:0,sp:0,ep:0,gp:[3,6],pp:0},{w:100,cp:0,sp:0,ep:0,gp:0,pp:[1,6]}],
+    "5-10":  [{w:30,cp:[4,6,10],sp:0,ep:[1,6],gp:0,pp:0},{w:60,cp:0,sp:[6,6,10],ep:0,gp:[2,6,10],pp:0},{w:70,cp:0,sp:0,ep:[3,6,10],gp:[2,6],pp:0},{w:95,cp:0,sp:0,ep:0,gp:[4,6,10],pp:0},{w:100,cp:0,sp:0,ep:[2,6],gp:0,pp:[3,6]}],
+    "11-16": [{w:20,cp:0,sp:[4,6,100],ep:0,gp:[1,6,100],pp:0},{w:35,cp:0,sp:0,ep:[1,6,10],gp:[1,6,100],pp:0},{w:75,cp:0,sp:0,ep:0,gp:[2,6,100],pp:0},{w:100,cp:0,sp:0,ep:[2,6,10],gp:[2,6,100],pp:[1,6,10]}],
+    "17+":   [{w:15,cp:0,sp:[2,6,1000],ep:0,gp:[8,6,100],pp:0},{w:55,cp:0,sp:0,ep:1,gp:[1,6,1000],pp:0},{w:100,cp:0,sp:0,ep:0,gp:[1,6,1000],pp:[1,6,100]}],
+  };
+
+  const HOARD_TREASURE = {
+    "0-4":   { cp:[6,6,100], sp:[3,6,10], ep:0, gp:[2,6,10], pp:0 },
+    "5-10":  { cp:[2,6,100], sp:[2,6,1000], ep:0, gp:[6,6,100], pp:[3,6,10] },
+    "11-16": { cp:0, sp:0, ep:[1,6,100], gp:[4,6,1000], pp:[5,6,100] },
+    "17+":   { cp:0, sp:0, ep:[2,6,100], gp:[12,6,1000], pp:[8,6,1000] },
+  };
+
+  const MAGIC_ITEMS_A = ["Potion of Healing","Spell Scroll (Cantrip)","Potion of Climbing","Spell Scroll (1st level)","Spell Scroll (2nd level)","Potion of Greater Healing","Bag of Holding","Driftglobe"];
+  const MAGIC_ITEMS_B = ["Potion of Greater Healing","Spell Scroll (2nd level)","Spell Scroll (3rd level)","Bag of Holding","Cloak of Protection","Periapt of Health","Eyes of the Eagle","Lantern of Revealing","Wand of Magic Missiles","Bracers of Archery"];
+  const MAGIC_ITEMS_C = ["Potion of Superior Healing","Spell Scroll (4th–6th level)","Ring of Protection","Flame Tongue","Staff of Striking","Necklace of Fireballs","Manual of Bodily Health","Cube of Force","Wand of the War Mage +2"];
+  const MAGIC_ITEMS_D = ["Potion of Supreme Healing","Holy Avenger","Staff of Power","Manual of Gainful Exercise","Deck of Many Things","Ring of Regeneration","Ioun Stone (Fortitude)","Iron Golem Manual"];
+  const MAGIC_TABLE_MAP = { A: MAGIC_ITEMS_A, B: MAGIC_ITEMS_B, C: MAGIC_ITEMS_C, D: MAGIC_ITEMS_D };
+
+  const HOARD_MAGIC = {
+    "0-4":   [{w:6,table:null,count:0},{w:16,table:'A',count:[1,6]},{w:26,table:'A',count:[1,4]},{w:36,table:'B',count:[1,4]},{w:100,table:'A',count:[1,4]}],
+    "5-10":  [{w:4,table:null,count:0},{w:10,table:'A',count:[1,6]},{w:20,table:'B',count:[1,4]},{w:28,table:'C',count:[1,4]},{w:100,table:'B',count:[1,4]}],
+    "11-16": [{w:3,table:'C',count:[1,4]},{w:6,table:'D',count:[1,4]},{w:9,table:'C',count:[1,4]},{w:100,table:'C',count:[1,4]}],
+    "17+":   [{w:2,table:'D',count:[1,4]},{w:5,table:'D',count:[1,6]},{w:100,table:'D',count:[1,4]}],
+  };
+
+  const TIERS = ["0-4","5-10","11-16","17+"];
+
+  function rollDie(n) { return Math.floor(Math.random() * n) + 1; }
+  function rollSpec(spec) {
+    if (!spec || spec === 0) return 0;
+    const [num, die, mult = 1] = spec;
+    let total = 0;
+    for (let i = 0; i < num; i++) total += rollDie(die);
+    return total * mult;
+  }
+  function rollTable(rows) {
+    const r = rollDie(100);
+    return rows.find(row => r <= row.w) || rows[rows.length - 1];
+  }
+  function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  const [mode, setMode] = useState('individual');
+  const [tier, setTier] = useState('0-4');
+  const [monsterCount, setMonsterCount] = useState(1);
+  const [result, setResult] = useState(null);
+  const [log, setLog] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(LOOT_LOG_KEY)) || []; }
+    catch { return []; }
+  });
+  const [copied, setCopied] = useState(false);
+
+  const roll = useCallback(() => {
+    let coins = { cp:0, sp:0, ep:0, gp:0, pp:0 };
+    let magicItems = [];
+
+    if (mode === 'individual') {
+      for (let m = 0; m < monsterCount; m++) {
+        const row = rollTable(IND_TREASURE[tier]);
+        ['cp','sp','ep','gp','pp'].forEach(c => {
+          if (row[c] && row[c] !== 0) coins[c] += rollSpec(row[c]);
+        });
+      }
+    } else {
+      const hoard = HOARD_TREASURE[tier];
+      ['cp','sp','ep','gp','pp'].forEach(c => {
+        if (hoard[c] && hoard[c] !== 0) coins[c] += rollSpec(hoard[c]);
+      });
+      const magicRow = rollTable(HOARD_MAGIC[tier]);
+      if (magicRow.table && magicRow.count !== 0) {
+        const tableArr = MAGIC_TABLE_MAP[magicRow.table];
+        const numItems = Array.isArray(magicRow.count) ? rollSpec(magicRow.count) : magicRow.count;
+        for (let i = 0; i < numItems; i++) {
+          magicItems.push(pickRandom(tableArr));
+        }
+      }
+    }
+
+    setResult({ coins, magicItems, mode, tier, timestamp: new Date().toLocaleTimeString() });
+  }, [mode, tier, monsterCount]);
+
+  const formatCoins = (coins) => {
+    const labels = { cp:'Copper (cp)', sp:'Silver (sp)', ep:'Electrum (ep)', gp:'Gold (gp)', pp:'Platinum (pp)' };
+    return Object.entries(coins)
+      .filter(([,v]) => v > 0)
+      .map(([k,v]) => `${v.toLocaleString()} ${k}`)
+      .join(', ');
+  };
+
+  const formatFull = (res) => {
+    if (!res) return '';
+    const coinStr = formatCoins(res.coins) || 'No coins';
+    let txt = `[${res.mode === 'individual' ? 'Individual' : 'Hoard'} — CR ${res.tier}] ${coinStr}`;
+    if (res.magicItems && res.magicItems.length > 0) txt += ` | Items: ${res.magicItems.join(', ')}`;
+    return txt;
+  };
+
+  const handleCopy = () => {
+    if (!result) return;
+    navigator.clipboard.writeText(formatFull(result)).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const handleSave = () => {
+    if (!result) return;
+    const entry = {
+      text: formatFull(result),
+      ts: new Date().toLocaleString(),
+    };
+    const updated = [entry, ...log].slice(0, 10);
+    setLog(updated);
+    localStorage.setItem(LOOT_LOG_KEY, JSON.stringify(updated));
+  };
+
+  const clearLog = () => {
+    setLog([]);
+    localStorage.removeItem(LOOT_LOG_KEY);
+  };
+
+  const COIN_LABELS = { cp:'Copper', sp:'Silver', ep:'Electrum', gp:'Gold', pp:'Platinum' };
+
+  return (
+    <div className="loot-tool">
+      {/* LEFT — Configuration */}
+      <div className="loot-panel loot-panel-left">
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>Mode</div>
+          <button
+            className={`loot-mode-btn${mode === 'individual' ? ' active' : ''}`}
+            onClick={() => setMode('individual')}>
+            Individual
+          </button>
+          <button
+            className={`loot-mode-btn${mode === 'hoard' ? ' active' : ''}`}
+            onClick={() => setMode('hoard')}>
+            Hoard
+          </button>
+        </div>
+
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>CR Tier</div>
+          {TIERS.map(t => (
+            <button
+              key={t}
+              className={`loot-tier-pill${tier === t ? ' active' : ''}`}
+              onClick={() => setTier(t)}>
+              CR {t}
+            </button>
+          ))}
+        </div>
+
+        {mode === 'individual' && (
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>
+              Monsters: <span style={{ color: 'var(--gold)' }}>{monsterCount}</span>
+            </div>
+            <input
+              type="range" min={1} max={20} value={monsterCount}
+              onChange={e => setMonsterCount(Number(e.target.value))}
+              style={{ width: '100%', accentColor: 'var(--gold)' }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+              <span>1</span><span>20</span>
+            </div>
+          </div>
+        )}
+
+        <button
+          onClick={roll}
+          style={{ width: '100%', padding: '10px 0', background: 'var(--gold)', color: '#0d0f14', border: 'none', borderRadius: 6, fontFamily: 'var(--font-head)', fontSize: '0.9rem', letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', fontWeight: 700, marginTop: 8 }}>
+          🎲 Roll
+        </button>
+      </div>
+
+      {/* CENTER — Result */}
+      <div className="loot-panel loot-panel-center">
+        <div style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 14 }}>Result</div>
+        {!result ? (
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: 40, textAlign: 'center' }}>
+            Configure and roll to generate loot
+          </div>
+        ) : (
+          <>
+            <div style={{ marginBottom: 12, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              {result.mode === 'individual' ? 'Individual' : 'Hoard'} — CR {result.tier}
+              {result.mode === 'individual' && monsterCount > 1 && ` — ${monsterCount} monsters`}
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              {Object.entries(result.coins).map(([coin, val]) =>
+                val > 0 ? (
+                  <div key={coin} className="loot-coin-row">
+                    <span style={{ color: 'var(--text-dim)' }}>{COIN_LABELS[coin]}</span>
+                    <span style={{ fontWeight: 600, color: 'var(--gold)' }}>{val.toLocaleString()}</span>
+                  </div>
+                ) : null
+              )}
+              {Object.values(result.coins).every(v => v === 0) && (
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No coins</div>
+              )}
+            </div>
+            {result.magicItems && result.magicItems.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>Magic Items</div>
+                {result.magicItems.map((item, i) => (
+                  <div key={i} style={{ fontSize: '0.88rem', padding: '4px 0', color: 'var(--green)' }}>✦ {item}</div>
+                ))}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <button
+                onClick={roll}
+                style={{ flex: 1, padding: '7px 0', background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-dim)', cursor: 'pointer', fontSize: '0.82rem' }}>
+                ↻ Roll Again
+              </button>
+              <button
+                onClick={handleCopy}
+                style={{ flex: 1, padding: '7px 0', background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: copied ? 'var(--green)' : 'var(--text-dim)', cursor: 'pointer', fontSize: '0.82rem' }}>
+                {copied ? '✓ Copied' : '📋 Copy'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* RIGHT — Session Log */}
+      <div className="loot-panel loot-panel-right">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Session Log</div>
+          {log.length > 0 && (
+            <button
+              onClick={clearLog}
+              style={{ fontSize: '0.72rem', background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', padding: 0 }}>
+              Clear Log
+            </button>
+          )}
+        </div>
+        <button
+          onClick={handleSave}
+          disabled={!result}
+          style={{ width: '100%', padding: '7px 0', marginBottom: 14, background: result ? 'rgba(201,168,76,0.12)' : 'none', border: '1px solid var(--border)', borderRadius: 6, color: result ? 'var(--gold)' : 'var(--text-muted)', cursor: result ? 'pointer' : 'default', fontSize: '0.82rem' }}>
+          Save This Loot
+        </button>
+        {log.length === 0 ? (
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>No saved entries yet.</div>
+        ) : (
+          log.map((entry, i) => (
+            <div key={i} className="loot-log-entry">
+              <div>{entry.text}</div>
+              <div style={{ fontSize: '0.7rem', marginTop: 3, opacity: 0.6 }}>{entry.ts}</div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── App ─────────────────────────────────────────────────────────────────────
 const TABS = [
   { id: 'session', label: '📜 Session' },
@@ -4841,6 +5117,7 @@ const TABS = [
   { id: 'lore',    label: '🏰 Lore' },
   { id: 'combat',    label: '⚔️ Combat' },
   { id: 'encounter', label: '⚔ Encounter' },
+  { id: 'loot',      label: '💰 Loot' },
   { id: 'guide',     label: '📚 Guide' },
 ];
 
@@ -4855,7 +5132,7 @@ function App() {
   const [activeCampaign, setActiveCampaign] = useState(saved.activeCampaign || '');
   const [campaigns, setCampaigns] = useState([]);
   const [handoffData, setHandoffData] = useState(null);
-  const [resetKeys, setResetKeys] = useState({ session:0, npc:0, scene:0, lore:0, combat:0, encounter:0, guide:0 });
+  const [resetKeys, setResetKeys] = useState({ session:0, npc:0, scene:0, lore:0, combat:0, encounter:0, loot:0, guide:0 });
   const resetTool = useCallback((id) => setResetKeys(p => ({ ...p, [id]: p[id] + 1 })), []);
   const setActiveTab = useCallback((id) => {
     setActiveTabState(id);
@@ -4931,6 +5208,7 @@ function App() {
                 {t.id === 'lore'    && <LoreBuilderTool />}
                 {t.id === 'combat'    && <CombatTool />}
                 {t.id === 'encounter' && <EncounterHelperTool />}
+                {t.id === 'loot'      && <LootCalculatorTool />}
                 {t.id === 'guide'     && <DMGuideTool />}
               </ToolErrorBoundary>
             </DeferredMount>
