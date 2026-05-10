@@ -513,6 +513,21 @@ input:focus, select:focus { border-color: var(--gold-dim); outline: none; }
 .loot-coin-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
 .loot-log-entry { font-size: 0.78rem; padding: 7px 0; border-bottom: 1px solid var(--border); color: var(--text-muted); line-height: 1.4; }
 
+/* ── Calendar Tool ── */
+.cal-tool { display: flex; gap: 16px; padding: 20px; height: 100%; overflow: hidden; box-sizing: border-box; }
+.cal-left { flex: 3; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; overflow-y: auto; }
+.cal-right { flex: 2; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; overflow-y: auto; }
+.cal-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-top: 12px; }
+.cal-cell { border: 1px solid var(--border); border-radius: 4px; padding: 6px 4px 4px; min-height: 52px; cursor: pointer; position: relative; font-size: 0.75rem; }
+.cal-cell:hover { border-color: var(--gold); }
+.cal-cell.today { border-color: var(--gold); border-width: 2px; }
+.cal-cell.selected { border-color: #5aabcd; border-width: 2px; }
+.cal-cell .day-num { color: var(--text-muted); font-size: 0.7rem; display: block; }
+.cal-cell .weather-icon { font-size: 1.1rem; display: block; text-align: center; margin-top: 2px; }
+.cal-month-nav { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.cal-month-name { flex: 1; text-align: center; font-weight: 600; font-size: 1rem; }
+.cal-save-msg { font-size: 0.82rem; color: var(--green); margin-top: 6px; }
+
 </style>
 </head>
 <body>
@@ -5110,6 +5125,307 @@ function LootCalculatorTool() {
 }
 
 // ─── App ─────────────────────────────────────────────────────────────────────
+// ─── CampaignCalendarTool ─────────────────────────────────────────────────────
+const WEATHER_BY_CLIMATE = {
+  temperate: ["Clear","Clear","Overcast","Light Rain","Heavy Rain","Fog","Snow"],
+  desert:    ["Clear","Clear","Clear","Dust Storm","Scorching","Haze","Clear"],
+  arctic:    ["Blizzard","Heavy Snow","Snow","Overcast","Clear","Ice Fog","Blizzard"],
+  coastal:   ["Clear","Sea Mist","Light Rain","Heavy Rain","Storm","Fog","Clear"],
+  magical:   ["Clear","Magical Glow","Ethereal Mist","Arcane Storm","Eerie Silence","Clear","Faerie Shimmer"],
+};
+const WEATHER_ICONS = {
+  "Clear":"☀️","Overcast":"☁️","Light Rain":"🌧","Heavy Rain":"⛈","Fog":"🌫","Snow":"❄️",
+  "Blizzard":"🌨","Heavy Snow":"🌨","Dust Storm":"🌪","Scorching":"🔥","Haze":"😶‍🌫️","Ice Fog":"🌫",
+  "Sea Mist":"🌊","Storm":"⛈","Magical Glow":"✨","Ethereal Mist":"🌫","Arcane Storm":"⚡",
+  "Eerie Silence":"😶","Faerie Shimmer":"🧚",
+};
+const TEMP_OPTIONS = ["Freezing","Cold","Cool","Warm","Hot"];
+const WEATHER_OPTIONS = ["Clear","Overcast","Light Rain","Heavy Rain","Fog","Snow","Blizzard","Dust Storm","Scorching","Haze","Sea Mist","Storm","Magical","Other"];
+const CLIMATE_OPTIONS = ["temperate","desert","arctic","coastal","magical"];
+
+const DEFAULT_CALENDAR = () => ({
+  currentDay: 1, currentMonth: 0, climate: "temperate",
+  months: Array.from({length: 12}, (_, i) => `Month ${i + 1}`),
+  entries: {}
+});
+
+function CampaignCalendarTool() {
+  const { activeCampaign } = React.useContext(AppContext);
+  const [calData, setCalData] = useState(null);
+  const [viewMonth, setViewMonth] = useState(0);
+  const [selectedDay, setSelectedDay] = useState(null); // {month, day}
+  const [editWeather, setEditWeather] = useState("Clear");
+  const [editTemp, setEditTemp] = useState("Cool");
+  const [editNotes, setEditNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState("");
+  const [renamingMonth, setRenamingMonth] = useState(false);
+  const [renameVal, setRenameVal] = useState("");
+
+  // Load calendar on mount or campaign change
+  useEffect(() => {
+    if (activeCampaign) {
+      fetch(`/api/campaign/${encodeURIComponent(activeCampaign)}/calendar`)
+        .then(r => r.json())
+        .then(data => {
+          setCalData(data);
+          setViewMonth(data.currentMonth || 0);
+        })
+        .catch(() => {
+          const d = DEFAULT_CALENDAR();
+          setCalData(d);
+          setViewMonth(d.currentMonth);
+        });
+    } else {
+      const d = DEFAULT_CALENDAR();
+      setCalData(d);
+      setViewMonth(d.currentMonth);
+    }
+  }, [activeCampaign]);
+
+  // When selectedDay changes, populate right panel
+  useEffect(() => {
+    if (!calData || !selectedDay) return;
+    const key = `${selectedDay.month}-${selectedDay.day}`;
+    const entry = calData.entries[key];
+    if (entry) {
+      setEditWeather(entry.weather || "Clear");
+      setEditTemp(entry.temp || "Cool");
+      setEditNotes(entry.notes || "");
+    } else {
+      setEditWeather("Clear");
+      setEditTemp("Cool");
+      setEditNotes("");
+    }
+  }, [selectedDay]);
+
+  const saveToServer = useCallback(async (newData) => {
+    if (!activeCampaign) return;
+    setSaving(true);
+    try {
+      await fetch(`/api/campaign/${encodeURIComponent(activeCampaign)}/calendar`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(newData)
+      });
+      setSaveMsg("Saved");
+      setTimeout(() => setSaveMsg(""), 2000);
+    } catch(e) {
+      setSaveMsg("Save failed");
+      setTimeout(() => setSaveMsg(""), 2000);
+    } finally {
+      setSaving(false);
+    }
+  }, [activeCampaign]);
+
+  const handleSaveDay = useCallback(() => {
+    if (!selectedDay || !calData) return;
+    const key = `${selectedDay.month}-${selectedDay.day}`;
+    const newData = {
+      ...calData,
+      entries: {
+        ...calData.entries,
+        [key]: { weather: editWeather, temp: editTemp, notes: editNotes }
+      }
+    };
+    setCalData(newData);
+    saveToServer(newData);
+  }, [selectedDay, calData, editWeather, editTemp, editNotes, saveToServer]);
+
+  const handleRollWeather = useCallback(() => {
+    if (!calData) return;
+    const pool = WEATHER_BY_CLIMATE[calData.climate] || WEATHER_BY_CLIMATE.temperate;
+    setEditWeather(pool[Math.floor(Math.random() * pool.length)]);
+  }, [calData]);
+
+  const handleSetToday = useCallback(() => {
+    if (!selectedDay || !calData) return;
+    const newData = { ...calData, currentDay: selectedDay.day, currentMonth: selectedDay.month };
+    setCalData(newData);
+    saveToServer(newData);
+  }, [selectedDay, calData, saveToServer]);
+
+  const handleClimateChange = useCallback((e) => {
+    if (!calData) return;
+    const newData = { ...calData, climate: e.target.value };
+    setCalData(newData);
+    saveToServer(newData);
+  }, [calData, saveToServer]);
+
+  const handlePrevMonth = () => setViewMonth(m => Math.max(0, m - 1));
+  const handleNextMonth = () => setViewMonth(m => Math.min((calData?.months?.length || 12) - 1, m + 1));
+
+  const handleMonthNameSave = useCallback(() => {
+    if (!calData || !renameVal.trim()) { setRenamingMonth(false); return; }
+    const months = [...calData.months];
+    months[viewMonth] = renameVal.trim();
+    const newData = { ...calData, months };
+    setCalData(newData);
+    setRenamingMonth(false);
+    saveToServer(newData);
+  }, [calData, renameVal, viewMonth, saveToServer]);
+
+  const handlePrevDay = useCallback(() => {
+    if (!selectedDay) return;
+    let { month, day } = selectedDay;
+    day--;
+    if (day < 1) { month = Math.max(0, month - 1); day = 30; }
+    setSelectedDay({ month, day });
+    if (month !== viewMonth) setViewMonth(month);
+  }, [selectedDay, viewMonth]);
+
+  const handleNextDay = useCallback(() => {
+    if (!calData) return;
+    const maxMonth = (calData.months?.length || 12) - 1;
+    let { month, day } = selectedDay || { month: viewMonth, day: 0 };
+    day++;
+    if (day > 30) { month = Math.min(maxMonth, month + 1); day = 1; }
+    // Also advance "today" if next day is triggered from today
+    const newData = { ...calData, currentDay: day, currentMonth: month };
+    setCalData(newData);
+    setSelectedDay({ month, day });
+    if (month !== viewMonth) setViewMonth(month);
+    saveToServer(newData);
+  }, [selectedDay, calData, viewMonth, saveToServer]);
+
+  const handleGoToToday = useCallback(() => {
+    if (!calData) return;
+    setSelectedDay({ month: calData.currentMonth, day: calData.currentDay });
+    setViewMonth(calData.currentMonth);
+  }, [calData]);
+
+  if (!calData) return React.createElement('div', {style:{padding:20,color:'var(--text-muted)'}}, 'Loading calendar…');
+
+  const monthName = calData.months[viewMonth] || `Month ${viewMonth + 1}`;
+  const entryKey = selectedDay ? `${selectedDay.month}-${selectedDay.day}` : null;
+
+  return (
+    <div className="cal-tool">
+      {/* LEFT: Calendar Grid */}
+      <div className="cal-left">
+        <div style={{display:'flex', alignItems:'center', gap:12, marginBottom:16}}>
+          <label style={{fontSize:'0.82rem', color:'var(--text-muted)'}}>Climate:</label>
+          <select value={calData.climate} onChange={handleClimateChange}
+            style={{background:'var(--bg-card)',color:'var(--text-dim)',border:'1px solid var(--border)',borderRadius:4,padding:'3px 8px',fontSize:'0.85rem'}}>
+            {CLIMATE_OPTIONS.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}
+          </select>
+        </div>
+
+        <div className="cal-month-nav">
+          <button onClick={handlePrevMonth} disabled={viewMonth === 0}
+            style={{background:'none',border:'1px solid var(--border)',color:'var(--text-dim)',borderRadius:4,padding:'3px 10px',cursor:'pointer'}}>← Prev</button>
+
+          {renamingMonth ? (
+            <div style={{flex:1,display:'flex',gap:6,justifyContent:'center'}}>
+              <input value={renameVal} onChange={e=>setRenameVal(e.target.value)}
+                onKeyDown={e=>{if(e.key==='Enter')handleMonthNameSave();if(e.key==='Escape')setRenamingMonth(false);}}
+                style={{width:'60%',background:'var(--bg-card)',color:'var(--text-dim)',border:'1px solid var(--gold)',borderRadius:4,padding:'3px 8px',textAlign:'center'}}
+                autoFocus />
+              <button onClick={handleMonthNameSave} style={{background:'none',border:'1px solid var(--green)',color:'var(--green)',borderRadius:4,padding:'3px 8px',cursor:'pointer',fontSize:'0.8rem'}}>✓</button>
+            </div>
+          ) : (
+            <span className="cal-month-name" title="Click to rename"
+              onClick={()=>{setRenamingMonth(true);setRenameVal(monthName);}}
+              style={{cursor:'pointer', color:'var(--text-dim)'}}>
+              {monthName}
+            </span>
+          )}
+
+          <button onClick={handleNextMonth} disabled={viewMonth >= (calData.months?.length||12)-1}
+            style={{background:'none',border:'1px solid var(--border)',color:'var(--text-dim)',borderRadius:4,padding:'3px 10px',cursor:'pointer'}}>Next →</button>
+        </div>
+
+        <div className="cal-grid">
+          {Array.from({length: 30}, (_, i) => {
+            const dayNum = i + 1;
+            const key = `${viewMonth}-${dayNum}`;
+            const entry = calData.entries[key];
+            const isToday = calData.currentMonth === viewMonth && calData.currentDay === dayNum;
+            const isSel = selectedDay && selectedDay.month === viewMonth && selectedDay.day === dayNum;
+            let cls = "cal-cell";
+            if (isToday) cls += " today";
+            if (isSel) cls += " selected";
+            return (
+              <div key={dayNum} className={cls}
+                onClick={() => setSelectedDay({ month: viewMonth, day: dayNum })}>
+                <span className="day-num">{dayNum}</span>
+                {entry && <span className="weather-icon">{WEATHER_ICONS[entry.weather] || '🌡'}</span>}
+              </div>
+            );
+          })}
+        </div>
+
+        {selectedDay && (
+          <div style={{marginTop:12}}>
+            <button onClick={handleSetToday}
+              style={{background:'none',border:'1px solid var(--gold)',color:'var(--gold)',borderRadius:4,padding:'5px 14px',cursor:'pointer',fontSize:'0.82rem'}}>
+              📌 Set as Today
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* RIGHT: Day Editor */}
+      <div className="cal-right">
+        {!selectedDay ? (
+          <p style={{color:'var(--text-muted)',fontSize:'0.9rem',marginTop:8}}>Select a day on the calendar to edit it.</p>
+        ) : (
+          <>
+            <h3 style={{margin:'0 0 16px',color:'var(--gold)',fontSize:'1rem'}}>
+              Day {selectedDay.day}, {calData.months[selectedDay.month] || `Month ${selectedDay.month+1}`}
+            </h3>
+
+            <div style={{marginBottom:12}}>
+              <label style={{display:'block',fontSize:'0.8rem',color:'var(--text-muted)',marginBottom:4}}>Weather</label>
+              <select value={editWeather} onChange={e=>setEditWeather(e.target.value)}
+                style={{width:'100%',background:'var(--bg-card)',color:'var(--text-dim)',border:'1px solid var(--border)',borderRadius:4,padding:'5px 8px',fontSize:'0.9rem'}}>
+                {WEATHER_OPTIONS.map(w=><option key={w} value={w}>{WEATHER_ICONS[w]||''} {w}</option>)}
+              </select>
+            </div>
+
+            <div style={{marginBottom:12}}>
+              <label style={{display:'block',fontSize:'0.8rem',color:'var(--text-muted)',marginBottom:4}}>Temperature</label>
+              <select value={editTemp} onChange={e=>setEditTemp(e.target.value)}
+                style={{width:'100%',background:'var(--bg-card)',color:'var(--text-dim)',border:'1px solid var(--border)',borderRadius:4,padding:'5px 8px',fontSize:'0.9rem'}}>
+                {TEMP_OPTIONS.map(t=><option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+
+            <div style={{marginBottom:12}}>
+              <label style={{display:'block',fontSize:'0.8rem',color:'var(--text-muted)',marginBottom:4}}>Notes</label>
+              <textarea value={editNotes} onChange={e=>setEditNotes(e.target.value)}
+                rows={5} placeholder="What happened this day…"
+                style={{width:'100%',background:'var(--bg-card)',color:'var(--text-dim)',border:'1px solid var(--border)',borderRadius:4,padding:'6px 8px',fontSize:'0.85rem',resize:'vertical',boxSizing:'border-box'}} />
+            </div>
+
+            <div style={{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap'}}>
+              <button onClick={handleRollWeather}
+                style={{background:'none',border:'1px solid var(--border)',color:'var(--text-dim)',borderRadius:4,padding:'6px 12px',cursor:'pointer',fontSize:'0.85rem'}}>
+                🎲 Roll Weather
+              </button>
+              <button onClick={handleSaveDay} disabled={saving}
+                style={{background:'rgba(201,168,76,0.15)',border:'1px solid var(--gold)',color:'var(--gold)',borderRadius:4,padding:'6px 14px',cursor:'pointer',fontSize:'0.85rem',fontWeight:600}}>
+                {saving ? 'Saving…' : 'Save Day'}
+              </button>
+            </div>
+
+            {saveMsg && <div className="cal-save-msg">{saveMsg}</div>}
+
+            <div style={{display:'flex',gap:8,marginTop:16,borderTop:'1px solid var(--border)',paddingTop:14,flexWrap:'wrap'}}>
+              <button onClick={handlePrevDay}
+                style={{background:'none',border:'1px solid var(--border)',color:'var(--text-dim)',borderRadius:4,padding:'5px 10px',cursor:'pointer',fontSize:'0.82rem'}}>← Prev Day</button>
+              <button onClick={handleGoToToday}
+                style={{background:'none',border:'1px solid var(--border)',color:'var(--text-dim)',borderRadius:4,padding:'5px 10px',cursor:'pointer',fontSize:'0.82rem',flex:1}}>Today</button>
+              <button onClick={handleNextDay}
+                style={{background:'none',border:'1px solid var(--border)',color:'var(--text-dim)',borderRadius:4,padding:'5px 10px',cursor:'pointer',fontSize:'0.82rem'}}>Next Day →</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const TABS = [
   { id: 'session', label: '📜 Session' },
   { id: 'npc',     label: '🎭 NPC Forge' },
@@ -5118,6 +5434,7 @@ const TABS = [
   { id: 'combat',    label: '⚔️ Combat' },
   { id: 'encounter', label: '⚔ Encounter' },
   { id: 'loot',      label: '💰 Loot' },
+  { id: 'calendar',  label: '📅 Calendar' },
   { id: 'guide',     label: '📚 Guide' },
 ];
 
@@ -5132,7 +5449,7 @@ function App() {
   const [activeCampaign, setActiveCampaign] = useState(saved.activeCampaign || '');
   const [campaigns, setCampaigns] = useState([]);
   const [handoffData, setHandoffData] = useState(null);
-  const [resetKeys, setResetKeys] = useState({ session:0, npc:0, scene:0, lore:0, combat:0, encounter:0, loot:0, guide:0 });
+  const [resetKeys, setResetKeys] = useState({ session:0, npc:0, scene:0, lore:0, combat:0, encounter:0, loot:0, calendar:0, guide:0 });
   const resetTool = useCallback((id) => setResetKeys(p => ({ ...p, [id]: p[id] + 1 })), []);
   const setActiveTab = useCallback((id) => {
     setActiveTabState(id);
@@ -5209,6 +5526,7 @@ function App() {
                 {t.id === 'combat'    && <CombatTool />}
                 {t.id === 'encounter' && <EncounterHelperTool />}
                 {t.id === 'loot'      && <LootCalculatorTool />}
+                {t.id === 'calendar'  && <CampaignCalendarTool />}
                 {t.id === 'guide'     && <DMGuideTool />}
               </ToolErrorBoundary>
             </DeferredMount>

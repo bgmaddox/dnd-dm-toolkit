@@ -968,6 +968,30 @@ async def save_campaign_entity(req: SaveEntityRequest):
     return {"ok": True, "path": str(file_path)}
 
 
+@app.get("/api/campaign/{name}/calendar")
+async def get_calendar(name: str):
+    if not _re.match(r"^[a-zA-Z0-9_\- ]+$", name):
+        raise HTTPException(status_code=400, detail="Invalid campaign name")
+    cal_path = CAMPAIGN_BASE / name / "calendar.json"
+    if cal_path.exists():
+        return json.loads(cal_path.read_text())
+    return {
+        "currentDay": 1, "currentMonth": 0, "climate": "temperate",
+        "months": [f"Month {i+1}" for i in range(12)],
+        "entries": {}
+    }
+
+@app.post("/api/campaign/{name}/calendar")
+async def save_calendar(name: str, body: dict):
+    if not _re.match(r"^[a-zA-Z0-9_\- ]+$", name):
+        raise HTTPException(status_code=400, detail="Invalid campaign name")
+    camp_dir = CAMPAIGN_BASE / name
+    camp_dir.mkdir(parents=True, exist_ok=True)
+    cal_path = camp_dir / "calendar.json"
+    cal_path.write_text(json.dumps(body, indent=2))
+    return {"ok": True}
+
+
 # Redirects from old individual tool URLs to the merged SPA
 from fastapi import Request
 from fastapi.responses import RedirectResponse
