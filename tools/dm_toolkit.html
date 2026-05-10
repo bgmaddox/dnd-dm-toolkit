@@ -528,6 +528,27 @@ input:focus, select:focus { border-color: var(--gold-dim); outline: none; }
 .cal-month-name { flex: 1; text-align: center; font-weight: 600; font-size: 1rem; }
 .cal-save-msg { font-size: 0.82rem; color: var(--green); margin-top: 6px; }
 
+/* ── AmbianceTool ── */
+.amb-tool { display: flex; gap: 16px; padding: 20px; height: 100%; overflow: hidden; box-sizing: border-box; }
+.amb-left { flex: 0 0 200px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+.amb-center { flex: 1; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.amb-right { flex: 0 0 220px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; overflow-y: auto; }
+.amb-preset-card { padding: 14px 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; text-align: center; transition: border-color 0.15s; }
+.amb-preset-card:hover { border-color: var(--text-dim); }
+.amb-preset-card.active { border-color: var(--gold); background: rgba(201,168,76,0.08); }
+.amb-preset-icon { font-size: 1.8rem; display: block; margin-bottom: 4px; }
+.amb-preset-label { font-size: 0.8rem; color: var(--text-dim); }
+.amb-play-btn { width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--gold); background: none; color: var(--gold); font-size: 1.6rem; cursor: pointer; margin: 16px 0; display: flex; align-items: center; justify-content: center; }
+.amb-play-btn:hover { background: rgba(201,168,76,0.1); }
+.amb-play-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.amb-track-name { font-size: 1.1rem; font-weight: 600; margin-bottom: 4px; }
+.amb-track-artist { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 8px; }
+.amb-attribution { font-size: 0.72rem; color: var(--text-dim); margin-top: auto; padding-top: 16px; font-style: italic; }
+.amb-sfx-btn { display: block; width: 100%; text-align: left; padding: 9px 12px; background: none; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 6px; }
+.amb-sfx-btn:hover { border-color: var(--text-dim); color: var(--text); background: rgba(255,255,255,0.03); }
+.amb-volume-row { display: flex; align-items: center; gap: 10px; margin: 12px 0; font-size: 0.82rem; color: var(--text-muted); width: 100%; }
+.amb-volume-row input[type=range] { flex: 1; }
+
 </style>
 </head>
 <body>
@@ -5426,6 +5447,210 @@ function CampaignCalendarTool() {
   );
 }
 
+// ─── AmbianceTool ────────────────────────────────────────────────────────────
+const AMBIANCE_PRESETS = [
+  { id:"tavern",   label:"Tavern",   icon:"🍺", track:"Constancy Part Three",    artist:"Kevin MacLeod", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Constancy%20Part%20Three.mp3" },
+  { id:"dungeon",  label:"Dungeon",  icon:"🏚", track:"Ominous",                 artist:"Kevin MacLeod", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Ominous.mp3" },
+  { id:"forest",   label:"Forest",   icon:"🌲", track:"The Forest and the Trees", artist:"Kevin MacLeod", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/The%20Forest%20and%20the%20Trees.mp3" },
+  { id:"combat",   label:"Combat",   icon:"⚔",  track:"Clash Defiant",           artist:"Kevin MacLeod", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Clash%20Defiant.mp3" },
+  { id:"mystical", label:"Mystical", icon:"✨", track:"Floating Cities",          artist:"Kevin MacLeod", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Floating%20Cities.mp3" },
+  { id:"town",     label:"Town",     icon:"🏘", track:"Merry Go",                artist:"Kevin MacLeod", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Merry%20Go.mp3" },
+  { id:"storm",    label:"Storm",    icon:"🌩", track:"Stormfront",              artist:"Kevin MacLeod", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Stormfront.mp3" },
+];
+
+const SFX_LIST = [
+  { id:"thunder",       icon:"⚡", label:"Thunder" },
+  { id:"swordClash",    icon:"⚔", label:"Sword Clash" },
+  { id:"magicShimmer",  icon:"✨", label:"Magic Shimmer" },
+  { id:"doorCreak",     icon:"🚪", label:"Door Creak" },
+  { id:"tavernCheer",   icon:"🍺", label:"Tavern Cheer" },
+  { id:"cracklingFire", icon:"🔥", label:"Crackling Fire" },
+  { id:"dramaticSting", icon:"🎵", label:"Dramatic Sting" },
+];
+
+function playSfx(type, volume = 0.5) {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const gain = ctx.createGain();
+  gain.connect(ctx.destination);
+  gain.gain.value = volume;
+
+  const configs = {
+    thunder: () => {
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 1.5, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.max(0, 1 - i / (ctx.sampleRate * 1.5));
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 300;
+      src.connect(lp); lp.connect(gain); src.start();
+    },
+    swordClash: () => {
+      const o = ctx.createOscillator(); o.type = 'sawtooth';
+      o.frequency.setValueAtTime(800, ctx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.3);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(1, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      o.connect(g); g.connect(gain); o.start(); o.stop(ctx.currentTime + 0.4);
+    },
+    magicShimmer: () => {
+      [523, 659, 784, 1047].forEach((f, i) => {
+        const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0, ctx.currentTime + i * 0.08);
+        g.gain.linearRampToValueAtTime(0.3, ctx.currentTime + i * 0.08 + 0.05);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.08 + 0.5);
+        o.connect(g); g.connect(gain);
+        o.start(ctx.currentTime + i * 0.08); o.stop(ctx.currentTime + i * 0.08 + 0.6);
+      });
+    },
+    doorCreak: () => {
+      const o = ctx.createOscillator(); o.type = 'sawtooth';
+      o.frequency.setValueAtTime(150, ctx.currentTime);
+      o.frequency.linearRampToValueAtTime(80, ctx.currentTime + 0.8);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.4, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.9);
+      o.connect(g); g.connect(gain); o.start(); o.stop(ctx.currentTime + 0.9);
+    },
+    tavernCheer: () => {
+      for (let i = 0; i < 8; i++) {
+        const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = 200 + Math.random() * 400;
+        const g = ctx.createGain(); const t = ctx.currentTime + Math.random() * 0.3;
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.15, t + 0.05);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+        o.connect(g); g.connect(gain); o.start(t); o.stop(t + 0.5);
+      }
+    },
+    cracklingFire: () => {
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.8, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.3;
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 2000;
+      src.connect(hp); hp.connect(gain); src.start();
+    },
+    dramaticSting: () => {
+      [220, 277, 330].forEach((f, i) => {
+        const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = f;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.3, ctx.currentTime + i * 0.15);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 0.5);
+        o.connect(g); g.connect(gain);
+        o.start(ctx.currentTime + i * 0.15); o.stop(ctx.currentTime + i * 0.15 + 0.6);
+      });
+    },
+  };
+  const fn = configs[type];
+  if (fn) fn();
+  setTimeout(() => ctx.close(), 3000);
+}
+
+function AmbianceTool() {
+  const audioRef = useRef(null);
+  const [activePreset, setActivePreset] = useState(null);
+  const [playing, setPlaying] = useState(false);
+  const [musicVolume, setMusicVolume] = useState(70);
+  const [sfxVolume, setSfxVolume] = useState(80);
+  const [audioError, setAudioError] = useState(false);
+
+  useEffect(() => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+      audioRef.current.loop = true;
+    }
+    return () => { audioRef.current?.pause(); };
+  }, []);
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = musicVolume / 100;
+  }, [musicVolume]);
+
+  function selectPreset(preset) {
+    const audio = audioRef.current;
+    if (!audio) return;
+    setAudioError(false);
+    if (activePreset?.id === preset.id) {
+      if (playing) { audio.pause(); setPlaying(false); }
+      else { audio.play().then(() => setPlaying(true)).catch(() => setAudioError(true)); }
+      return;
+    }
+    audio.pause();
+    audio.src = preset.url;
+    audio.volume = musicVolume / 100;
+    setActivePreset(preset);
+    audio.play().then(() => setPlaying(true)).catch(() => setAudioError(true));
+  }
+
+  return (
+    <div className="amb-tool">
+      {/* Left — Preset Cards */}
+      <div className="amb-left">
+        {AMBIANCE_PRESETS.map(p => (
+          <div
+            key={p.id}
+            className={`amb-preset-card${activePreset?.id === p.id ? ' active' : ''}`}
+            onClick={() => selectPreset(p)}
+          >
+            <span className="amb-preset-icon">{p.icon}</span>
+            <span className="amb-preset-label">{p.label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Center — Music Player */}
+      <div className="amb-center">
+        <div className="amb-track-name">{activePreset ? activePreset.track : 'No track selected'}</div>
+        {activePreset && <div className="amb-track-artist">{activePreset.artist}</div>}
+        <button
+          className="amb-play-btn"
+          disabled={!activePreset || audioError}
+          onClick={() => activePreset && selectPreset(activePreset)}
+          title={playing ? 'Pause' : 'Play'}
+        >
+          {playing ? '⏸' : '▶'}
+        </button>
+        {audioError && (
+          <div style={{color:'var(--gold)',fontSize:'0.85rem',marginBottom:8}}>
+            ⚠ Audio unavailable — check network connection
+          </div>
+        )}
+        <div className="amb-volume-row">
+          <span>Music Volume</span>
+          <input
+            type="range" min="0" max="100" value={musicVolume}
+            onChange={e => setMusicVolume(Number(e.target.value))}
+          />
+          <span>{musicVolume}%</span>
+        </div>
+        <div style={{fontSize:'0.82rem',color:'var(--text-muted)',marginTop:4}}>🔁 Always looping</div>
+        <div className="amb-attribution">Music: Kevin MacLeod / incompetech.com — CC BY 3.0</div>
+      </div>
+
+      {/* Right — SFX Panel */}
+      <div className="amb-right">
+        <div style={{fontWeight:600,marginBottom:12,fontSize:'0.9rem'}}>Sound Effects</div>
+        <div className="amb-volume-row">
+          <span>SFX Vol</span>
+          <input
+            type="range" min="0" max="100" value={sfxVolume}
+            onChange={e => setSfxVolume(Number(e.target.value))}
+          />
+          <span>{sfxVolume}%</span>
+        </div>
+        {SFX_LIST.map(sfx => (
+          <button
+            key={sfx.id}
+            className="amb-sfx-btn"
+            onClick={() => playSfx(sfx.id, sfxVolume / 100)}
+          >
+            {sfx.icon} {sfx.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const TABS = [
   { id: 'session', label: '📜 Session' },
   { id: 'npc',     label: '🎭 NPC Forge' },
@@ -5435,6 +5660,7 @@ const TABS = [
   { id: 'encounter', label: '⚔ Encounter' },
   { id: 'loot',      label: '💰 Loot' },
   { id: 'calendar',  label: '📅 Calendar' },
+  { id: 'ambiance',  label: '🎵 Ambiance' },
   { id: 'guide',     label: '📚 Guide' },
 ];
 
@@ -5449,7 +5675,7 @@ function App() {
   const [activeCampaign, setActiveCampaign] = useState(saved.activeCampaign || '');
   const [campaigns, setCampaigns] = useState([]);
   const [handoffData, setHandoffData] = useState(null);
-  const [resetKeys, setResetKeys] = useState({ session:0, npc:0, scene:0, lore:0, combat:0, encounter:0, loot:0, calendar:0, guide:0 });
+  const [resetKeys, setResetKeys] = useState({ session:0, npc:0, scene:0, lore:0, combat:0, encounter:0, loot:0, calendar:0, ambiance:0, guide:0 });
   const resetTool = useCallback((id) => setResetKeys(p => ({ ...p, [id]: p[id] + 1 })), []);
   const setActiveTab = useCallback((id) => {
     setActiveTabState(id);
@@ -5527,6 +5753,7 @@ function App() {
                 {t.id === 'encounter' && <EncounterHelperTool />}
                 {t.id === 'loot'      && <LootCalculatorTool />}
                 {t.id === 'calendar'  && <CampaignCalendarTool />}
+                {t.id === 'ambiance'  && <AmbianceTool />}
                 {t.id === 'guide'     && <DMGuideTool />}
               </ToolErrorBoundary>
             </DeferredMount>
