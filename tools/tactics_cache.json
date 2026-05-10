@@ -6,5 +6,32 @@
       "Falls back behind cover, terrain, or allies when forced into melee, relying on AC 15 to weather hits while repositioning for ranged attacks"
     ],
     "flee_threshold": "Flees at ~50% HP (4 HP) or immediately if cornered with no escape route \u2014 goblins are cowardly opportunists who fight only when they have numerical advantage or a safe retreat path; a wounded goblin alone prioritizes survival over combat honor."
+  },
+  "hobgoblin": {
+    "tactics": [
+      "Maintains formation with allies, using shield and high AC (18) defensively while allowing ranged attackers to operate safely behind the line",
+      "Focuses fire on the most dangerous immediate threat (spellcasters or high-damage dealers) to eliminate threats before they can deal maximum damage",
+      "Uses the Parry reaction when available to reduce incoming damage, demonstrating tactical discipline and self-preservation instinct",
+      "Positions itself to protect weaker allies or control chokepoints, leveraging hobgoblin military discipline and coordinated tactics"
+    ],
+    "flee_threshold": "Flees at ~25% HP (around 3 HP remaining) if the hobgoblin's unit is broken or will be routed \u2014 hobgoblin culture values organized retreat and tactical discipline over suicidal last stands, and a severely wounded hobgoblin would abandon a lost position to regroup with its warband."
+  },
+  "bearded-devil": {
+    "tactics": [
+      "Closes to melee range aggressively using its 30 ft. speed, relying on natural armor and HP pool to absorb damage while dealing consistent damage with its attacks",
+      "Uses its Beard ability to grapple and restrain enemies, locking down dangerous melee combatants or spellcasters to control the battlefield",
+      "Employs infernal resilience and damage resistance where applicable to outlast opponents in prolonged melee exchanges, forcing attrition in its favor",
+      "Positions itself to protect weaker allies or hold strategic ground, acting as a reliable infernal enforcer that doesn't need to retreat unless truly overwhelmed"
+    ],
+    "flee_threshold": "Flees at ~25% HP (13 HP) if outmatched by multiple strong opponents or facing imminent death \u2014 devils are pragmatic servants of Hell and abandon losing battles to report to their masters or regroup, rather than waste themselves pointlessly."
+  },
+  "vampire": {
+    "tactics": [
+      "Uses legendary actions and high mobility to stay away from multiple enemies; prefers to charm humanoids and turn them against the party rather than engage directly",
+      "Relies on Charm Person and hypnotic gaze to neutralize threats before combat escalates; concentrates on isolating single targets away from the group",
+      "Leverages regeneration (regains 20 HP at start of turn if has at least 1 HP) by withdrawing briefly to allow healing; uses Misty Step to reposition around difficult terrain and cover",
+      "Targets spellcasters and clerics first to prevent turn undead and dispel magic; uses children or charmed minions as shields and sources of blood to maintain survivability"
+    ],
+    "flee_threshold": "Flees at ~50% HP (72 HP) if significantly outnumbered, cornered, or exposed to sunlight \u2014 vampires are pragmatic hunters with centuries of survival instinct; a tactical retreat allows them to regroup, rebuild thrall networks, and strike when odds favor them. They rarely fight to final destruction."
   }
 }

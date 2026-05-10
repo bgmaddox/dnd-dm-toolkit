@@ -916,6 +916,13 @@ async def save_campaign_entity(req: SaveEntityRequest):
     return {"ok": True, "path": str(file_path)}
 
 
+# Redirects from old individual tool URLs to the merged SPA
+from fastapi.responses import RedirectResponse
+_OLD_TOOLS = ["combat_companion", "dm_learning_guide", "lore_builder", "npc_forge", "scene_painter", "session_companion"]
+for _slug in _OLD_TOOLS:
+    _path = f"/tools/{_slug}.html"
+    app.add_api_route(_path, lambda req, p=_path: RedirectResponse("/tools/dm_toolkit.html", status_code=301), methods=["GET"])
+
 # Serve tool HTML files directly at /tools/<name>.html
 app.mount("/tools", StaticFiles(directory=str(TOOLS_DIR), html=False), name="tools")
 
