@@ -5449,13 +5449,41 @@ function CampaignCalendarTool() {
 
 // ─── AmbianceTool ────────────────────────────────────────────────────────────
 const AMBIANCE_PRESETS = [
-  { id:"tavern",   label:"Tavern",   icon:"🍺", track:"Constancy Part Three",    artist:"Kevin MacLeod", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Constancy%20Part%20Three.mp3" },
-  { id:"dungeon",  label:"Dungeon",  icon:"🏚", track:"Ominous",                 artist:"Kevin MacLeod", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Ominous.mp3" },
-  { id:"forest",   label:"Forest",   icon:"🌲", track:"The Forest and the Trees", artist:"Kevin MacLeod", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/The%20Forest%20and%20the%20Trees.mp3" },
-  { id:"combat",   label:"Combat",   icon:"⚔",  track:"Clash Defiant",           artist:"Kevin MacLeod", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Clash%20Defiant.mp3" },
-  { id:"mystical", label:"Mystical", icon:"✨", track:"Floating Cities",          artist:"Kevin MacLeod", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Floating%20Cities.mp3" },
-  { id:"town",     label:"Town",     icon:"🏘", track:"Merry Go",                artist:"Kevin MacLeod", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Merry%20Go.mp3" },
-  { id:"storm",    label:"Storm",    icon:"🌩", track:"Stormfront",              artist:"Kevin MacLeod", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Stormfront.mp3" },
+  { id:"tavern",   label:"Tavern",   icon:"🍺", tracks:[
+    { title:"Constancy Part Three", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Constancy%20Part%20Three.mp3" },
+    { title:"Fluffing a Duck",      url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Fluffing%20a%20Duck.mp3" },
+    { title:"Sneaky Snitch",        url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Sneaky%20Snitch.mp3" },
+  ]},
+  { id:"dungeon",  label:"Dungeon",  icon:"🏚", tracks:[
+    { title:"Ominous",        url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Ominous.mp3" },
+    { title:"Darkest Child",  url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Darkest%20Child.mp3" },
+    { title:"Lightless Dawn", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Lightless%20Dawn.mp3" },
+  ]},
+  { id:"forest",   label:"Forest",   icon:"🌲", tracks:[
+    { title:"The Forest and the Trees", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/The%20Forest%20and%20the%20Trees.mp3" },
+    { title:"Enchanted Journey",        url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Enchanted%20Journey.mp3" },
+    { title:"Hidden Agenda",            url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Hidden%20Agenda.mp3" },
+  ]},
+  { id:"combat",   label:"Combat",   icon:"⚔",  tracks:[
+    { title:"Clash Defiant",       url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Clash%20Defiant.mp3" },
+    { title:"Master of the Feast", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Master%20of%20the%20Feast.mp3" },
+    { title:"Volatile Reaction",   url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Volatile%20Reaction.mp3" },
+  ]},
+  { id:"mystical", label:"Mystical", icon:"✨", tracks:[
+    { title:"Floating Cities", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Floating%20Cities.mp3" },
+    { title:"Wizardtorium",    url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Wizardtorium.mp3" },
+    { title:"Unseen Horrors",  url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Unseen%20Horrors.mp3" },
+  ]},
+  { id:"town",     label:"Town",     icon:"🏘", tracks:[
+    { title:"Merry Go",  url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Merry%20Go.mp3" },
+    { title:"Carefree",  url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Carefree.mp3" },
+    { title:"Vivacity",  url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Vivacity.mp3" },
+  ]},
+  { id:"storm",    label:"Storm",    icon:"🌩", tracks:[
+    { title:"Stormfront",  url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Stormfront.mp3" },
+    { title:"Unrelenting", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Unrelenting.mp3" },
+    { title:"Dark Times",  url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Dark%20Times.mp3" },
+  ]},
 ];
 
 const SFX_LIST = [
@@ -5470,84 +5498,158 @@ const SFX_LIST = [
 
 function playSfx(type, volume = 0.5) {
   const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const gain = ctx.createGain();
-  gain.connect(ctx.destination);
-  gain.gain.value = volume;
+  const master = ctx.createGain();
+  master.gain.value = volume;
+  master.connect(ctx.destination);
+
+  const noise = (duration) => {
+    const buf = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource(); src.buffer = buf; return src;
+  };
 
   const configs = {
     thunder: () => {
-      const buf = ctx.createBuffer(1, ctx.sampleRate * 1.5, ctx.sampleRate);
-      const d = buf.getChannelData(0);
-      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.max(0, 1 - i / (ctx.sampleRate * 1.5));
-      const src = ctx.createBufferSource(); src.buffer = buf;
-      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 300;
-      src.connect(lp); lp.connect(gain); src.start();
+      // Sharp crack: noise burst through highpass
+      const crack = noise(0.12);
+      const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1200;
+      const crackGain = ctx.createGain();
+      crackGain.gain.setValueAtTime(1.2, ctx.currentTime);
+      crackGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+      crack.connect(hp); hp.connect(crackGain); crackGain.connect(master); crack.start();
+      // Rolling rumble: noise through lowpass, long decay
+      const rumble = noise(2.5);
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 180;
+      const rumbleGain = ctx.createGain();
+      rumbleGain.gain.setValueAtTime(0, ctx.currentTime);
+      rumbleGain.gain.linearRampToValueAtTime(0.9, ctx.currentTime + 0.05);
+      rumbleGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2.5);
+      rumble.connect(lp); lp.connect(rumbleGain); rumbleGain.connect(master); rumble.start();
     },
     swordClash: () => {
-      const o = ctx.createOscillator(); o.type = 'sawtooth';
-      o.frequency.setValueAtTime(800, ctx.currentTime);
-      o.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.3);
-      const g = ctx.createGain();
-      g.gain.setValueAtTime(1, ctx.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-      o.connect(g); g.connect(gain); o.start(); o.stop(ctx.currentTime + 0.4);
+      // Metallic clang: layered harmonics with instant attack, fast ring-out
+      [440, 660, 880, 1320, 1760].forEach((f, i) => {
+        const o = ctx.createOscillator(); o.type = i < 2 ? 'sawtooth' : 'triangle';
+        o.frequency.value = f * (1 + (Math.random() - 0.5) * 0.04);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.5 / (i + 1), ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05 + i * 0.06);
+        o.connect(g); g.connect(master); o.start(); o.stop(ctx.currentTime + 0.4);
+      });
+      // Impact thud: brief noise burst
+      const imp = noise(0.04);
+      const impGain = ctx.createGain();
+      impGain.gain.setValueAtTime(0.8, ctx.currentTime);
+      impGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+      imp.connect(impGain); impGain.connect(master); imp.start();
     },
     magicShimmer: () => {
-      [523, 659, 784, 1047].forEach((f, i) => {
-        const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f;
-        const g = ctx.createGain();
-        g.gain.setValueAtTime(0, ctx.currentTime + i * 0.08);
-        g.gain.linearRampToValueAtTime(0.3, ctx.currentTime + i * 0.08 + 0.05);
-        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.08 + 0.5);
-        o.connect(g); g.connect(gain);
-        o.start(ctx.currentTime + i * 0.08); o.stop(ctx.currentTime + i * 0.08 + 0.6);
+      // Bell-like tones at pentatonic intervals, with slow fade-in shimmer
+      [523, 698, 784, 1047, 1175, 1568].forEach((f, i) => {
+        const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = f;
+        // Slight vibrato via detune LFO
+        const lfo = ctx.createOscillator(); lfo.frequency.value = 5 + i;
+        const lfoGain = ctx.createGain(); lfoGain.gain.value = 8;
+        lfo.connect(lfoGain); lfoGain.connect(o.detune);
+        const g = ctx.createGain(); const t = ctx.currentTime + i * 0.07;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.22, t + 0.06);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+        o.connect(g); g.connect(master);
+        lfo.start(t); o.start(t); o.stop(t + 0.9); lfo.stop(t + 0.9);
       });
     },
     doorCreak: () => {
-      const o = ctx.createOscillator(); o.type = 'sawtooth';
-      o.frequency.setValueAtTime(150, ctx.currentTime);
-      o.frequency.linearRampToValueAtTime(80, ctx.currentTime + 0.8);
+      // FM creak: carrier modulated by a slowly shifting modulator
+      const carrier = ctx.createOscillator(); carrier.type = 'sawtooth';
+      carrier.frequency.setValueAtTime(140, ctx.currentTime);
+      carrier.frequency.linearRampToValueAtTime(95, ctx.currentTime + 0.5);
+      carrier.frequency.linearRampToValueAtTime(110, ctx.currentTime + 0.9);
+      const mod = ctx.createOscillator(); mod.frequency.value = 3.5;
+      const modGain = ctx.createGain(); modGain.gain.value = 28;
+      mod.connect(modGain); modGain.connect(carrier.frequency);
       const g = ctx.createGain();
-      g.gain.setValueAtTime(0.4, ctx.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.9);
-      o.connect(g); g.connect(gain); o.start(); o.stop(ctx.currentTime + 0.9);
+      g.gain.setValueAtTime(0, ctx.currentTime);
+      g.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.05);
+      g.gain.setValueAtTime(0.5, ctx.currentTime + 0.7);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.0);
+      carrier.connect(g); g.connect(master);
+      mod.start(); carrier.start(); carrier.stop(ctx.currentTime + 1.1); mod.stop(ctx.currentTime + 1.1);
     },
     tavernCheer: () => {
-      for (let i = 0; i < 8; i++) {
-        const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = 200 + Math.random() * 400;
-        const g = ctx.createGain(); const t = ctx.currentTime + Math.random() * 0.3;
-        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.15, t + 0.05);
-        g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
-        o.connect(g); g.connect(gain); o.start(t); o.stop(t + 0.5);
+      // Dense crowd: many voices at speech-frequency bands with staggered timing
+      for (let i = 0; i < 18; i++) {
+        const o = ctx.createOscillator(); o.type = 'triangle';
+        o.frequency.value = 160 + Math.random() * 380;
+        const bp = ctx.createBiquadFilter(); bp.type = 'bandpass';
+        bp.frequency.value = 800 + Math.random() * 1200; bp.Q.value = 1.5;
+        const g = ctx.createGain(); const t = ctx.currentTime + Math.random() * 0.4;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.08 + Math.random() * 0.08, t + 0.04 + Math.random() * 0.08);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.3 + Math.random() * 0.5);
+        o.connect(bp); bp.connect(g); g.connect(master); o.start(t); o.stop(t + 1.0);
+      }
+      // Clapping transients
+      for (let i = 0; i < 4; i++) {
+        const clap = noise(0.06);
+        const clapGain = ctx.createGain(); const t = ctx.currentTime + 0.1 + i * 0.18 + Math.random() * 0.1;
+        clapGain.gain.setValueAtTime(0.4, t);
+        clapGain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+        clap.connect(clapGain); clapGain.connect(master); clap.start(t);
       }
     },
     cracklingFire: () => {
-      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.8, ctx.sampleRate);
-      const d = buf.getChannelData(0);
-      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.3;
-      const src = ctx.createBufferSource(); src.buffer = buf;
-      const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 2000;
-      src.connect(hp); hp.connect(gain); src.start();
+      // Base hiss: noise through bandpass
+      const hiss = noise(1.5);
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 3500; bp.Q.value = 0.8;
+      const hissGain = ctx.createGain();
+      hissGain.gain.setValueAtTime(0.3, ctx.currentTime);
+      hissGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.5);
+      hiss.connect(bp); bp.connect(hissGain); hissGain.connect(master); hiss.start();
+      // Random pops and crackles
+      for (let i = 0; i < 6; i++) {
+        const pop = noise(0.03);
+        const popGain = ctx.createGain(); const t = ctx.currentTime + Math.random() * 1.2;
+        popGain.gain.setValueAtTime(0.6 + Math.random() * 0.4, t);
+        popGain.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+        pop.connect(popGain); popGain.connect(master); pop.start(t);
+      }
     },
     dramaticSting: () => {
-      [220, 277, 330].forEach((f, i) => {
-        const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = f;
+      // Orchestral stab: three-note chord with swell, triangle waves for warmth
+      const chord = [196, 247, 294, 392]; // G minor-ish
+      chord.forEach((f, i) => {
+        const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = f;
+        const o2 = ctx.createOscillator(); o2.type = 'sine'; o2.frequency.value = f * 2;
         const g = ctx.createGain();
-        g.gain.setValueAtTime(0.3, ctx.currentTime + i * 0.15);
-        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 0.5);
-        o.connect(g); g.connect(gain);
-        o.start(ctx.currentTime + i * 0.15); o.stop(ctx.currentTime + i * 0.15 + 0.6);
+        g.gain.setValueAtTime(0, ctx.currentTime);
+        g.gain.linearRampToValueAtTime(0.35 / (i * 0.3 + 1), ctx.currentTime + 0.08);
+        g.gain.setValueAtTime(0.35 / (i * 0.3 + 1), ctx.currentTime + 0.5);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.4);
+        o.connect(g); o2.connect(g); g.connect(master);
+        o.start(); o2.start(); o.stop(ctx.currentTime + 1.5); o2.stop(ctx.currentTime + 1.5);
+      });
+      // Echo at half-volume
+      chord.forEach((f) => {
+        const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = f;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0, ctx.currentTime + 0.22);
+        g.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 0.30);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.6);
+        o.connect(g); g.connect(master); o.start(ctx.currentTime + 0.22); o.stop(ctx.currentTime + 1.7);
       });
     },
   };
   const fn = configs[type];
   if (fn) fn();
-  setTimeout(() => ctx.close(), 3000);
+  setTimeout(() => ctx.close(), 5000);
 }
 
 function AmbianceTool() {
   const audioRef = useRef(null);
   const [activePreset, setActivePreset] = useState(null);
+  const [activeTrack, setActiveTrack] = useState(null);
   const [playing, setPlaying] = useState(false);
   const [musicVolume, setMusicVolume] = useState(70);
   const [sfxVolume, setSfxVolume] = useState(80);
@@ -5565,20 +5667,28 @@ function AmbianceTool() {
     if (audioRef.current) audioRef.current.volume = musicVolume / 100;
   }, [musicVolume]);
 
-  function selectPreset(preset) {
+  function playTrack(preset, track) {
     const audio = audioRef.current;
     if (!audio) return;
     setAudioError(false);
-    if (activePreset?.id === preset.id) {
-      if (playing) { audio.pause(); setPlaying(false); }
-      else { audio.play().then(() => setPlaying(true)).catch(() => setAudioError(true)); }
-      return;
-    }
     audio.pause();
-    audio.src = preset.url;
+    audio.src = track.url;
     audio.volume = musicVolume / 100;
     setActivePreset(preset);
+    setActiveTrack(track);
     audio.play().then(() => setPlaying(true)).catch(() => setAudioError(true));
+  }
+
+  function togglePlay() {
+    const audio = audioRef.current;
+    if (!audio || !activePreset) return;
+    if (playing) { audio.pause(); setPlaying(false); }
+    else { audio.play().then(() => setPlaying(true)).catch(() => setAudioError(true)); }
+  }
+
+  function selectPreset(preset) {
+    if (activePreset?.id === preset.id) { togglePlay(); return; }
+    playTrack(preset, preset.tracks[0]);
   }
 
   return (
@@ -5599,50 +5709,74 @@ function AmbianceTool() {
 
       {/* Center — Music Player */}
       <div className="amb-center">
-        <div className="amb-track-name">{activePreset ? activePreset.track : 'No track selected'}</div>
-        {activePreset && <div className="amb-track-artist">{activePreset.artist}</div>}
-        <button
-          className="amb-play-btn"
-          disabled={!activePreset || audioError}
-          onClick={() => activePreset && selectPreset(activePreset)}
-          title={playing ? 'Pause' : 'Play'}
-        >
-          {playing ? '⏸' : '▶'}
-        </button>
-        {audioError && (
-          <div style={{color:'var(--gold)',fontSize:'0.85rem',marginBottom:8}}>
-            ⚠ Audio unavailable — check network connection
-          </div>
+        {activePreset ? (
+          <>
+            <div style={{fontSize:'0.8rem',color:'var(--text-muted)',marginBottom:4,textTransform:'uppercase',letterSpacing:'0.08em'}}>{activePreset.label}</div>
+            <div className="amb-track-name">{activeTrack?.title}</div>
+            <div className="amb-track-artist">Kevin MacLeod</div>
+            <button
+              className="amb-play-btn"
+              disabled={audioError}
+              onClick={togglePlay}
+              title={playing ? 'Pause' : 'Play'}
+            >
+              {playing ? '⏸' : '▶'}
+            </button>
+            {audioError && (
+              <div style={{color:'var(--gold)',fontSize:'0.88rem',marginBottom:8}}>
+                ⚠ Audio unavailable — check network connection
+              </div>
+            )}
+            <div className="amb-volume-row" style={{maxWidth:280}}>
+              <span>Volume</span>
+              <input type="range" min="0" max="100" value={musicVolume} onChange={e => setMusicVolume(Number(e.target.value))} />
+              <span>{musicVolume}%</span>
+            </div>
+            <div style={{fontSize:'0.8rem',color:'var(--text-muted)',marginTop:4,marginBottom:20}}>🔁 Looping</div>
+            <div style={{width:'100%',maxWidth:340}}>
+              <div style={{fontSize:'0.75rem',textTransform:'uppercase',letterSpacing:'0.1em',color:'var(--text-dim)',marginBottom:8}}>Tracks</div>
+              {activePreset.tracks.map(t => (
+                <div
+                  key={t.url}
+                  onClick={() => playTrack(activePreset, t)}
+                  style={{
+                    padding:'8px 12px', cursor:'pointer', borderRadius:6, marginBottom:4,
+                    border:`1px solid ${activeTrack?.url === t.url ? 'var(--gold)' : 'var(--border)'}`,
+                    background: activeTrack?.url === t.url ? 'rgba(201,168,76,0.08)' : 'none',
+                    color: activeTrack?.url === t.url ? 'var(--gold)' : 'var(--text-dim)',
+                    fontSize:'0.92rem', display:'flex', alignItems:'center', gap:8,
+                  }}
+                >
+                  <span style={{fontSize:'0.7rem',opacity:0.6}}>{activeTrack?.url === t.url && playing ? '▶' : '○'}</span>
+                  {t.title}
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{fontSize:'2rem',marginBottom:12,opacity:0.3}}>🎵</div>
+            <div style={{color:'var(--text-muted)',fontSize:'0.95rem'}}>Select a mood to begin</div>
+            <div className="amb-volume-row" style={{maxWidth:280,marginTop:24}}>
+              <span>Volume</span>
+              <input type="range" min="0" max="100" value={musicVolume} onChange={e => setMusicVolume(Number(e.target.value))} />
+              <span>{musicVolume}%</span>
+            </div>
+          </>
         )}
-        <div className="amb-volume-row">
-          <span>Music Volume</span>
-          <input
-            type="range" min="0" max="100" value={musicVolume}
-            onChange={e => setMusicVolume(Number(e.target.value))}
-          />
-          <span>{musicVolume}%</span>
-        </div>
-        <div style={{fontSize:'0.82rem',color:'var(--text-muted)',marginTop:4}}>🔁 Always looping</div>
         <div className="amb-attribution">Music: Kevin MacLeod / incompetech.com — CC BY 3.0</div>
       </div>
 
       {/* Right — SFX Panel */}
       <div className="amb-right">
-        <div style={{fontWeight:600,marginBottom:12,fontSize:'0.9rem'}}>Sound Effects</div>
+        <div style={{fontWeight:600,marginBottom:12,fontSize:'1rem'}}>Sound Effects</div>
         <div className="amb-volume-row">
           <span>SFX Vol</span>
-          <input
-            type="range" min="0" max="100" value={sfxVolume}
-            onChange={e => setSfxVolume(Number(e.target.value))}
-          />
+          <input type="range" min="0" max="100" value={sfxVolume} onChange={e => setSfxVolume(Number(e.target.value))} />
           <span>{sfxVolume}%</span>
         </div>
         {SFX_LIST.map(sfx => (
-          <button
-            key={sfx.id}
-            className="amb-sfx-btn"
-            onClick={() => playSfx(sfx.id, sfxVolume / 100)}
-          >
+          <button key={sfx.id} className="amb-sfx-btn" onClick={() => playSfx(sfx.id, sfxVolume / 100)}>
             {sfx.icon} {sfx.label}
           </button>
         ))}
