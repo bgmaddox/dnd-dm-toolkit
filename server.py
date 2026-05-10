@@ -932,7 +932,7 @@ app.mount("/tools", StaticFiles(directory=str(TOOLS_DIR), html=False), name="too
 
 @app.get("/")
 async def root():
-    return FileResponse(str(TOOLS_DIR / "session_companion.html"))
+    return RedirectResponse("/tools/dm_toolkit.html", status_code=301)
 
 def find_available_port(start_port=8000, max_attempts=10):
     import socket
