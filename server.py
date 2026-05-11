@@ -883,19 +883,63 @@ class SaveEntityRequest(BaseModel):
     campaign: str
     type: str  # "npc" or "location"
     data: dict
+    original_slug: str | None = None
+
+@app.get("/api/campaign/entities")
+async def get_campaign_entities(campaign: str):
+    if not _re.match(r"^[a-zA-Z0-9_\- ]+$", campaign):
+        raise HTTPException(status_code=400, detail="Invalid campaign name")
+    camp_dir = CAMPAIGN_BASE / campaign
+    if not camp_dir.exists():
+        return {"npcs": [], "locations": []}
+
+    def read_entities(subdir):
+        d = camp_dir / subdir
+        if not d.exists():
+            return []
+        result = []
+        for f in sorted(d.glob("*.md")):
+            content = f.read_text()
+            name_match = _re.search(r'^# (.+)$', content, _re.MULTILINE)
+            name = name_match.group(1).strip() if name_match else f.stem.replace("_", " ").title()
+            result.append({"slug": f.stem, "name": name, "content": content})
+        return result
+
+    return {"npcs": read_entities("npcs"), "locations": read_entities("locations")}
+
+
+@app.delete("/api/campaign/entity")
+async def delete_campaign_entity(campaign: str, type: str, slug: str):
+    if not _re.match(r"^[a-zA-Z0-9_\- ]+$", campaign):
+        raise HTTPException(status_code=400, detail="Invalid campaign name")
+    if not _re.match(r"^[a-z0-9_]+$", slug):
+        raise HTTPException(status_code=400, detail="Invalid slug")
+    if type not in ("npc", "location"):
+        raise HTTPException(status_code=400, detail="Invalid type")
+    path = CAMPAIGN_BASE / campaign / (type + "s") / (slug + ".md")
+    if path.exists():
+        path.unlink()
+    return {"ok": True}
+
 
 @app.post("/api/campaign/save_entity")
 async def save_campaign_entity(req: SaveEntityRequest):
     camp_dir = CAMPAIGN_BASE / req.campaign
     if not camp_dir.exists():
         raise HTTPException(status_code=404, detail="Campaign not found")
-    
+
     target_dir = camp_dir / (req.type + "s")
     target_dir.mkdir(exist_ok=True)
-    
+
     name = req.data.get("name", "Unnamed").strip()
     file_name = _re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_") + ".md"
     file_path = target_dir / file_name
+
+    # If renaming, remove the old file
+    if req.original_slug and req.original_slug != file_path.stem:
+        old_path = target_dir / (req.original_slug + ".md")
+        if old_path.exists():
+            old_path.unlink()
     
     content = ""
     if req.type == "npc":
