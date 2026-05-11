@@ -1336,12 +1336,6 @@ function LoreBuilderTool() {
     <div className="lore-tool">
       <div className="lore-container">
         <div className="lore-sidebar">
-          <div>
-            <h3>New Campaign</h3>
-            <input type="text" placeholder="Campaign Name" value={newCampaignName}
-              onChange={e => setNewCampaignName(e.target.value)} style={{ marginBottom: 8 }} />
-            <button className="btn" onClick={handleCreateCampaign} disabled={loading || !newCampaignName}>Create</button>
-          </div>
           <div style={{ marginTop: 'auto', fontSize: 11, color: 'var(--text-dim)' }}>
             Entities are saved as Markdown files in your campaign folder.
           </div>
@@ -4762,15 +4756,15 @@ function EncounterHelperTool() {
     setActiveTab("combat");
   }
 
-  const inputStyle = { background: "var(--bg)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 4, padding: "4px 8px", fontSize: "0.9rem", width: "60px" };
-  const labelStyle = { fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: 4, display: "block" };
-  const sectionHead = { fontFamily: "var(--font-head)", fontSize: "0.7rem", letterSpacing: "0.1em", color: "var(--text-dim)", textTransform: "uppercase", marginBottom: 10, marginTop: 18 };
+  const inputStyle = { background: "var(--bg)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 4, padding: "4px 8px", fontSize: "1.05rem", width: "70px" };
+  const labelStyle = { fontSize: "1rem", color: "var(--text-muted)", marginBottom: 4, display: "block" };
+  const sectionHead = { fontFamily: "var(--font-head)", fontSize: "0.95rem", letterSpacing: "0.1em", color: "var(--text-dim)", textTransform: "uppercase", marginBottom: 10, marginTop: 18 };
 
   return (
     <div className="enc-tool">
       {/* Left Panel — Party Setup */}
       <div className="enc-panel enc-panel-left">
-        <div style={{ fontFamily: "var(--font-head)", fontSize: "0.7rem", letterSpacing: "0.1em", color: "var(--text-dim)", textTransform: "uppercase", marginBottom: 14 }}>Party Setup</div>
+        <div style={{ fontFamily: "var(--font-head)", fontSize: "0.95rem", letterSpacing: "0.1em", color: "var(--text-dim)", textTransform: "uppercase", marginBottom: 14 }}>Party Setup</div>
 
         <div style={{ marginBottom: 12 }}>
           <label style={labelStyle}>Party Size</label>
@@ -4785,7 +4779,7 @@ function EncounterHelperTool() {
         </div>
 
         <div style={sectionHead}>XP Thresholds</div>
-        <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: 8 }}>Per-party totals</div>
+        <div style={{ fontSize: "0.95rem", color: "var(--text-muted)", marginBottom: 8 }}>Per-party totals</div>
 
         {[
           { label: "Low", key: "low", color: "var(--green)", bg: "rgba(80,200,120,0.12)" },
@@ -4801,14 +4795,14 @@ function EncounterHelperTool() {
 
       {/* Center Panel — Monster Builder */}
       <div className="enc-panel enc-panel-center">
-        <div style={{ fontFamily: "var(--font-head)", fontSize: "0.7rem", letterSpacing: "0.1em", color: "var(--text-dim)", textTransform: "uppercase", marginBottom: 14 }}>Monster Builder</div>
+        <div style={{ fontFamily: "var(--font-head)", fontSize: "0.95rem", letterSpacing: "0.1em", color: "var(--text-dim)", textTransform: "uppercase", marginBottom: 14 }}>Monster Builder</div>
 
         <input
           type="text"
           placeholder="Search monsters…"
           value={monsterSearch}
           onChange={e => setMonsterSearch(e.target.value)}
-          style={{ width: "100%", background: "var(--bg)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 4, padding: "6px 10px", fontSize: "0.85rem", boxSizing: "border-box", marginBottom: 4 }}
+          style={{ width: "100%", background: "var(--bg)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 4, padding: "6px 10px", fontSize: "1.05rem", boxSizing: "border-box", marginBottom: 4 }}
         />
 
         {searchResults.length > 0 && (
@@ -4816,7 +4810,7 @@ function EncounterHelperTool() {
             {searchResults.map(m => (
               <div key={m.name} className="enc-monster-result" onClick={() => addToEncounter(m)}>
                 <span>{m.name}</span>
-                <span style={{ color: "var(--text-dim)", fontSize: "0.78rem" }}>CR {m.challenge_rating} · {m.xp.toLocaleString()} XP</span>
+                <span style={{ color: "var(--text-dim)", fontSize: "0.9rem" }}>CR {m.challenge_rating} · {m.xp.toLocaleString()} XP</span>
               </div>
             ))}
           </div>
@@ -4825,14 +4819,14 @@ function EncounterHelperTool() {
         <div style={sectionHead}>Encounter List</div>
 
         {encounter.length === 0 && (
-          <div style={{ color: "var(--text-muted)", fontSize: "0.83rem", padding: "12px 0" }}>No monsters added yet. Search above to add.</div>
+          <div style={{ color: "var(--text-muted)", fontSize: "1rem", padding: "12px 0" }}>No monsters added yet. Search above to add.</div>
         )}
 
         {encounter.map(({ monster, count }) => (
           <div key={monster.name} className="enc-entry">
             <span style={{ flex: 1, fontWeight: 500 }}>{monster.name}</span>
-            <span style={{ color: "var(--text-dim)", fontSize: "0.78rem", minWidth: 60 }}>CR {monster.challenge_rating}</span>
-            <span style={{ color: "var(--text-muted)", fontSize: "0.78rem", minWidth: 70 }}>{(monster.xp * count).toLocaleString()} XP</span>
+            <span style={{ color: "var(--text-dim)", fontSize: "0.9rem", minWidth: 60 }}>CR {monster.challenge_rating}</span>
+            <span style={{ color: "var(--text-muted)", fontSize: "0.9rem", minWidth: 70 }}>{(monster.xp * count).toLocaleString()} XP</span>
             <button onClick={() => changeCount(monster.name, -1)} style={{ background: "none", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 3, width: 22, height: 22, cursor: "pointer", lineHeight: 1 }}>−</button>
             <span style={{ minWidth: 18, textAlign: "center" }}>{count}</span>
             <button onClick={() => changeCount(monster.name, 1)} style={{ background: "none", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 3, width: 22, height: 22, cursor: "pointer", lineHeight: 1 }}>+</button>
@@ -4842,7 +4836,7 @@ function EncounterHelperTool() {
 
         {encounter.length > 0 && (
           <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "0.83rem", color: "var(--text-muted)" }}>Total Monster XP</span>
+            <span style={{ fontSize: "1rem", color: "var(--text-muted)" }}>Total Monster XP</span>
             <span style={{ fontWeight: 700, fontSize: "1.1rem", color: "var(--gold)" }}>{totalXp.toLocaleString()} XP</span>
           </div>
         )}
@@ -4850,10 +4844,10 @@ function EncounterHelperTool() {
 
       {/* Right Panel — Difficulty Readout */}
       <div className="enc-panel enc-panel-right">
-        <div style={{ fontFamily: "var(--font-head)", fontSize: "0.7rem", letterSpacing: "0.1em", color: "var(--text-dim)", textTransform: "uppercase", marginBottom: 14 }}>Difficulty</div>
+        <div style={{ fontFamily: "var(--font-head)", fontSize: "0.95rem", letterSpacing: "0.1em", color: "var(--text-dim)", textTransform: "uppercase", marginBottom: 14 }}>Difficulty</div>
 
         {!difficulty ? (
-          <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Add monsters to see difficulty.</div>
+          <div style={{ color: "var(--text-muted)", fontSize: "1rem" }}>Add monsters to see difficulty.</div>
         ) : (
           <>
             <div className="enc-difficulty-label" style={{ color: DIFF_COLORS[difficulty] || "var(--text)" }}>
@@ -4861,14 +4855,14 @@ function EncounterHelperTool() {
             </div>
             <div className="enc-flavor">{DIFF_FLAVOR[difficulty]}</div>
             {difficulty === "Beyond Deadly" && (
-              <div style={{ fontSize: "0.78rem", color: "#c94c4c", background: "rgba(201,76,76,0.1)", border: "1px solid #6b2e2e", borderRadius: 6, padding: "8px 10px", marginBottom: 16 }}>
+              <div style={{ fontSize: "0.95rem", color: "#c94c4c", background: "rgba(201,76,76,0.1)", border: "1px solid #6b2e2e", borderRadius: 6, padding: "8px 10px", marginBottom: 16 }}>
                 This encounter significantly exceeds the deadly threshold. Consider reducing monster count or saving for a legendary finale.
               </div>
             )}
-            <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: 6 }}>
+            <div style={{ fontSize: "1rem", color: "var(--text-muted)", marginBottom: 6 }}>
               Encounter XP: <strong style={{ color: "var(--text)" }}>{totalXp.toLocaleString()}</strong>
             </div>
-            <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: 20 }}>
+            <div style={{ fontSize: "1rem", color: "var(--text-muted)", marginBottom: 20 }}>
               Deadly threshold: <strong style={{ color: "var(--text)" }}>{partyThresholds.deadly.toLocaleString()}</strong>
             </div>
           </>
@@ -4877,7 +4871,7 @@ function EncounterHelperTool() {
         {encounter.length > 0 && (
           <button
             onClick={sendToCombat}
-            style={{ width: "100%", padding: "10px 0", background: "var(--gold)", color: "#0d0f14", border: "none", borderRadius: 6, fontFamily: "var(--font-head)", fontSize: "0.75rem", letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer", fontWeight: 700 }}>
+            style={{ width: "100%", padding: "10px 0", background: "var(--gold)", color: "#0d0f14", border: "none", borderRadius: 6, fontFamily: "var(--font-head)", fontSize: "0.95rem", letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer", fontWeight: 700 }}>
             ⚔ Send to Combat
           </button>
         )}
@@ -5019,7 +5013,7 @@ function LootCalculatorTool() {
       {/* LEFT — Configuration */}
       <div className="loot-panel loot-panel-left">
         <div style={{ marginBottom: 18 }}>
-          <div style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>Mode</div>
+          <div style={{ fontSize: '0.95rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>Mode</div>
           <button
             className={`loot-mode-btn${mode === 'individual' ? ' active' : ''}`}
             onClick={() => setMode('individual')}>
@@ -5033,7 +5027,7 @@ function LootCalculatorTool() {
         </div>
 
         <div style={{ marginBottom: 18 }}>
-          <div style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>CR Tier</div>
+          <div style={{ fontSize: '0.95rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>CR Tier</div>
           {TIERS.map(t => (
             <button
               key={t}
@@ -5046,14 +5040,14 @@ function LootCalculatorTool() {
 
         {mode === 'individual' && (
           <div style={{ marginBottom: 18 }}>
-            <div style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>
+            <div style={{ fontSize: '0.95rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>
               Monsters: <span style={{ color: 'var(--gold)' }}>{monsterCount}</span>
             </div>
             <input
               type="range" min={1} max={20} value={monsterCount}
               onChange={e => setMonsterCount(Number(e.target.value))}
               style={{ width: '100%', accentColor: 'var(--gold)' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
               <span>1</span><span>20</span>
             </div>
           </div>
@@ -5061,21 +5055,21 @@ function LootCalculatorTool() {
 
         <button
           onClick={roll}
-          style={{ width: '100%', padding: '10px 0', background: 'var(--gold)', color: '#0d0f14', border: 'none', borderRadius: 6, fontFamily: 'var(--font-head)', fontSize: '0.9rem', letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', fontWeight: 700, marginTop: 8 }}>
+          style={{ width: '100%', padding: '10px 0', background: 'var(--gold)', color: '#0d0f14', border: 'none', borderRadius: 6, fontFamily: 'var(--font-head)', fontSize: '1rem', letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', fontWeight: 700, marginTop: 8 }}>
           🎲 Roll
         </button>
       </div>
 
       {/* CENTER — Result */}
       <div className="loot-panel loot-panel-center">
-        <div style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 14 }}>Result</div>
+        <div style={{ fontSize: '0.95rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 14 }}>Result</div>
         {!result ? (
-          <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: 40, textAlign: 'center' }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: '1rem', marginTop: 40, textAlign: 'center' }}>
             Configure and roll to generate loot
           </div>
         ) : (
           <>
-            <div style={{ marginBottom: 12, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+            <div style={{ marginBottom: 12, fontSize: '0.95rem', color: 'var(--text-muted)' }}>
               {result.mode === 'individual' ? 'Individual' : 'Hoard'} — CR {result.tier}
               {result.mode === 'individual' && monsterCount > 1 && ` — ${monsterCount} monsters`}
             </div>
@@ -5094,21 +5088,21 @@ function LootCalculatorTool() {
             </div>
             {result.magicItems && result.magicItems.length > 0 && (
               <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>Magic Items</div>
+                <div style={{ fontSize: '0.95rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>Magic Items</div>
                 {result.magicItems.map((item, i) => (
-                  <div key={i} style={{ fontSize: '0.88rem', padding: '4px 0', color: 'var(--green)' }}>✦ {item}</div>
+                  <div key={i} style={{ fontSize: '1rem', padding: '4px 0', color: 'var(--green)' }}>✦ {item}</div>
                 ))}
               </div>
             )}
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
               <button
                 onClick={roll}
-                style={{ flex: 1, padding: '7px 0', background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-dim)', cursor: 'pointer', fontSize: '0.82rem' }}>
+                style={{ flex: 1, padding: '7px 0', background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-dim)', cursor: 'pointer', fontSize: '0.95rem' }}>
                 ↻ Roll Again
               </button>
               <button
                 onClick={handleCopy}
-                style={{ flex: 1, padding: '7px 0', background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: copied ? 'var(--green)' : 'var(--text-dim)', cursor: 'pointer', fontSize: '0.82rem' }}>
+                style={{ flex: 1, padding: '7px 0', background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: copied ? 'var(--green)' : 'var(--text-dim)', cursor: 'pointer', fontSize: '0.95rem' }}>
                 {copied ? '✓ Copied' : '📋 Copy'}
               </button>
             </div>
@@ -5119,11 +5113,11 @@ function LootCalculatorTool() {
       {/* RIGHT — Session Log */}
       <div className="loot-panel loot-panel-right">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Session Log</div>
+          <div style={{ fontSize: '0.95rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Session Log</div>
           {log.length > 0 && (
             <button
               onClick={clearLog}
-              style={{ fontSize: '0.72rem', background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', padding: 0 }}>
+              style={{ fontSize: '0.9rem', background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', padding: 0 }}>
               Clear Log
             </button>
           )}
@@ -5131,16 +5125,16 @@ function LootCalculatorTool() {
         <button
           onClick={handleSave}
           disabled={!result}
-          style={{ width: '100%', padding: '7px 0', marginBottom: 14, background: result ? 'rgba(201,168,76,0.12)' : 'none', border: '1px solid var(--border)', borderRadius: 6, color: result ? 'var(--gold)' : 'var(--text-muted)', cursor: result ? 'pointer' : 'default', fontSize: '0.82rem' }}>
+          style={{ width: '100%', padding: '7px 0', marginBottom: 14, background: result ? 'rgba(201,168,76,0.12)' : 'none', border: '1px solid var(--border)', borderRadius: 6, color: result ? 'var(--gold)' : 'var(--text-muted)', cursor: result ? 'pointer' : 'default', fontSize: '0.95rem' }}>
           Save This Loot
         </button>
         {log.length === 0 ? (
-          <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>No saved entries yet.</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>No saved entries yet.</div>
         ) : (
           log.map((entry, i) => (
             <div key={i} className="loot-log-entry">
               <div>{entry.text}</div>
-              <div style={{ fontSize: '0.7rem', marginTop: 3, opacity: 0.6 }}>{entry.ts}</div>
+              <div style={{ fontSize: '0.85rem', marginTop: 3, opacity: 0.6 }}>{entry.ts}</div>
             </div>
           ))
         )}
@@ -5329,9 +5323,9 @@ function CampaignCalendarTool() {
       {/* LEFT: Calendar Grid */}
       <div className="cal-left">
         <div style={{display:'flex', alignItems:'center', gap:12, marginBottom:16}}>
-          <label style={{fontSize:'0.82rem', color:'var(--text-muted)'}}>Climate:</label>
+          <label style={{fontSize:'1rem', color:'var(--text-muted)'}}>Climate:</label>
           <select value={calData.climate} onChange={handleClimateChange}
-            style={{background:'var(--bg-card)',color:'var(--text-dim)',border:'1px solid var(--border)',borderRadius:4,padding:'3px 8px',fontSize:'0.85rem'}}>
+            style={{background:'var(--bg-card)',color:'var(--text-dim)',border:'1px solid var(--border)',borderRadius:4,padding:'3px 8px',fontSize:'1rem'}}>
             {CLIMATE_OPTIONS.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}
           </select>
         </div>
@@ -5383,7 +5377,7 @@ function CampaignCalendarTool() {
         {selectedDay && (
           <div style={{marginTop:12}}>
             <button onClick={handleSetToday}
-              style={{background:'none',border:'1px solid var(--gold)',color:'var(--gold)',borderRadius:4,padding:'5px 14px',cursor:'pointer',fontSize:'0.82rem'}}>
+              style={{background:'none',border:'1px solid var(--gold)',color:'var(--gold)',borderRadius:4,padding:'5px 14px',cursor:'pointer',fontSize:'1rem'}}>
               📌 Set as Today
             </button>
           </div>
@@ -5393,43 +5387,43 @@ function CampaignCalendarTool() {
       {/* RIGHT: Day Editor */}
       <div className="cal-right">
         {!selectedDay ? (
-          <p style={{color:'var(--text-muted)',fontSize:'0.9rem',marginTop:8}}>Select a day on the calendar to edit it.</p>
+          <p style={{color:'var(--text-muted)',fontSize:'1rem',marginTop:8}}>Select a day on the calendar to edit it.</p>
         ) : (
           <>
-            <h3 style={{margin:'0 0 16px',color:'var(--gold)',fontSize:'1rem'}}>
+            <h3 style={{margin:'0 0 16px',color:'var(--gold)',fontSize:'1.2rem'}}>
               Day {selectedDay.day}, {calData.months[selectedDay.month] || `Month ${selectedDay.month+1}`}
             </h3>
 
             <div style={{marginBottom:12}}>
-              <label style={{display:'block',fontSize:'0.8rem',color:'var(--text-muted)',marginBottom:4}}>Weather</label>
+              <label style={{display:'block',fontSize:'1rem',color:'var(--text-muted)',marginBottom:4}}>Weather</label>
               <select value={editWeather} onChange={e=>setEditWeather(e.target.value)}
-                style={{width:'100%',background:'var(--bg-card)',color:'var(--text-dim)',border:'1px solid var(--border)',borderRadius:4,padding:'5px 8px',fontSize:'0.9rem'}}>
+                style={{width:'100%',background:'var(--bg-card)',color:'var(--text-dim)',border:'1px solid var(--border)',borderRadius:4,padding:'5px 8px',fontSize:'1rem'}}>
                 {WEATHER_OPTIONS.map(w=><option key={w} value={w}>{WEATHER_ICONS[w]||''} {w}</option>)}
               </select>
             </div>
 
             <div style={{marginBottom:12}}>
-              <label style={{display:'block',fontSize:'0.8rem',color:'var(--text-muted)',marginBottom:4}}>Temperature</label>
+              <label style={{display:'block',fontSize:'1rem',color:'var(--text-muted)',marginBottom:4}}>Temperature</label>
               <select value={editTemp} onChange={e=>setEditTemp(e.target.value)}
-                style={{width:'100%',background:'var(--bg-card)',color:'var(--text-dim)',border:'1px solid var(--border)',borderRadius:4,padding:'5px 8px',fontSize:'0.9rem'}}>
+                style={{width:'100%',background:'var(--bg-card)',color:'var(--text-dim)',border:'1px solid var(--border)',borderRadius:4,padding:'5px 8px',fontSize:'1rem'}}>
                 {TEMP_OPTIONS.map(t=><option key={t} value={t}>{t}</option>)}
               </select>
             </div>
 
             <div style={{marginBottom:12}}>
-              <label style={{display:'block',fontSize:'0.8rem',color:'var(--text-muted)',marginBottom:4}}>Notes</label>
+              <label style={{display:'block',fontSize:'1rem',color:'var(--text-muted)',marginBottom:4}}>Notes</label>
               <textarea value={editNotes} onChange={e=>setEditNotes(e.target.value)}
                 rows={5} placeholder="What happened this day…"
-                style={{width:'100%',background:'var(--bg-card)',color:'var(--text-dim)',border:'1px solid var(--border)',borderRadius:4,padding:'6px 8px',fontSize:'0.85rem',resize:'vertical',boxSizing:'border-box'}} />
+                style={{width:'100%',background:'var(--bg-card)',color:'var(--text-dim)',border:'1px solid var(--border)',borderRadius:4,padding:'6px 8px',fontSize:'1rem',resize:'vertical',boxSizing:'border-box'}} />
             </div>
 
             <div style={{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap'}}>
               <button onClick={handleRollWeather}
-                style={{background:'none',border:'1px solid var(--border)',color:'var(--text-dim)',borderRadius:4,padding:'6px 12px',cursor:'pointer',fontSize:'0.85rem'}}>
+                style={{background:'none',border:'1px solid var(--border)',color:'var(--text-dim)',borderRadius:4,padding:'6px 12px',cursor:'pointer',fontSize:'1rem'}}>
                 🎲 Roll Weather
               </button>
               <button onClick={handleSaveDay} disabled={saving}
-                style={{background:'rgba(201,168,76,0.15)',border:'1px solid var(--gold)',color:'var(--gold)',borderRadius:4,padding:'6px 14px',cursor:'pointer',fontSize:'0.85rem',fontWeight:600}}>
+                style={{background:'rgba(201,168,76,0.15)',border:'1px solid var(--gold)',color:'var(--gold)',borderRadius:4,padding:'6px 14px',cursor:'pointer',fontSize:'1rem',fontWeight:600}}>
                 {saving ? 'Saving…' : 'Save Day'}
               </button>
             </div>
@@ -5438,11 +5432,11 @@ function CampaignCalendarTool() {
 
             <div style={{display:'flex',gap:8,marginTop:16,borderTop:'1px solid var(--border)',paddingTop:14,flexWrap:'wrap'}}>
               <button onClick={handlePrevDay}
-                style={{background:'none',border:'1px solid var(--border)',color:'var(--text-dim)',borderRadius:4,padding:'5px 10px',cursor:'pointer',fontSize:'0.82rem'}}>← Prev Day</button>
+                style={{background:'none',border:'1px solid var(--border)',color:'var(--text-dim)',borderRadius:4,padding:'5px 10px',cursor:'pointer',fontSize:'1rem'}}>← Prev Day</button>
               <button onClick={handleGoToToday}
-                style={{background:'none',border:'1px solid var(--border)',color:'var(--text-dim)',borderRadius:4,padding:'5px 10px',cursor:'pointer',fontSize:'0.82rem',flex:1}}>Today</button>
+                style={{background:'none',border:'1px solid var(--border)',color:'var(--text-dim)',borderRadius:4,padding:'5px 10px',cursor:'pointer',fontSize:'1rem',flex:1}}>Today</button>
               <button onClick={handleNextDay}
-                style={{background:'none',border:'1px solid var(--border)',color:'var(--text-dim)',borderRadius:4,padding:'5px 10px',cursor:'pointer',fontSize:'0.82rem'}}>Next Day →</button>
+                style={{background:'none',border:'1px solid var(--border)',color:'var(--text-dim)',borderRadius:4,padding:'5px 10px',cursor:'pointer',fontSize:'1rem'}}>Next Day →</button>
             </div>
           </>
         )}
