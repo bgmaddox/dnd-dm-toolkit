@@ -4768,50 +4768,62 @@ function CombatTool() {
   const [showInitModal, setShowInitModal] = useState(false);
   const [showSaveLoadModal, setShowSaveLoadModal] = useState(false);
 
+  // Separated out so it can be called on mount AND when navigating back from Encounter tool
+  const applyPrefill = useCallback((monsterList) => {
+    const raw = localStorage.getItem("combat_prefill");
+    if (!raw) return;
+    try {
+      const prefill = JSON.parse(raw);
+      localStorage.removeItem("combat_prefill");
+      if (!prefill.monsters || prefill.monsters.length === 0) return;
+      const newCombatants = [];
+      prefill.monsters.forEach(({ name, count, hit_points }) => {
+        const matched = monsterList.find(m => m.name === name);
+        const hpVal = hit_points || (matched && matched.hit_points) || 10;
+        for (let i = 0; i < count; i++) {
+          newCombatants.push({
+            id: Date.now() + Math.random(),
+            name: count > 1 ? `${name} ${i + 1}` : name,
+            _monsterName: name,
+            type: "Monster",
+            hp: hpVal, maxHp: hpVal,
+            conditions: [], loot: "",
+            diceModifiers: { bless: false, bane: false, guidance: false },
+            advDisadv: { attackOut: null, attackIn: null, saves: null, abilityCheck: null, hexAbility: "" },
+            boomingBlade: false,
+            initiative: 0,
+          });
+        }
+      });
+      if (newCombatants.length > 0) {
+        setCombatants(prev => [...prev, ...newCombatants]);
+        newCombatants.forEach(c => generatePortrait(c));
+      }
+    } catch(e) {
+      localStorage.removeItem("combat_prefill");
+    }
+  }, []);
+
+  const allMonstersRef = useRef([]);
+
   useEffect(() => {
     fetch("/tools/monsters.json")
       .then(r => r.json())
       .then(data => {
         const list = Array.isArray(data) ? data : Object.values(data);
+        allMonstersRef.current = list;
         setAllMonsters(list);
-        // Check for combat_prefill from EncounterHelperTool
-        const raw = localStorage.getItem("combat_prefill");
-        if (raw) {
-          try {
-            const prefill = JSON.parse(raw);
-            localStorage.removeItem("combat_prefill");
-            if (prefill.monsters && prefill.monsters.length > 0) {
-              const newCombatants = [];
-              prefill.monsters.forEach(({ name, count, hit_points }) => {
-                const matched = list.find(m => m.name === name);
-                const hpVal = hit_points || (matched && matched.hit_points) || 10;
-                for (let i = 0; i < count; i++) {
-                  newCombatants.push({
-                    id: Date.now() + Math.random(),
-                    name: count > 1 ? `${name} ${i + 1}` : name,
-                    _monsterName: name,
-                    type: "Monster",
-                    hp: hpVal, maxHp: hpVal,
-                    conditions: [], loot: "",
-                    diceModifiers: { bless: false, bane: false, guidance: false },
-                    advDisadv: { attackOut: null, attackIn: null, saves: null, abilityCheck: null, hexAbility: "" },
-                    boomingBlade: false,
-                    initiative: 0,
-                  });
-                }
-              });
-              if (newCombatants.length > 0) {
-                setCombatants(prev => [...prev, ...newCombatants]);
-                newCombatants.forEach(c => generatePortrait(c));
-              }
-            }
-          } catch (e) {
-            localStorage.removeItem("combat_prefill");
-          }
-        }
+        applyPrefill(list);
       })
       .catch(() => {});
   }, []);
+
+  // Re-check for prefill when user navigates back from Encounter tool
+  useEffect(() => {
+    function handlePrefillReady() { applyPrefill(allMonstersRef.current); }
+    document.addEventListener('combat_prefill_ready', handlePrefillReady);
+    return () => document.removeEventListener('combat_prefill_ready', handlePrefillReady);
+  }, [applyPrefill]);
 
   function generatePortrait(combatant) {
     const prompt = buildPortraitPrompt(combatant);
@@ -5015,6 +5027,8 @@ function EncounterHelperTool() {
     const prefill = { monsters: encounter.map(e => ({ name: e.monster.name, count: e.count, hit_points: e.monster.hit_points })) };
     localStorage.setItem("combat_prefill", JSON.stringify(prefill));
     setActiveTab("combat");
+    // Notify CombatTool to read the prefill — needed when it's already mounted
+    setTimeout(() => document.dispatchEvent(new CustomEvent('combat_prefill_ready')), 80);
   }
 
   const inputStyle = { background: "var(--bg)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 4, padding: "4px 8px", fontSize: "1.05rem", width: "70px" };
