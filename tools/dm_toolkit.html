@@ -2337,7 +2337,7 @@ Respond with ONLY a valid JSON object in this exact structure:
 {
   "name": "Full NPC Name",
   "role": "Short role label",
-  "statBlock": "Stat block hint",
+  "statBlock": "One-line hint e.g. 'Spy, CR 1' or 'Knight, CR 3, uses veteran block'",
   "faction": "${faction || 'None'}",
   "description": "2-sentence vivid physical description.",
   "voiceQuirk": "One specific speech pattern.",
@@ -2380,7 +2380,7 @@ Make it gritty, specific, and immediately playable. Avoid clichés.`;
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: fullPrompt,
-          max_tokens: 750,
+          max_tokens: 1500,
           system: "You are a JSON API. Respond ONLY with a valid JSON object. No markdown, no code fences, no explanation — raw JSON only.",
           provider: aiProvider,
         })
