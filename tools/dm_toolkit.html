@@ -353,8 +353,8 @@ body::before {
 .message-assistant { align-self: flex-start; background: var(--bg-panel); border: 1px solid var(--border); border-left: 3px solid var(--gold); color: var(--text); border-bottom-left-radius: 2px; }
 .chat-input-area { padding: 20px 30px; background: var(--bg-panel); border-top: 1px solid var(--border); }
 .chat-input-wrapper { position: relative; display: flex; gap: 12px; }
-.chat-input { flex: 1; height: 50px; resize: none; padding: 12px 16px; }
-.send-btn { width: 50px; height: 50px; margin-top: 0 !important; padding: 0 !important; }
+.chat-input { flex: 1; height: 80px; resize: none; padding: 12px 16px; }
+.send-btn { flex: 0 0 50px !important; width: 50px !important; height: 80px; margin-top: 0 !important; padding: 0 !important; }
 .message-actions { display: flex; gap: 8px; margin-top: 12px; opacity: 0; transition: opacity 0.2s; }
 .session-tool .message:hover .message-actions { opacity: 1; }
 .msg-action-btn { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-dim); padding: 4px 10px; border-radius: 4px; font-size: 11px; font-family: var(--serif); cursor: pointer; transition: all 0.2s; }
@@ -2695,7 +2695,7 @@ Make it gritty, specific, and immediately playable. Avoid clichés.`;
             </div>
             {error && <div className="field-error" style={{marginTop: 6, textAlign: 'center'}}>{error}</div>}
             <div style={{marginTop: 10, fontSize: 11, color: 'var(--text-dim)', textAlign: 'center', fontStyle: 'italic'}}>
-              Ctrl+Enter to forge · {aiProvider === 'gemini' ? 'Gemini Flash' : 'Claude Haiku'} · Portraits via Pollinations
+              Ctrl+Enter to forge · {aiProvider === 'gemini' ? 'Gemini Flash · Free' : 'Claude Haiku · ~$0.003–$0.005/NPC'} · Portraits via Pollinations (free)
             </div>
           </div>
         </div>
@@ -3177,6 +3177,7 @@ function SessionTool() {
                     onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} />
                   <button className="btn send-btn" onClick={sendMessage} disabled={chatLoading || !userInput.trim()}>➤</button>
                 </div>
+                <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 6, textAlign: 'right' }}>Claude Sonnet · ~$0.01–$0.03/message</div>
               </div>
             </div>
             <div className="session-side session-side-right">
@@ -3944,27 +3945,41 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
           </div>
         )}
         {(combatants.length > 0 || searchedMonster) && isPC ? (
-          <div style={{ marginBottom: 10 }}>
-            <h2 style={{ fontFamily: "var(--font-head)", fontSize: 28, fontWeight: 700, color: "var(--gold)", lineHeight: 1.2, marginBottom: 2 }}>
-              {activeCombatant.name}
-            </h2>
-            <div style={{ color: "var(--text-dim)", fontSize: 18, fontStyle: "italic", marginBottom: 8 }}>
-              {activeCombatant.pcData?.charClass || "Player Character"}{activeCombatant.pcData?.level ? ` ${activeCombatant.pcData.level}` : ""}
+          <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 14 }}>
+            <div style={{ width: 72, height: 72, flexShrink: 0, borderRadius: 6, border: `1px solid ${portraits?.[activeCombatant?.id] ? "rgba(74,120,196,0.4)" : "var(--border)"}`, background: "var(--bg-card)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {portraits?.[activeCombatant?.id]
+                ? <img src={portraits[activeCombatant.id]} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                : <span style={{ fontSize: 28, opacity: 0.18 }}>⚔</span>}
             </div>
-            <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 15, padding: "3px 10px", border: "1px solid var(--blue)", borderRadius: 20, color: "#6a9de8", fontFamily: "var(--font-head)" }}>PC</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h2 style={{ fontFamily: "var(--font-head)", fontSize: 28, fontWeight: 700, color: "var(--gold)", lineHeight: 1.2, marginBottom: 2 }}>
+                {activeCombatant.name}
+              </h2>
+              <div style={{ color: "var(--text-dim)", fontSize: 18, fontStyle: "italic", marginBottom: 8 }}>
+                {activeCombatant.pcData?.charClass || "Player Character"}{activeCombatant.pcData?.level ? ` ${activeCombatant.pcData.level}` : ""}
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 15, padding: "3px 10px", border: "1px solid var(--blue)", borderRadius: 20, color: "#6a9de8", fontFamily: "var(--font-head)" }}>PC</span>
+              </div>
             </div>
           </div>
         ) : (combatants.length > 0 || searchedMonster) ? (
           <>
-            <div style={{ marginBottom: 10 }}>
-              <h2 style={{ fontFamily: "var(--font-head)", fontSize: 28, fontWeight: 700, color: "var(--gold)", lineHeight: 1.2, marginBottom: 2 }}>
-                {activeCombatant?.type === "Monster" ? activeCombatant.name : sb.name}
-              </h2>
-              <div style={{ color: "var(--text-dim)", fontSize: 18, fontStyle: "italic", marginBottom: 8 }}>{sb.size} {sb.type}, {sb.alignment}</div>
-              {activeCombatant?.type !== "Monster" && (
-                <button onClick={() => onOpenAdd(currentMonster)} style={{ marginTop: 8, padding: "6px 16px", background: "rgba(201,168,76,0.1)", border: "1px solid rgba(201,168,76,0.3)", borderRadius: 5, color: "var(--gold)", fontFamily: "var(--font-head)", fontSize: 14, letterSpacing: "0.08em", cursor: "pointer" }}>+ ADD TO COMBAT</button>
-              )}
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 10 }}>
+              <div style={{ width: 72, height: 72, flexShrink: 0, borderRadius: 6, border: `1px solid ${portraits?.[activeCombatant?.id] ? "rgba(201,168,76,0.4)" : "var(--border)"}`, background: "var(--bg-card)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {portraits?.[activeCombatant?.id]
+                  ? <img src={portraits[activeCombatant.id]} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  : <span style={{ fontSize: 28, opacity: 0.18 }}>☠</span>}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h2 style={{ fontFamily: "var(--font-head)", fontSize: 28, fontWeight: 700, color: "var(--gold)", lineHeight: 1.2, marginBottom: 2 }}>
+                  {activeCombatant?.type === "Monster" ? activeCombatant.name : sb.name}
+                </h2>
+                <div style={{ color: "var(--text-dim)", fontSize: 18, fontStyle: "italic", marginBottom: 8 }}>{sb.size} {sb.type}, {sb.alignment}</div>
+                {activeCombatant?.type !== "Monster" && (
+                  <button onClick={() => onOpenAdd(currentMonster)} style={{ marginTop: 8, padding: "6px 16px", background: "rgba(201,168,76,0.1)", border: "1px solid rgba(201,168,76,0.3)", borderRadius: 5, color: "var(--gold)", fontFamily: "var(--font-head)", fontSize: 14, letterSpacing: "0.08em", cursor: "pointer" }}>+ ADD TO COMBAT</button>
+                )}
+              </div>
             </div>
             <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
               <span style={{ fontSize: 15, padding: "3px 10px", border: `1px solid var(--gold)`, borderRadius: 20, color: "var(--gold)", fontFamily: "var(--font-head)" }}>CR {sb.cr}</span>
@@ -4062,19 +4077,13 @@ function CenterPanel({ combatants, activeIdx, setCombatants, allMonsters, onOpen
 
         {activeTab === "hp" && activeCombatant && (
           <div style={{ paddingBottom: 24 }}>
-            <div style={{ display: "flex", gap: 16, alignItems: "flex-start", marginBottom: 20 }}>
-              <div style={{ width: 90, height: 90, flexShrink: 0, borderRadius: 6, border: `1px solid ${portraits && portraits[activeCombatant.id] ? "var(--border-bright)" : "var(--border)"}`, background: "var(--bg)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {portraits && portraits[activeCombatant.id] ? (<img src={portraits[activeCombatant.id]} style={{ width: "100%", height: "100%", objectFit: "cover" }} />) : (<span style={{ fontSize: 30, opacity: 0.2 }}>{activeCombatant.type === "PC" ? "⚔" : "☠"}</span>)}
+            <div style={{ textAlign: "center", marginBottom: 20 }}>
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 6 }}>
+                <span style={{ fontFamily: "var(--font-head)", fontSize: 50, fontWeight: 700, color: activeCombatant.hp === 0 ? "var(--red)" : "var(--text)", lineHeight: 1 }}>{activeCombatant.hp}</span>
+                <span style={{ fontSize: 22, color: "var(--text-faint)" }}>/ {activeCombatant.maxHp}</span>
               </div>
-              <div style={{ flex: 1, textAlign: "center" }}>
-                <div style={{ fontFamily: "var(--font-head)", fontSize: 14, color: "var(--gold)", marginBottom: 6 }}>{activeCombatant.name.toUpperCase()}</div>
-                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 6 }}>
-                  <span style={{ fontFamily: "var(--font-head)", fontSize: 50, fontWeight: 700, color: activeCombatant.hp === 0 ? "var(--red)" : "var(--text)", lineHeight: 1 }}>{activeCombatant.hp}</span>
-                  <span style={{ fontSize: 22, color: "var(--text-faint)" }}>/ {activeCombatant.maxHp}</span>
-                </div>
-                <div style={{ marginTop: 8, height: 8, background: "var(--border)", borderRadius: 4, overflow: "hidden" }}>
-                  <div style={{ height: "100%", borderRadius: 4, width: `${Math.round((activeCombatant.hp / activeCombatant.maxHp) * 100)}%`, background: activeCombatant.hp < activeCombatant.maxHp * 0.25 ? "var(--red)" : activeCombatant.hp < activeCombatant.maxHp * 0.5 ? "#c4844a" : "var(--green)" }} />
-                </div>
+              <div style={{ marginTop: 8, height: 8, background: "var(--border)", borderRadius: 4, overflow: "hidden" }}>
+                <div style={{ height: "100%", borderRadius: 4, width: `${Math.round((activeCombatant.hp / activeCombatant.maxHp) * 100)}%`, background: activeCombatant.hp < activeCombatant.maxHp * 0.25 ? "var(--red)" : activeCombatant.hp < activeCombatant.maxHp * 0.5 ? "#c4844a" : "var(--green)" }} />
               </div>
             </div>
             <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
