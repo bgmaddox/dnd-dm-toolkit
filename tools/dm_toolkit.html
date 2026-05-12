@@ -5389,8 +5389,36 @@ function LootCalculatorTool() {
       { name: "Bottled moonlight (small)",       value: 18 },
       { name: "Faerie blossom, preserved",       value: 10 },
     ],
+    elemental: [
+      { name: "Crystallized elemental core",      value: 45 },
+      { name: "Vial of pure elemental essence",   value: 30 },
+      { name: "Shimmering elemental silt",       value: 15 },
+      { name: "Hardened lava fragment",           value: 10 },
+      { name: "Condensed cloud vapor",           value: 20 },
+    ],
+    aberration: [
+      { name: "Alien eye in preservation jar",    value: 40 },
+      { name: "Strange pulsating slime vial",     value: 25 },
+      { name: "Corrupted mind-shard fragment",   value: 50 },
+      { name: "Multi-layered chitin plate",       value: 18 },
+      { name: "Incomprehensible stone idol",     value: 35 },
+    ],
+    plant: [
+      { name: "Iron-hard bark section",          value: 15 },
+      { name: "Rare poisonous sap vial",         value: 25 },
+      { name: "Bioluminescent bloom",            value: 12 },
+      { name: "Entangling vine sample",          value: 8  },
+      { name: "Ancient seed pod",                value: 20 },
+    ],
+    monstrosity: [
+      { name: "Manticore tail spike",            value: 25 },
+      { name: "Gryphon feather (pristine)",      value: 15 },
+      { name: "Basilisk scale fragment",         value: 30 },
+      { name: "Chimera horn segment",            value: 40 },
+      { name: "Displacer beast fur tuft",        value: 35 },
+    ],
   };
-  const MONSTER_TYPES = ['none', 'beast', 'undead', 'humanoid', 'dragon', 'fiend', 'construct', 'fey'];
+  const MONSTER_TYPES = ['none', 'beast', 'undead', 'humanoid', 'dragon', 'fiend', 'construct', 'fey', 'elemental', 'aberration', 'plant', 'monstrosity'];
 
   const MAGIC_ITEM_TAGS = {
     "Potion of Healing":           ['utility'],
@@ -6620,6 +6648,90 @@ const TABLES_DATA = [
       { n: 18, cat: '', text: "The cold remains of a campfire — not ancient." },
       { n: 19, cat: '', text: "A door leading into solid stone — bricked up from the other side." },
       { n: 20, cat: '', text: "Total silence. The ambient sounds of the dungeon stop entirely for a moment." },
+    ]
+  },
+  {
+    id: 'trinkets', label: 'Random Trinkets', icon: '💎', die: 20,
+    description: 'Mysterious or mundane items players might find.',
+    type: 'simple',
+    entries: [
+      { n: 1,  cat: '', text: "A small, engraved silver whistle that makes no sound when blown." },
+      { n: 2,  cat: '', text: "A vial of ink that glows faintly in the dark." },
+      { n: 3,  cat: '', text: "A pocket watch that runs backward." },
+      { n: 4,  cat: '', text: "A piece of sea glass shaped like a perfect star." },
+      { n: 5,  cat: '', text: "A set of bone dice where the 6 is replaced with a skull." },
+      { n: 6,  cat: '', text: "A leather pouch containing smooth river stones of varying colors." },
+      { n: 7,  cat: '', text: "A small wooden box that hums when held close to the ear." },
+      { n: 8,  cat: '', text: "A tarnished locket with a painting of a place that doesn't exist." },
+      { n: 9,  cat: '', text: "A heavy iron key with no obvious lock." },
+      { n: 10, cat: '', text: "A map of a city that was destroyed centuries ago." },
+      { n: 11, cat: '', text: "A dried flower that never loses its scent." },
+      { n: 12, cat: '', text: "A glass marble that contains a miniature, unmoving lightning bolt." },
+      { n: 13, cat: '', text: "A scrap of parchment with a recipe for a dish no one has heard of." },
+      { n: 14, cat: '', text: "A small lead soldier missing its head." },
+      { n: 15, cat: '', text: "A silk handkerchief that always feels damp." },
+      { n: 16, cat: '', text: "A brass compass that points toward the nearest source of fresh water." },
+      { n: 17, cat: '', text: "A bottle containing the preserved remains of a rare insect." },
+      { n: 18, cat: '', text: "A small, intricately carved stone flute." },
+      { n: 19, cat: '', text: "A rusted dagger with a hilt wrapped in fraying velvet." },
+      { n: 20, cat: '', text: "A mysterious crystal that feels warm to the touch." },
+    ]
+  },
+  {
+    id: 'rumors', label: 'Local Rumors', icon: '📜', die: 12,
+    description: 'Town gossip and potential adventure hooks.',
+    type: 'simple',
+    entries: [
+      { n: 1,  cat: '', text: "The local blacksmith has been seen meeting with shady figures at midnight." },
+      { n: 2,  cat: '', text: "A strange light has been flickering in the abandoned tower on the hill." },
+      { n: 3,  cat: '', text: "The mayor is secretly in debt to a powerful criminal organization." },
+      { n: 4,  cat: '', text: "A legendary treasure is hidden somewhere in the nearby forest." },
+      { n: 5,  cat: '', text: "The town's water supply has been tainted by a mysterious substance." },
+      { n: 6,  cat: '', text: "A group of travelers vanished without a trace last week." },
+      { n: 7,  cat: '', text: "The local priest is hiding a dark secret from their past." },
+      { n: 8,  cat: '', text: "A rare and valuable herb grows only on the cliffs to the north." },
+      { n: 9,  cat: '', text: "A ghost has been seen wandering the streets after sunset." },
+      { n: 10, cat: '', text: "The nearby caves are home to a tribe of aggressive goblins." },
+      { n: 11, cat: '', text: "A mysterious stranger arrived in town with a heavy locked chest." },
+      { n: 12, cat: '', text: "The upcoming festival is being sabotaged by a rival town." },
+    ]
+  },
+  {
+    id: 'city_events', label: 'City Street Events', icon: '🏙️', die: 12,
+    description: 'Random occurrences in an urban environment.',
+    type: 'simple',
+    entries: [
+      { n: 1,  cat: '', text: "A pickpocket flees past the party, pursued by a shouting merchant." },
+      { n: 2,  cat: '', text: "A street performer draws a large, boisterous crowd." },
+      { n: 3,  cat: '', text: "A runaway carriage barrels down the narrow street." },
+      { n: 4,  cat: '', text: "A group of guards is conducting a random search of travelers." },
+      { n: 5,  cat: '', text: "A sudden downpour sends everyone scurrying for cover." },
+      { n: 6,  cat: '', text: "A heated argument breaks out between two rival tavern owners." },
+      { n: 7,  cat: '', text: "A stray dog follows the party, hoping for a scrap of food." },
+      { n: 8,  cat: '', text: "A mysterious message is scrawled in chalk on a nearby wall." },
+      { n: 9,  cat: '', text: "A group of children is playing a loud and chaotic game." },
+      { n: 10, cat: '', text: "A local noble's procession passes through, demanding the way." },
+      { n: 11, cat: '', text: "A faint, beautiful melody drifts from an upper-story window." },
+      { n: 12, cat: '', text: "A vendor is selling 'genuine' magical charms at a steep price." },
+    ]
+  },
+  {
+    id: 'traps', label: 'Random Traps', icon: '🪤', die: 12,
+    description: 'Quickly generate a trap for a dungeon or secure area.',
+    type: 'simple',
+    entries: [
+      { n: 1,  cat: '', text: "Pressure plate triggers a volley of poison darts from the walls." },
+      { n: 2,  cat: '', text: "A false floor drops into a 10-foot pit filled with rusted spikes." },
+      { n: 3,  cat: '', text: "Opening a chest triggers a cloud of paralyzing gas." },
+      { n: 4,  cat: '', text: "A tripwire releases a heavy swinging log from the ceiling." },
+      { n: 5,  cat: '', text: "Touching a certain idol triggers a magical blast of cold." },
+      { n: 6,  cat: '', text: "A hidden nozzle sprays a jet of burning oil across the corridor." },
+      { n: 7,  cat: '', text: "A magical rune on the floor triggers a thunderwave when stepped on." },
+      { n: 8,  cat: '', text: "A mechanical scythe swings out from a hidden slot in the wall." },
+      { n: 9,  cat: '', text: "Stepping on a specific tile triggers a collapse of loose ceiling stones." },
+      { n: 10, cat: '', text: "A locked door is rigged with a needle that delivers a potent sleeping toxin." },
+      { n: 11, cat: '', text: "An illusionary floor covers a deep shaft leading to a lower level." },
+      { n: 12, cat: '', text: "A golden bowl on a pedestal is rigged with an alarm that alerts nearby guards." },
     ]
   },
 ];
