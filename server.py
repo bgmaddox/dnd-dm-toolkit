@@ -180,6 +180,62 @@ class GenerateRequest(BaseModel):
     system: str = ""
     provider: str = "claude"
 
+class MoodRequest(BaseModel):
+    preset: str
+
+@app.post("/api/ai/describe_mood")
+async def describe_mood(req: MoodRequest):
+    system_instruction = "You are a sensory D&D dungeon master. Provide a single, evocative sentence (max 25 words) that describes the atmosphere, including smell, sound, or temperature. No preamble."
+    user_prompt = f"The current ambiance is: {req.preset}. Describe the mood of the environment for the players."
+
+    raw = None
+
+    # Try Gemini first
+    if _gemini_client is not None:
+        allowed, _ = _gemini_text_limiter.acquire()
+        if allowed:
+            try:
+                cfg = _gemini_types.GenerateContentConfig(
+                    max_output_tokens=100,
+                    system_instruction=system_instruction,
+                )
+                response = _gemini_client.models.generate_content(
+                    model="gemini-2.0-flash",
+                    contents=user_prompt,
+                    config=cfg,
+                )
+                raw = response.text.strip().replace('"', '')
+            except Exception:
+                pass
+
+    # Fall back to Claude
+    if raw is None and client:
+        try:
+            message = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=100,
+                system=system_instruction,
+                messages=[{"role": "user", "content": user_prompt}],
+            )
+            raw = message.content[0].text.strip().replace('"', '')
+        except Exception:
+            pass
+            
+    if not raw:
+        # Static fallback if both APIs fail
+        fallbacks = {
+            "Tavern": "The air is warm and smells of roasted meat, filled with the low hum of chatter and the rhythmic clinking of tankards.",
+            "Dungeon": "Cold, damp air clings to your skin, and the silence is broken only by the distant, echoing rhythm of dripping water.",
+            "Forest": "The scent of damp earth and pine needles fills the air, accompanied by the gentle rustle of leaves in the breeze.",
+            "Combat": "The metallic tang of blood and sweat mixes with the scent of ozone as the air vibrates with the sounds of clashing steel.",
+            "Mystical": "The air feels unnaturally thin and hums with a faint, static charge, smelling of old parchment and ozone.",
+            "Town": "The bustle of daily life fills the air with the smell of baked bread and the sound of distant market calls.",
+            "Storm": "Heavy raindrops drench the earth as the smell of wet stone and ozone precedes each blinding flash of lightning."
+        }
+        raw = fallbacks.get(req.preset, "The air is thick with anticipation, and every shadow seems to hold a secret.")
+
+    return {"description": raw}
+
 
 @app.post("/api/ai/generate")
 async def generate(req: GenerateRequest):

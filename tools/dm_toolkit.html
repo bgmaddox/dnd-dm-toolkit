@@ -50,6 +50,10 @@
   --shadow-gold: 0 0 24px #c9a84c22, 0 2px 8px #00000080;
   --shadow-card: 0 2px 16px #00000060;
   --sidebar-w: 260px;
+  
+  /* Dynamic Mood Variables */
+  --mood-c1: #c9a84c08;
+  --mood-c2: #6b4fa808;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -63,11 +67,12 @@ body::before {
   position: fixed;
   inset: 0;
   background-image:
-    radial-gradient(ellipse 80% 60% at 20% 10%, #c9a84c08 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 90%, #6b4fa808 0%, transparent 60%),
+    radial-gradient(ellipse 80% 60% at 20% 10%, var(--mood-c1) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 90%, var(--mood-c2) 0%, transparent 60%),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
   pointer-events: none;
   z-index: 0;
+  transition: background-image 2s ease;
 }
 
 ::-webkit-scrollbar { width: 6px; }
@@ -530,28 +535,24 @@ input:focus, select:focus { border-color: var(--gold-dim); outline: none; }
 
 /* ── AmbianceTool ── */
 .amb-tool { display: flex; gap: 16px; padding: 20px; height: 100%; overflow: hidden; box-sizing: border-box; }
-.amb-left { flex: 0 0 220px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
-.amb-center { flex: 1; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-.amb-right { flex: 0 0 240px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; overflow-y: auto; }
-.amb-preset-card { padding: 14px 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; text-align: center; transition: border-color 0.15s; }
-.amb-preset-card:hover { border-color: var(--text-dim); }
-.amb-preset-card.active { border-color: var(--gold); background: rgba(201,168,76,0.08); }
-.amb-preset-icon { font-size: 2.2rem; display: block; margin-bottom: 4px; }
-.amb-preset-label { font-size: 1.2rem; color: var(--text-dim); }
-.amb-play-btn { width: 72px; height: 72px; border-radius: 50%; border: 2px solid var(--gold); background: none; color: var(--gold); font-size: 2rem; cursor: pointer; margin: 16px 0; display: flex; align-items: center; justify-content: center; }
-.amb-play-btn:hover { background: rgba(201,168,76,0.1); }
-.amb-play-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.amb-track-name { font-size: 1.5rem; font-weight: 600; margin-bottom: 4px; }
-.amb-track-artist { font-size: 1.2rem; color: var(--text-muted); margin-bottom: 8px; }
-.amb-attribution { font-size: 1.0rem; color: var(--text-dim); margin-top: auto; padding-top: 16px; font-style: italic; }
-.amb-sfx-btn { display: flex; align-items: center; width: 100%; border: 1px solid var(--border); border-radius: 6px; font-size: 1.25rem; color: var(--text-dim); margin-bottom: 6px; overflow: hidden; background: none; padding: 0; }
-.amb-sfx-btn.looping { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.08); }
-.amb-sfx-play { flex: 1; text-align: left; padding: 10px 14px; background: none; border: none; cursor: pointer; font-size: inherit; color: inherit; }
-.amb-sfx-play:hover { background: rgba(255,255,255,0.04); }
-.amb-sfx-loop { padding: 10px 13px; background: none; border: none; border-left: 1px solid var(--border); cursor: pointer; color: inherit; font-size: 1rem; flex-shrink: 0; }
-.amb-sfx-loop:hover { background: rgba(255,255,255,0.06); }
-.amb-volume-row { display: flex; align-items: center; gap: 10px; margin: 12px 0; font-size: 1.2rem; color: var(--text-muted); width: 100%; }
-.amb-volume-row input[type=range] { flex: 1; }
+.amb-left { flex: 0 0 220px; display: flex; flex-direction: column; overflow-y: auto; }
+.amb-center { flex: 1; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; box-shadow: var(--shadow-card); }
+.amb-right { flex: 0 0 260px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; }
+.amb-preset-card { padding: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; text-align: center; transition: all 0.2s; margin-bottom: 4px; }
+.amb-preset-card:hover { border-color: var(--gold-dim); transform: translateY(-1px); }
+.amb-preset-card.active { border-color: var(--gold); background: rgba(201,168,76,0.12); box-shadow: 0 0 15px rgba(201,168,76,0.1); }
+.amb-preset-icon { font-size: 1.8rem; display: block; margin-bottom: 4px; }
+.amb-preset-label { font-size: 0.95rem; font-family: var(--serif); color: var(--text-muted); font-weight: 600; letter-spacing: 0.05em; }
+.amb-preset-card.active .amb-preset-label { color: var(--gold); }
+.amb-play-btn { border-radius: 50%; border: 2px solid var(--gold); background: none; color: var(--gold); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.amb-play-btn:hover { background: rgba(201,168,76,0.1); transform: scale(1.05); }
+.amb-track-name { font-family: var(--serif); font-size: 1.4rem; font-weight: 700; margin-bottom: 2px; color: var(--text); }
+.amb-track-artist { font-size: 0.95rem; color: var(--text-dim); margin-bottom: 12px; }
+.amb-attribution { font-size: 0.8rem; color: var(--text-faint); margin-top: auto; padding-top: 16px; font-style: italic; }
+.amb-volume-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: 0.85rem; color: var(--text-dim); width: 100%; font-family: var(--serif); text-transform: uppercase; letter-spacing: 0.05em; }
+.amb-volume-row input[type=range] { flex: 1; accent-color: var(--gold); height: 4px; }
+.amb-sfx-grid-btn:hover { border-color: var(--gold-dim) !important; background: rgba(255,255,255,0.03) !important; color: var(--text) !important; }
+.amb-sfx-grid-btn:active { transform: scale(0.95); }
 
 /* ─── Random Tables Tool ─── */
 .tables-tool { display: flex; flex-direction: column; gap: 1.5rem; max-width: 760px; margin: 0 auto; }
@@ -6212,37 +6213,37 @@ function CampaignCalendarTool() {
 
 // ─── AmbianceTool ────────────────────────────────────────────────────────────
 const AMBIANCE_PRESETS = [
-  { id:"tavern",   label:"Tavern",   icon:"🍺", tracks:[
+  { id:"tavern",   label:"Tavern",   icon:"🍺", mood:{ c1:"#c9a84c15", c2:"#8b5e3c08" }, tracks:[
     { title:"Constancy Part Three", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Constancy%20Part%20Three.mp3" },
     { title:"Fluffing a Duck",      url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Fluffing%20a%20Duck.mp3" },
     { title:"Sneaky Snitch",        url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Sneaky%20Snitch.mp3" },
   ]},
-  { id:"dungeon",  label:"Dungeon",  icon:"🏚", tracks:[
+  { id:"dungeon",  label:"Dungeon",  icon:"🏚", mood:{ c1:"#3a4b5e15", c2:"#1a2a3a10" }, tracks:[
     { title:"Ominous",        url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Ominous.mp3" },
     { title:"Darkest Child",  url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Darkest%20Child.mp3" },
     { title:"Lightless Dawn", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Lightless%20Dawn.mp3" },
   ]},
-  { id:"forest",   label:"Forest",   icon:"🌲", tracks:[
+  { id:"forest",   label:"Forest",   icon:"🌲", mood:{ c1:"#3d5e3a15", c2:"#2a3a1a10" }, tracks:[
     { title:"The Forest and the Trees", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/The%20Forest%20and%20the%20Trees.mp3" },
     { title:"Enchanted Journey",        url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Enchanted%20Journey.mp3" },
     { title:"Hidden Agenda",            url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Hidden%20Agenda.mp3" },
   ]},
-  { id:"combat",   label:"Combat",   icon:"⚔",  tracks:[
+  { id:"combat",   label:"Combat",   icon:"⚔",  mood:{ c1:"#a0404015", c2:"#5c1a1a10" }, tracks:[
     { title:"Clash Defiant",       url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Clash%20Defiant.mp3" },
     { title:"Master of the Feast", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Master%20of%20the%20Feast.mp3" },
     { title:"Volatile Reaction",   url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Volatile%20Reaction.mp3" },
   ]},
-  { id:"mystical", label:"Mystical", icon:"✨", tracks:[
+  { id:"mystical", label:"Mystical", icon:"✨", mood:{ c1:"#6b4fa815", c2:"#3a2a5e10" }, tracks:[
     { title:"Floating Cities", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Floating%20Cities.mp3" },
     { title:"Wizardtorium",    url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Wizardtorium.mp3" },
     { title:"Unseen Horrors",  url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Unseen%20Horrors.mp3" },
   ]},
-  { id:"town",     label:"Town",     icon:"🏘", tracks:[
+  { id:"town",     label:"Town",     icon:"🏘", mood:{ c1:"#c9a84c10", c2:"#4a78c408" }, tracks:[
     { title:"Merry Go",  url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Merry%20Go.mp3" },
     { title:"Carefree",  url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Carefree.mp3" },
     { title:"Vivacity",  url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Vivacity.mp3" },
   ]},
-  { id:"storm",    label:"Storm",    icon:"🌩", tracks:[
+  { id:"storm",    label:"Storm",    icon:"🌩", mood:{ c1:"#4a5a7815", c2:"#1a2a3a10" }, tracks:[
     { title:"Stormfront",  url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Stormfront.mp3" },
     { title:"Unrelenting", url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Unrelenting.mp3" },
     { title:"Dark Times",  url:"https://incompetech.com/music/royalty-free/mp3-royaltyfree/Dark%20Times.mp3" },
@@ -6250,14 +6251,36 @@ const AMBIANCE_PRESETS = [
 ];
 
 const SFX_LIST = [
-  { id:"thunder",       ext:"wav", icon:"⚡", label:"Thunder" },
-  { id:"swordClash",    ext:"wav", icon:"⚔", label:"Sword Clash" },
-  { id:"magicShimmer",  ext:"wav", icon:"✨", label:"Magic Shimmer" },
-  { id:"doorCreak",     ext:"wav", icon:"🚪", label:"Door Creak" },
-  { id:"tavernCheer",   ext:"wav", icon:"🍺", label:"Tavern Cheer" },
-  { id:"crowdHoots",    ext:"wav", icon:"👥", label:"Crowd Hoots" },
+  // Tactical One-Shots
+  { id:"swordClash",    ext:"wav", icon:"⚔", label:"Sword Clash", cat:"Tactical" },
+  { id:"arrow_whiz",    ext:"wav", icon:"🏹", label:"Arrow Whiz", cat:"Tactical" },
+  { id:"shield_clash",  ext:"wav", icon:"🛡", label:"Shield Block", cat:"Tactical" },
+  { id:"fireball_blast",ext:"mp3", icon:"💥", label:"Fireball", cat:"Tactical" },
+  { id:"healing_glug",  ext:"wav", icon:"🧪", label:"Healing", cat:"Tactical" },
+  { id:"coin_jingle",   ext:"wav", icon:"💰", label:"Loot Coin", cat:"Tactical" },
+  
+  // Dungeon Master Utility
+  { id:"lock_click",    ext:"wav", icon:"🔓", label:"Lock Click", cat:"Utility" },
+  { id:"doorCreak",     ext:"wav", icon:"🚪", label:"Door Creak", cat:"Utility" },
+  { id:"page_turn",     ext:"wav", icon:"📖", label:"Page Turn", cat:"Utility" },
+  { id:"monster_roar",  ext:"wav", icon:"👹", label:"Monster Roar", cat:"Utility" },
+  { id:"dramaticSting", ext:"wav", icon:"🎵", label:"Dramatic Sting", cat:"Utility" },
+  
+  // Environmental / Scene
+  { id:"thunder",       ext:"wav", icon:"⚡", label:"Thunder", cat:"Scene" },
+  { id:"tavernCheer",   ext:"wav", icon:"🍺", label:"Tavern Cheer", cat:"Scene" },
+  { id:"crowdHoots",    ext:"wav", icon:"👥", label:"Crowd Hoots", cat:"Scene" },
+  { id:"magicShimmer",  ext:"wav", icon:"✨", label:"Magic Shimmer", cat:"Scene" },
+];
+
+const ATMOSPHERIC_LOOPS = [
   { id:"cracklingFire", ext:"mp3", icon:"🔥", label:"Crackling Fire" },
-  { id:"dramaticSting", ext:"wav", icon:"🎵", label:"Dramatic Sting" },
+  { id:"rain_loop",     ext:"mp3", icon:"🌧", label:"Steady Rain" },
+  { id:"wind_howl",     ext:"mp3", icon:"🌬", label:"Howling Wind" },
+  { id:"forest_birds",  ext:"mp3", icon:"🐦", label:"Forest Birds" },
+  { id:"dungeon_drip",  ext:"mp3", icon:"💧", label:"Dungeon Drip" },
+  { id:"whispers",      ext:"mp3", icon:"👻", label:"Eerie Whispers" },
+  { id:"heartbeat",     ext:"mp3", icon:"💓", label:"Tense Heartbeat" },
 ];
 
 function playSfx(type, volume = 0.5) {
@@ -6270,21 +6293,27 @@ function playSfx(type, volume = 0.5) {
 
 function AmbianceTool() {
   const audioRef = useRef(null);
-  const loopingAudioRef = useRef(null);
+  const layerRefs = useRef({}); // { id: Audio }
+  
   const [activePreset, setActivePreset] = useState(null);
   const [activeTrack, setActiveTrack] = useState(null);
   const [playing, setPlaying] = useState(false);
   const [musicVolume, setMusicVolume] = useState(70);
   const [sfxVolume, setSfxVolume] = useState(80);
   const [audioError, setAudioError] = useState(false);
-  const [loopingSfxId, setLoopingSfxId] = useState(null);
+  const [activeLayers, setActiveLayers] = useState([]); // [id]
+  const [moodDescription, setMoodDescription] = useState("");
+  const [moodLoading, setMoodLoading] = useState(false);
 
   useEffect(() => {
     if (!audioRef.current) {
       audioRef.current = new Audio();
       audioRef.current.loop = true;
     }
-    return () => { audioRef.current?.pause(); loopingAudioRef.current?.pause(); };
+    return () => { 
+      audioRef.current?.pause(); 
+      Object.values(layerRefs.current).forEach(a => a.pause());
+    };
   }, []);
 
   useEffect(() => {
@@ -6292,53 +6321,133 @@ function AmbianceTool() {
   }, [musicVolume]);
 
   useEffect(() => {
-    if (loopingAudioRef.current) loopingAudioRef.current.volume = sfxVolume / 100;
+    Object.values(layerRefs.current).forEach(a => {
+      a.volume = sfxVolume / 100;
+    });
   }, [sfxVolume]);
 
-  function toggleLoop(id) {
-    if (loopingAudioRef.current) {
-      loopingAudioRef.current.pause();
-      loopingAudioRef.current = null;
+  function fadeAudio(audio, targetVolume, duration = 1500) {
+    const startVolume = audio.volume;
+    const steps = 30;
+    const interval = duration / steps;
+    const delta = (targetVolume - startVolume) / steps;
+    
+    let currentStep = 0;
+    const timer = setInterval(() => {
+      currentStep++;
+      audio.volume = Math.max(0, Math.min(1, startVolume + (delta * currentStep)));
+      if (currentStep >= steps) {
+        clearInterval(timer);
+        if (targetVolume === 0) audio.pause();
+      }
+    }, interval);
+  }
+
+  function toggleLayer(loop) {
+    if (activeLayers.includes(loop.id)) {
+      const audio = layerRefs.current[loop.id];
+      if (audio) fadeAudio(audio, 0, 1000);
+      setActiveLayers(prev => prev.filter(id => id !== loop.id));
+    } else {
+      let audio = layerRefs.current[loop.id];
+      if (!audio) {
+        audio = new Audio(`/tools/sfx/${loop.id}.${loop.ext}`);
+        audio.loop = true;
+        layerRefs.current[loop.id] = audio;
+      }
+      audio.volume = 0;
+      audio.play().catch(() => {});
+      fadeAudio(audio, sfxVolume / 100, 1000);
+      setActiveLayers(prev => [...prev, loop.id]);
     }
-    if (loopingSfxId === id) { setLoopingSfxId(null); return; }
-    const sfx = SFX_LIST.find(s => s.id === id);
-    if (!sfx) return;
-    const audio = new Audio(`/tools/sfx/${id}.${sfx.ext}`);
-    audio.loop = true;
-    audio.volume = sfxVolume / 100;
-    audio.play().catch(() => {});
-    loopingAudioRef.current = audio;
-    setLoopingSfxId(id);
   }
 
   function playTrack(preset, track) {
     const audio = audioRef.current;
     if (!audio) return;
     setAudioError(false);
-    audio.pause();
+    
+    if (playing) {
+      // Fade out current, then switch
+      const oldVol = audio.volume;
+      const steps = 15;
+      const interval = 50;
+      const delta = oldVol / steps;
+      let current = 0;
+      const timer = setInterval(() => {
+        current++;
+        audio.volume = Math.max(0, oldVol - (delta * current));
+        if (current >= steps) {
+          clearInterval(timer);
+          audio.pause();
+          startNewTrack(preset, track);
+        }
+      }, interval);
+    } else {
+      startNewTrack(preset, track);
+    }
+  }
+
+  function startNewTrack(preset, track) {
+    const audio = audioRef.current;
     audio.src = track.url;
-    audio.volume = musicVolume / 100;
+    audio.volume = 0;
     setActivePreset(preset);
     setActiveTrack(track);
-    audio.play().then(() => setPlaying(true)).catch(() => setAudioError(true));
+    audio.play().then(() => {
+      setPlaying(true);
+      fadeAudio(audio, musicVolume / 100, 1500);
+      // Update visual mood
+      if (preset.mood) {
+        document.documentElement.style.setProperty('--mood-c1', preset.mood.c1);
+        document.documentElement.style.setProperty('--mood-c2', preset.mood.c2);
+      }
+    }).catch(() => setAudioError(true));
   }
 
   function togglePlay() {
     const audio = audioRef.current;
     if (!audio || !activePreset) return;
-    if (playing) { audio.pause(); setPlaying(false); }
-    else { audio.play().then(() => setPlaying(true)).catch(() => setAudioError(true)); }
+    if (playing) { 
+      fadeAudio(audio, 0, 1000);
+      setPlaying(false); 
+    } else { 
+      audio.play().then(() => {
+        setPlaying(true);
+        fadeAudio(audio, musicVolume / 100, 1000);
+      }).catch(() => setAudioError(true)); 
+    }
   }
 
   function selectPreset(preset) {
     if (activePreset?.id === preset.id) { togglePlay(); return; }
     playTrack(preset, preset.tracks[0]);
+    setMoodDescription("");
+  }
+
+  async function generateMoodDescription() {
+    if (!activePreset) return;
+    setMoodLoading(true);
+    try {
+      const resp = await fetch("/api/ai/describe_mood", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preset: activePreset.label })
+      });
+      const data = await resp.json();
+      setMoodDescription(data.description);
+    } catch (e) {
+      setMoodDescription("The air is thick with anticipation, and every shadow seems to hold a secret.");
+    } finally {
+      setMoodLoading(false);
+    }
   }
 
   return (
     <div className="amb-tool">
       {/* Left — Preset Cards */}
       <div className="amb-left">
+        <div style={{fontSize:'0.75rem',textTransform:'uppercase',letterSpacing:'0.1em',color:'var(--text-dim)',marginBottom:12,paddingLeft:4}}>Atmosphere</div>
         {AMBIANCE_PRESETS.map(p => (
           <div
             key={p.id}
@@ -6349,6 +6458,25 @@ function AmbianceTool() {
             <span className="amb-preset-label">{p.label}</span>
           </div>
         ))}
+        
+        <div style={{fontSize:'0.75rem',textTransform:'uppercase',letterSpacing:'0.1em',color:'var(--text-dim)',marginTop:24,marginBottom:12,paddingLeft:4}}>Scene Layers</div>
+        <div style={{display:'flex',flexDirection:'column',gap:6}}>
+          {ATMOSPHERIC_LOOPS.map(loop => (
+            <div key={loop.id} 
+              onClick={() => toggleLayer(loop)}
+              style={{
+                display:'flex',alignItems:'center',gap:10,padding:'8px 12px',borderRadius:8,cursor:'pointer',fontSize:'0.9rem',
+                border:`1px solid ${activeLayers.includes(loop.id) ? 'var(--teal)' : 'var(--border)'}`,
+                background: activeLayers.includes(loop.id) ? 'rgba(61,168,148,0.1)' : 'none',
+                color: activeLayers.includes(loop.id) ? 'var(--teal)' : 'var(--text-muted)',
+                transition:'all 0.2s'
+              }}>
+              <span>{loop.icon}</span>
+              <span style={{flex:1}}>{loop.label}</span>
+              {activeLayers.includes(loop.id) && <span style={{fontSize:'0.7rem'}}>🔁</span>}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Center — Music Player */}
@@ -6358,77 +6486,133 @@ function AmbianceTool() {
             <div style={{fontSize:'0.8rem',color:'var(--text-muted)',marginBottom:4,textTransform:'uppercase',letterSpacing:'0.08em'}}>{activePreset.label}</div>
             <div className="amb-track-name">{activeTrack?.title}</div>
             <div className="amb-track-artist">Kevin MacLeod</div>
-            <button
-              className="amb-play-btn"
-              disabled={audioError}
-              onClick={togglePlay}
-              title={playing ? 'Pause' : 'Play'}
-            >
-              {playing ? '⏸' : '▶'}
-            </button>
+            
+            <div style={{display:'flex',alignItems:'center',gap:20,margin:'20px 0'}}>
+              <button
+                className="amb-play-btn"
+                disabled={audioError}
+                onClick={togglePlay}
+                style={{width:64,height:64,fontSize:'1.5rem'}}
+                title={playing ? 'Pause' : 'Play'}
+              >
+                {playing ? '⏸' : '▶'}
+              </button>
+              
+              <div style={{flex:1}}>
+                <div className="amb-volume-row" style={{maxWidth:240}}>
+                  <span>Music</span>
+                  <input type="range" min="0" max="100" value={musicVolume} onChange={e => setMusicVolume(Number(e.target.value))} />
+                  <span>{musicVolume}%</span>
+                </div>
+                <div className="amb-volume-row" style={{maxWidth:240,marginTop:8}}>
+                  <span>Layers</span>
+                  <input type="range" min="0" max="100" value={sfxVolume} onChange={e => setSfxVolume(Number(e.target.value))} />
+                  <span>{sfxVolume}%</span>
+                </div>
+              </div>
+            </div>
+
             {audioError && (
               <div style={{color:'var(--gold)',fontSize:'0.88rem',marginBottom:8}}>
                 ⚠ Audio unavailable — check network connection
               </div>
             )}
-            <div className="amb-volume-row" style={{maxWidth:280}}>
-              <span>Volume</span>
-              <input type="range" min="0" max="100" value={musicVolume} onChange={e => setMusicVolume(Number(e.target.value))} />
-              <span>{musicVolume}%</span>
+            
+            <div style={{width:'100%',maxWidth:400,background:'var(--bg-card)',borderRadius:12,padding:16,border:'1px solid var(--border)',marginBottom:24}}>
+               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+                 <span style={{fontSize:'0.75rem',textTransform:'uppercase',letterSpacing:'0.1em',color:'var(--text-dim)'}}>✨ Sensory Mood</span>
+                 <button onClick={generateMoodDescription} disabled={moodLoading}
+                   style={{background:'none',border:'1px solid var(--gold-dim)',color:'var(--gold)',borderRadius:4,padding:'2px 8px',fontSize:'0.8rem',cursor:'pointer'}}>
+                   {moodLoading ? 'Thinking...' : 'Refresh'}
+                 </button>
+               </div>
+               {moodDescription ? (
+                 <div style={{fontStyle:'italic',color:'var(--text)',lineHeight:1.6,fontSize:'1.05rem',animation:'fadeIn 0.5s ease'}}>
+                   "{moodDescription}"
+                 </div>
+               ) : (
+                 <div style={{color:'var(--text-dim)',fontSize:'0.9rem'}}>Click refresh to generate a sensory description of this mood.</div>
+               )}
             </div>
-            <div style={{fontSize:'0.8rem',color:'var(--text-muted)',marginTop:4,marginBottom:20}}>🔁 Looping</div>
-            <div style={{width:'100%',maxWidth:340}}>
-              <div style={{fontSize:'0.75rem',textTransform:'uppercase',letterSpacing:'0.1em',color:'var(--text-dim)',marginBottom:8}}>Tracks</div>
+
+            <div style={{width:'100%',maxWidth:400}}>
+              <div style={{fontSize:'0.75rem',textTransform:'uppercase',letterSpacing:'0.1em',color:'var(--text-dim)',marginBottom:8}}>Music Tracks</div>
               {activePreset.tracks.map(t => (
                 <div
                   key={t.url}
                   onClick={() => playTrack(activePreset, t)}
                   style={{
-                    padding:'8px 12px', cursor:'pointer', borderRadius:6, marginBottom:4,
+                    padding:'10px 14px', cursor:'pointer', borderRadius:8, marginBottom:6,
                     border:`1px solid ${activeTrack?.url === t.url ? 'var(--gold)' : 'var(--border)'}`,
                     background: activeTrack?.url === t.url ? 'rgba(201,168,76,0.08)' : 'none',
                     color: activeTrack?.url === t.url ? 'var(--gold)' : 'var(--text-dim)',
-                    fontSize:'0.92rem', display:'flex', alignItems:'center', gap:8,
+                    fontSize:'0.95rem', display:'flex', alignItems:'center', gap:10,
                   }}
                 >
-                  <span style={{fontSize:'0.7rem',opacity:0.6}}>{activeTrack?.url === t.url && playing ? '▶' : '○'}</span>
+                  <span style={{fontSize:'0.8rem',opacity:0.6}}>{activeTrack?.url === t.url && playing ? '▶' : '○'}</span>
                   {t.title}
                 </div>
               ))}
             </div>
           </>
         ) : (
-          <>
-            <div style={{fontSize:'2rem',marginBottom:12,opacity:0.3}}>🎵</div>
-            <div style={{color:'var(--text-muted)',fontSize:'0.95rem'}}>Select a mood to begin</div>
-            <div className="amb-volume-row" style={{maxWidth:280,marginTop:24}}>
-              <span>Volume</span>
-              <input type="range" min="0" max="100" value={musicVolume} onChange={e => setMusicVolume(Number(e.target.value))} />
-              <span>{musicVolume}%</span>
+          <div style={{textAlign:'center',padding:'40px 0'}}>
+            <div style={{fontSize:'3rem',marginBottom:16,opacity:0.2}}>🎭</div>
+            <div style={{color:'var(--gold)',fontFamily:'var(--serif)',fontSize:'1.4rem',marginBottom:8}}>Set the Stage</div>
+            <div style={{color:'var(--text-muted)',fontSize:'1rem'}}>Select an atmosphere to begin your story</div>
+            
+            <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:12,marginTop:32}}>
+              <div className="amb-volume-row" style={{maxWidth:240}}>
+                <span>Master Volume</span>
+                <input type="range" min="0" max="100" value={musicVolume} onChange={e => {setMusicVolume(e.target.value); setSfxVolume(e.target.value);}} />
+              </div>
             </div>
-          </>
+          </div>
         )}
         <div className="amb-attribution">Music: Kevin MacLeod / incompetech.com — CC BY 3.0</div>
       </div>
 
       {/* Right — SFX Panel */}
       <div className="amb-right">
-        <div style={{fontWeight:600,marginBottom:12,fontSize:'1rem'}}>Sound Effects</div>
-        <div className="amb-volume-row">
-          <span>SFX Vol</span>
-          <input type="range" min="0" max="100" value={sfxVolume} onChange={e => setSfxVolume(Number(e.target.value))} />
-          <span>{sfxVolume}%</span>
-        </div>
-        {SFX_LIST.map(sfx => (
-          <div key={sfx.id} className={`amb-sfx-btn${loopingSfxId === sfx.id ? ' looping' : ''}`}>
-            <button className="amb-sfx-play" onClick={() => playSfx(sfx.id, sfxVolume / 100)}>
-              {sfx.icon} {sfx.label}
-            </button>
-            <button className="amb-sfx-loop" onClick={() => toggleLoop(sfx.id)} title={loopingSfxId === sfx.id ? 'Stop loop' : 'Loop'}>
-              {loopingSfxId === sfx.id ? '⏹' : '🔁'}
-            </button>
+        <div style={{fontSize:'0.75rem',textTransform:'uppercase',letterSpacing:'0.1em',color:'var(--text-dim)',marginBottom:16}}>Sound Effects</div>
+        
+        {['Tactical', 'Utility', 'Scene'].map(cat => (
+          <div key={cat} style={{marginBottom:20}}>
+            <div style={{fontSize:'0.7rem',color:'var(--text-dim)',marginBottom:10,borderBottom:'1px solid var(--border)',paddingBottom:4}}>{cat}</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+              {SFX_LIST.filter(s => s.cat === cat).map(sfx => (
+                <button 
+                  key={sfx.id}
+                  onClick={() => playSfx(sfx.id, sfxVolume / 100)}
+                  className="amb-sfx-grid-btn"
+                  style={{
+                    appearance:'none',background:'var(--bg-card)',border:'1px solid var(--border)',borderRadius:8,
+                    padding:'10px 6px',color:'var(--text-muted)',cursor:'pointer',fontSize:'0.85rem',
+                    display:'flex',flexDirection:'column',alignItems:'center',gap:4,transition:'all 0.15s'
+                  }}
+                >
+                  <span style={{fontSize:'1.2rem'}}>{sfx.icon}</span>
+                  <span style={{fontSize:'0.7rem',textAlign:'center'}}>{sfx.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
         ))}
+        
+        <button 
+          onClick={() => {
+            Object.values(layerRefs.current).forEach(a => fadeAudio(a, 0, 500));
+            if (audioRef.current) fadeAudio(audioRef.current, 0, 500);
+            setPlaying(false);
+            setActiveLayers([]);
+          }}
+          style={{
+            width:'100%',padding:'12px',background:'rgba(160,64,64,0.15)',border:'1px solid var(--danger)',
+            color:'var(--red-text)',borderRadius:8,cursor:'pointer',fontFamily:'var(--serif)',
+            fontSize:'0.9rem',letterSpacing:'0.05em',marginTop:10
+          }}>
+          🔇 SILENCE ALL
+        </button>
       </div>
     </div>
   );
