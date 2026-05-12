@@ -4977,6 +4977,8 @@ function EncounterHelperTool() {
 
   const [partySize, setPartySize] = useState(4);
   const [partyLevel, setPartyLevel] = useState(5);
+  const [powerLevel, setPowerLevel] = useState('standard');
+  const [hazards, setHazards] = useState([]);
   const [monsterSearch, setMonsterSearch] = useState("");
   const [allMonsters, setAllMonsters] = useState([]);
   const [encounter, setEncounter] = useState([]); // [{monster, count}]
@@ -5022,15 +5024,35 @@ function EncounterHelperTool() {
     setEncounter(prev => prev.filter(e => e.monster.name !== name));
   }
 
+  function getMonsterActionCount(monster) {
+    let count = 1;
+    if (monster.actions && monster.actions.length > 0) {
+      const attacks = monster.actions.filter(a =>
+        a.name && !a.name.toLowerCase().includes('multiattack')
+      );
+      count = Math.max(attacks.length, 1);
+    }
+    if (monster.legendary_actions && monster.legendary_actions.length > 0) {
+      count += 3;
+    }
+    return count;
+  }
+
+  const POWER_MULTIPLIERS = { standard: 1.0, 'high-magic': 1.15, optimized: 1.30 };
   const totalXp = encounter.reduce((sum, e) => sum + e.monster.xp * e.count, 0);
   const thresholds = getThresholdsForLevel(Math.min(Math.max(partyLevel, 1), 20));
+  const multiplier = POWER_MULTIPLIERS[powerLevel];
   const partyThresholds = {
-    low: thresholds.low * partySize,
-    mod: thresholds.mod * partySize,
-    high: thresholds.high * partySize,
-    deadly: thresholds.deadly * partySize,
+    low:    thresholds.low    * partySize * multiplier,
+    mod:    thresholds.mod    * partySize * multiplier,
+    high:   thresholds.high   * partySize * multiplier,
+    deadly: thresholds.deadly * partySize * multiplier,
   };
   const difficulty = getDifficultyExact(totalXp, partyThresholds);
+
+  const partyActions = partySize;
+  const monsterActions = encounter.reduce((sum, e) => sum + getMonsterActionCount(e.monster) * e.count, 0);
+  const actionRatio = monsterActions > 0 ? (partyActions / monsterActions) : null;
 
   function sendToCombat() {
     const prefill = { monsters: encounter.map(e => ({ name: e.monster.name, count: e.count, hit_points: e.monster.hit_points })) };
@@ -5040,6 +5062,17 @@ function EncounterHelperTool() {
     setTimeout(() => document.dispatchEvent(new CustomEvent('combat_prefill_ready')), 80);
   }
 
+  const HAZARD_OPTIONS = [
+    "Enemy has High Ground",
+    "Difficult Terrain limits melee",
+    "Enemies behind significant cover",
+    "Environmental Hazards (lava, fire, spells)",
+    "Party split / can't regroup",
+    "Enemies alerted, not surprised",
+  ];
+  function toggleHazard(h) {
+    setHazards(prev => prev.includes(h) ? prev.filter(x => x !== h) : [...prev, h]);
+  }
   const inputStyle = { background: "var(--bg)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 4, padding: "4px 8px", fontSize: "1.05rem", width: "70px" };
   const labelStyle = { fontSize: "1rem", color: "var(--text-muted)", marginBottom: 4, display: "block" };
   const sectionHead = { fontFamily: "var(--font-head)", fontSize: "0.95rem", letterSpacing: "0.1em", color: "var(--text-dim)", textTransform: "uppercase", marginBottom: 10, marginTop: 18 };
@@ -5062,6 +5095,28 @@ function EncounterHelperTool() {
             onChange={e => setPartyLevel(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))} />
         </div>
 
+        <div style={{ marginBottom: 18 }}>
+          <div style={sectionHead}>Party Power</div>
+          {['standard', 'high-magic', 'optimized'].map(lvl => (
+            <button key={lvl}
+              onClick={() => setPowerLevel(lvl)}
+              style={{
+                display: 'block', width: '100%', marginBottom: 4, padding: '5px 10px',
+                background: powerLevel === lvl ? 'rgba(201,168,76,0.12)' : 'none',
+                border: `1px solid ${powerLevel === lvl ? 'var(--gold-dim)' : 'var(--border)'}`,
+                color: powerLevel === lvl ? 'var(--gold)' : 'var(--text-muted)',
+                borderRadius: 4, cursor: 'pointer', fontSize: '0.95rem', textAlign: 'left',
+              }}>
+              {lvl === 'standard' ? 'Standard' : lvl === 'high-magic' ? 'High Magic (+15%)' : 'Highly Optimized (+30%)'}
+            </button>
+          ))}
+          {powerLevel !== 'standard' && (
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginTop: 4 }}>
+              XP budget inflated — you can push past the standard threshold safely.
+            </div>
+          )}
+        </div>
+
         <div style={sectionHead}>XP Thresholds</div>
         <div style={{ fontSize: "0.95rem", color: "var(--text-muted)", marginBottom: 8 }}>Per-party totals</div>
 
@@ -5075,6 +5130,17 @@ function EncounterHelperTool() {
             {label}: {partyThresholds[key].toLocaleString()} XP
           </span>
         ))}
+
+        <div style={{ marginTop: 18 }}>
+          <div style={sectionHead}>Battlefield Conditions</div>
+          {HAZARD_OPTIONS.map(h => (
+            <label key={h} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, cursor: 'pointer', fontSize: '0.95rem', color: hazards.includes(h) ? 'var(--text)' : 'var(--text-muted)' }}>
+              <input type="checkbox" checked={hazards.includes(h)} onChange={() => toggleHazard(h)}
+                style={{ accentColor: 'var(--gold)', width: 14, height: 14 }} />
+              {h}
+            </label>
+          ))}
+        </div>
       </div>
 
       {/* Center Panel — Monster Builder */}
@@ -5152,6 +5218,52 @@ function EncounterHelperTool() {
           </>
         )}
 
+        {hazards.length > 0 && (
+          <div style={{ margin: '14px 0', padding: '10px 12px', background: 'rgba(224,140,48,0.10)', border: '1px solid #8a4e10', borderRadius: 6 }}>
+            <div style={{ fontSize: '0.95rem', color: '#e08c30', fontWeight: 600, marginBottom: 4 }}>
+              ⚠ Battlefield: +{hazards.length} condition{hazards.length > 1 ? 's' : ''}
+            </div>
+            {hazards.map(h => (
+              <div key={h} style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginLeft: 4 }}>· {h}</div>
+            ))}
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginTop: 6 }}>
+              Terrain acts as a phantom modifier — treat this encounter as effectively harder than the XP rating suggests.
+            </div>
+          </div>
+        )}
+
+        {encounter.length > 0 && actionRatio !== null && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={sectionHead}>Action Economy</div>
+            <div style={{ display: 'flex', gap: 18, marginBottom: 8, fontSize: '1rem' }}>
+              <div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Party</div>
+                <div style={{ fontWeight: 600 }}>{partyActions} action{partyActions !== 1 ? 's' : ''}</div>
+              </div>
+              <div style={{ color: 'var(--text-dim)', alignSelf: 'center' }}>vs.</div>
+              <div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Monsters</div>
+                <div style={{ fontWeight: 600 }}>{monsterActions} action{monsterActions !== 1 ? 's' : ''}</div>
+              </div>
+            </div>
+            {actionRatio >= 2 && (
+              <div style={{ fontSize: '0.9rem', color: 'var(--green)', background: 'rgba(90,171,106,0.10)', border: '1px solid #2a5c38', borderRadius: 5, padding: '7px 10px' }}>
+                ⚠ Party outnumbers monsters {Math.round(actionRatio)}:1 — consider adding minions or giving the boss Legendary Actions to stay competitive.
+              </div>
+            )}
+            {actionRatio <= 0.5 && (
+              <div style={{ fontSize: '0.9rem', color: 'var(--red)', background: 'rgba(196,74,74,0.10)', border: '1px solid #5c2a2a', borderRadius: 5, padding: '7px 10px' }}>
+                ⚠ Monsters outnumber the party — high volume can overwhelm even low-CR encounters. Consider using group Initiative for speed.
+              </div>
+            )}
+            {actionRatio > 0.5 && actionRatio < 2 && (
+              <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                Ratio {partyActions}:{monsterActions} — action economy is balanced.
+              </div>
+            )}
+          </div>
+        )}
+
         {encounter.length > 0 && (
           <button
             onClick={sendToCombat}
@@ -5197,6 +5309,124 @@ function LootCalculatorTool() {
 
   const TIERS = ["0-4","5-10","11-16","17+"];
 
+  const THEMATIC_LOOT = {
+    beast: [
+      { name: "Pristine fur pelt",              value: 15 },
+      { name: "Polished claws or talons",        value: 10 },
+      { name: "Intact tusk or horn",             value: 20 },
+      { name: "Rare gall bladder (alchemy use)", value: 25 },
+      { name: "Exotic feathers",                 value: 8  },
+      { name: "Venom sac (intact)",              value: 30 },
+      { name: "Hardened hide section",           value: 12 },
+    ],
+    undead: [
+      { name: "Tarnished silver locket",         value: 15 },
+      { name: "Antique coins (mixed, old era)",  value: 20 },
+      { name: "Cracked funerary urn",            value: 8  },
+      { name: "Blackened bone dust (alchemy)",   value: 12 },
+      { name: "Faded noble signet ring",         value: 18 },
+      { name: "Ancient burial cloth, intact",    value: 25 },
+    ],
+    humanoid: [
+      { name: "Coin pouch with mixed coins",     value: 20 },
+      { name: "Worn leather belt pouch",         value: 5  },
+      { name: "Gambling dice and card deck",     value: 3  },
+      { name: "Forged travel papers",            value: 15 },
+      { name: "Cheap religious medallion",       value: 8  },
+      { name: "Guard captain's signet",          value: 22 },
+    ],
+    dragon: [
+      { name: "Dragon scale (damaged)",          value: 40 },
+      { name: "Hoarded gold coins (old mint)",   value: 30 },
+      { name: "Rough gem fragment",              value: 25 },
+      { name: "Melted gold ingot",               value: 35 },
+      { name: "Ancient coin, rare origin",       value: 50 },
+    ],
+    fiend: [
+      { name: "Brimstone crystal (magical use)", value: 20 },
+      { name: "Cursed trinket (identify first)", value: 15 },
+      { name: "Soul coin (one trapped soul)",    value: 100},
+      { name: "Hellish ichor vial",              value: 30 },
+      { name: "Infernal contract fragment",      value: 18 },
+    ],
+    construct: [
+      { name: "Precision clockwork gear",        value: 12 },
+      { name: "Arcane power cell (depleted)",    value: 20 },
+      { name: "Mithril linkage segment",         value: 25 },
+      { name: "Runed iron plate",                value: 15 },
+      { name: "Spell-inscribed gem (cracked)",   value: 30 },
+    ],
+    fey: [
+      { name: "Moondew vial (faerie magic)",     value: 20 },
+      { name: "Enchanted acorn trinket",         value: 12 },
+      { name: "Dreamstone sliver",               value: 35 },
+      { name: "Bottled moonlight (small)",       value: 18 },
+      { name: "Faerie blossom, preserved",       value: 10 },
+    ],
+  };
+  const MONSTER_TYPES = ['none', 'beast', 'undead', 'humanoid', 'dragon', 'fiend', 'construct', 'fey'];
+
+  const MAGIC_ITEM_TAGS = {
+    "Potion of Healing":           ['utility'],
+    "Spell Scroll (Cantrip)":      ['caster'],
+    "Potion of Climbing":          ['utility'],
+    "Spell Scroll (1st level)":    ['caster'],
+    "Spell Scroll (2nd level)":    ['caster'],
+    "Spell Scroll (3rd level)":    ['caster'],
+    "Spell Scroll (4th–6th level)":['caster'],
+    "Potion of Greater Healing":   ['utility'],
+    "Potion of Superior Healing":  ['utility'],
+    "Potion of Supreme Healing":   ['utility'],
+    "Bag of Holding":              ['utility'],
+    "Driftglobe":                  ['utility'],
+    "Cloak of Protection":         ['utility','armor'],
+    "Periapt of Health":           ['utility'],
+    "Eyes of the Eagle":           ['utility','ranged'],
+    "Lantern of Revealing":        ['utility'],
+    "Wand of Magic Missiles":      ['caster'],
+    "Bracers of Archery":          ['ranged'],
+    "Ring of Protection":          ['utility'],
+    "Flame Tongue":                ['melee'],
+    "Staff of Striking":           ['melee','caster'],
+    "Necklace of Fireballs":       ['caster'],
+    "Manual of Bodily Health":     ['utility'],
+    "Cube of Force":               ['caster','utility'],
+    "Wand of the War Mage +2":     ['caster'],
+    "Holy Avenger":                ['melee'],
+    "Staff of Power":              ['caster'],
+    "Manual of Gainful Exercise":  ['utility'],
+    "Deck of Many Things":         ['utility'],
+    "Ring of Regeneration":        ['utility'],
+    "Ioun Stone (Fortitude)":      ['utility'],
+    "Iron Golem Manual":           ['utility'],
+  };
+  const ROLE_CATEGORIES = {
+    melee:  ['melee','utility'],
+    ranged: ['ranged','utility'],
+    caster: ['caster','utility'],
+    tank:   ['armor','melee','utility'],
+  };
+  const ROLE_OPTIONS = [
+    { id: 'melee',  label: 'Melee (Fighter, Barbarian, Paladin)' },
+    { id: 'ranged', label: 'Ranged (Ranger, Rogue)' },
+    { id: 'caster', label: 'Caster (Wizard, Sorcerer, Warlock, Bard, Cleric)' },
+    { id: 'tank',   label: 'Tank / Heavy Armor (Fighter, Paladin)' },
+  ];
+
+  const RELIC_ERAS = ["the Age of Arcanum","the Old Mage War era","the Collapsed Empire","the Sundering","pre-Sundering antiquity","the First Kingdom period","unknown ancient origin"];
+  const RELIC_MATERIALS = {
+    gem:    ["deep crimson ruby","pale blue sapphire","sea-green emerald","smoky topaz","star-white diamond","ink-black onyx","amber-gold citrine"],
+    metal:  ["tarnished silver","aged brass","dark iron","worn bronze","dull mithril","corroded gold"],
+    stone:  ["smooth obsidian","speckled granite","carved limestone","polished jade","rough quartz"],
+    other:  ["pale ivory","dark mahogany","salt-white bone","petrified heartwood","iridescent shell"],
+  };
+  const RELIC_TRAITS = ["slightly warm to the touch","cold despite the ambient heat","faintly luminescent in darkness","vibrates almost imperceptibly","smells of old smoke and copper","leaves a faint metallic taste in the mouth","casts no shadow","feels lighter than it should"];
+  const RELIC_VESSELS = {
+    gem:    ["set in tarnished brass","wrapped in fraying silver wire","mounted on a cracked ivory base","loose, no setting","sealed in amber","fitted in corroded gold filigree"],
+    other:  ["wrapped in faded silk","bound with old leather cord","sealed in a lead-lined pouch","tied with a signet ribbon"],
+  };
+  const RELIC_TYPES = ["gem","art object","coin","weapon fragment","religious icon","scroll case","signet ring","statuette"];
+
   function rollDie(n) { return Math.floor(Math.random() * n) + 1; }
   function rollSpec(spec) {
     if (!spec || spec === 0) return 0;
@@ -5211,10 +5441,21 @@ function LootCalculatorTool() {
   }
   function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
+  function totalGpValue(coins) {
+    return (coins.cp || 0) * 0.01
+         + (coins.sp || 0) * 0.1
+         + (coins.ep || 0) * 0.5
+         + (coins.gp || 0) * 1
+         + (coins.pp || 0) * 10;
+  }
+
   const [mode, setMode] = useState('individual');
   const [tier, setTier] = useState('0-4');
   const [monsterCount, setMonsterCount] = useState(1);
+  const [monsterType, setMonsterType] = useState('none');
+  const [partyRoles, setPartyRoles] = useState([]);
   const [result, setResult] = useState(null);
+  const [relic, setRelic] = useState(null);
   const [log, setLog] = useState(() => {
     try { return JSON.parse(localStorage.getItem(LOOT_LOG_KEY)) || []; }
     catch { return []; }
@@ -5242,7 +5483,9 @@ function LootCalculatorTool() {
         const tableArr = MAGIC_TABLE_MAP[magicRow.table];
         const numItems = Array.isArray(magicRow.count) ? rollSpec(magicRow.count) : magicRow.count;
         for (let i = 0; i < numItems; i++) {
-          magicItems.push(pickRandom(tableArr));
+          const viable = filteredPool(tableArr);
+          const pool = viable.length > 0 ? viable : tableArr;
+          magicItems.push(pickRandom(pool));
         }
       }
     }
@@ -5260,8 +5503,24 @@ function LootCalculatorTool() {
 
   const formatFull = (res) => {
     if (!res) return '';
-    const coinStr = formatCoins(res.coins) || 'No coins';
-    let txt = `[${res.mode === 'individual' ? 'Individual' : 'Hoard'} — CR ${res.tier}] ${coinStr}`;
+    let txt = `[${res.mode === 'individual' ? 'Individual' : 'Hoard'} — CR ${res.tier}]`;
+    if (monsterType !== 'none' && monsterType !== 'humanoid') {
+      const gp = totalGpValue(res.coins);
+      const themed = convertToThematic(gp, monsterType);
+      if (themed && themed.length > 0) {
+        txt += ` ${monsterType.charAt(0).toUpperCase() + monsterType.slice(1)} Loot: ` + themed.map(i => `${i.name} (${i.value} gp)`).join(', ');
+      }
+    } else {
+      const coinStr = formatCoins(res.coins) || 'No coins';
+      txt += ` ${coinStr}`;
+      if (monsterType === 'humanoid') {
+        const gp = totalGpValue(res.coins);
+        const themed = convertToThematic(gp, 'humanoid');
+        if (themed && themed.length > 0) {
+          txt += ` | Personal Effects: ` + themed.map(i => i.name).join(', ');
+        }
+      }
+    }
     if (res.magicItems && res.magicItems.length > 0) txt += ` | Items: ${res.magicItems.join(', ')}`;
     return txt;
   };
@@ -5289,6 +5548,61 @@ function LootCalculatorTool() {
     setLog([]);
     localStorage.removeItem(LOOT_LOG_KEY);
   };
+
+  function generateRelic() {
+    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+    const type = pick(RELIC_TYPES);
+    const isGem = type === 'gem';
+    const era = pick(RELIC_ERAS);
+    const trait = pick(RELIC_TRAITS);
+    const valueTiers = [50,100,150,250,500,750,1000];
+    const value = pick(valueTiers);
+    let desc;
+    if (isGem) {
+      const mat = pick(RELIC_MATERIALS.gem);
+      const vessel = pick(RELIC_VESSELS.gem);
+      desc = `A ${mat} ${vessel}, dating to ${era}. It is ${trait}.`;
+    } else if (type === 'art object') {
+      const mat = pick([...RELIC_MATERIALS.metal, ...RELIC_MATERIALS.stone, ...RELIC_MATERIALS.other]);
+      desc = `A ${mat} figurine from ${era}. It is ${trait}.`;
+    } else {
+      const mat = pick(RELIC_MATERIALS.other);
+      desc = `A ${mat} ${type} from ${era}. It is ${trait}.`;
+    }
+    setRelic({ type, desc, value });
+  }
+
+  function toggleRole(r) {
+    setPartyRoles(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r]);
+  }
+  function filterItemForParty(itemName) {
+    if (partyRoles.length === 0) return true;
+    const tags = MAGIC_ITEM_TAGS[itemName] || ['utility'];
+    const acceptedCats = new Set(partyRoles.flatMap(r => ROLE_CATEGORIES[r] || []));
+    return tags.some(t => acceptedCats.has(t));
+  }
+  function filteredPool(pool) {
+    return pool.filter(filterItemForParty);
+  }
+
+  function convertToThematic(gpValue, type) {
+    if (type === 'none' || gpValue < 1) return null;
+    const pool = THEMATIC_LOOT[type] || [];
+    let remaining = Math.round(gpValue);
+    const items = [];
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+    for (const item of shuffled) {
+      if (remaining <= 0) break;
+      const usedQty = Math.ceil(remaining / item.value);
+      const usedVal = Math.min(usedQty * item.value, remaining);
+      items.push({ name: item.name, value: usedVal });
+      remaining -= usedVal;
+    }
+    if (remaining > 0 && items.length > 0) {
+      items[items.length - 1].value += remaining;
+    }
+    return items;
+  }
 
   const COIN_LABELS = { cp:'Copper', sp:'Silver', ep:'Electrum', gp:'Gold', pp:'Platinum' };
 
@@ -5337,6 +5651,43 @@ function LootCalculatorTool() {
           </div>
         )}
 
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: '0.95rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>Monster Type</div>
+          <select
+            value={monsterType}
+            onChange={e => setMonsterType(e.target.value)}
+            style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: 4, padding: '5px 8px', fontSize: '0.95rem' }}>
+            <option value="none">None (raw coins)</option>
+            {MONSTER_TYPES.filter(t => t !== 'none').map(t => (
+              <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+            ))}
+          </select>
+          {monsterType !== 'none' && (
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginTop: 4 }}>
+              Gold converted to thematic items
+            </div>
+          )}
+        </div>
+
+        {mode === 'hoard' && (
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ fontSize: '0.95rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>Party Roles</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: 6 }}>Filter magic items to viable drops</div>
+            {ROLE_OPTIONS.map(r => (
+              <label key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5, cursor: 'pointer', fontSize: '0.9rem', color: partyRoles.includes(r.id) ? 'var(--text)' : 'var(--text-muted)' }}>
+                <input type="checkbox" checked={partyRoles.includes(r.id)} onChange={() => toggleRole(r.id)}
+                  style={{ accentColor: 'var(--gold)', width: 14, height: 14 }} />
+                {r.label}
+              </label>
+            ))}
+            {partyRoles.length > 0 && (
+              <div style={{ fontSize: '0.8rem', color: 'var(--gold-dim)', marginTop: 4 }}>
+                Filtering active — magic items matched to party.
+              </div>
+            )}
+          </div>
+        )}
+
         <button
           onClick={roll}
           style={{ width: '100%', padding: '10px 0', background: 'var(--gold)', color: '#0d0f14', border: 'none', borderRadius: 6, fontFamily: 'var(--font-head)', fontSize: '1rem', letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', fontWeight: 700, marginTop: 8 }}>
@@ -5357,19 +5708,76 @@ function LootCalculatorTool() {
               {result.mode === 'individual' ? 'Individual' : 'Hoard'} — CR {result.tier}
               {result.mode === 'individual' && monsterCount > 1 && ` — ${monsterCount} monsters`}
             </div>
-            <div style={{ marginBottom: 16 }}>
-              {Object.entries(result.coins).map(([coin, val]) =>
-                val > 0 ? (
-                  <div key={coin} className="loot-coin-row">
-                    <span style={{ color: 'var(--text-dim)' }}>{COIN_LABELS[coin]}</span>
-                    <span style={{ fontWeight: 600, color: 'var(--gold)' }}>{val.toLocaleString()}</span>
+            {(() => {
+              const isHumanoid = monsterType === 'humanoid';
+              const showRawCoins = monsterType === 'none' || isHumanoid;
+              const gp = totalGpValue(result.coins);
+              const themed = (monsterType !== 'none') ? convertToThematic(gp, monsterType) : null;
+
+              return (
+                <div style={{ marginBottom: 16 }}>
+                  {showRawCoins && (
+                    <>
+                      {Object.entries(result.coins).map(([coin, val]) =>
+                        val > 0 ? (
+                          <div key={coin} className="loot-coin-row">
+                            <span style={{ color: 'var(--text-dim)' }}>{COIN_LABELS[coin]}</span>
+                            <span style={{ fontWeight: 600, color: 'var(--gold)' }}>{val.toLocaleString()}</span>
+                          </div>
+                        ) : null
+                      )}
+                      {Object.values(result.coins).every(v => v === 0) && (
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No coins</div>
+                      )}
+                    </>
+                  )}
+
+                  {themed && themed.length > 0 && (
+                    <div style={{ marginTop: isHumanoid ? 12 : 0, paddingTop: isHumanoid ? 10 : 0, borderTop: isHumanoid ? '1px solid var(--border)' : 'none' }}>
+                      <div style={{ fontSize: '0.9rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: 6 }}>
+                        {isHumanoid ? 'Personal Effects' : `${monsterType.charAt(0).toUpperCase() + monsterType.slice(1)} Loot`}
+                      </div>
+                      {themed.map((item, i) => (
+                        <div key={i} className="loot-coin-row">
+                          <span style={{ color: 'var(--text)' }}>{item.name}</span>
+                          <span style={{ color: isHumanoid ? 'var(--text-muted)' : 'var(--gold)', fontWeight: 600 }}>
+                            {item.value} gp
+                          </span>
+                        </div>
+                      ))}
+                      {!isHumanoid && (
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginTop: 6 }}>
+                          True value: ~{Math.round(gp)} gp
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+            {(() => {
+              if (monsterType !== 'none' && monsterType !== 'humanoid') return null;
+              const trueGp = totalGpValue(result.coins);
+              if (trueGp < 1) return null;
+              const merchant = Math.round(trueGp * 0.5);
+              const fence = Math.round(trueGp * 0.3);
+              return (
+                <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: '0.95rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>Trade Values</div>
+                  <div className="loot-coin-row">
+                    <span style={{ color: 'var(--text-dim)' }}>Merchant (50%)</span>
+                    <span style={{ color: 'var(--gold)', fontWeight: 600 }}>{merchant.toLocaleString()} gp</span>
                   </div>
-                ) : null
-              )}
-              {Object.values(result.coins).every(v => v === 0) && (
-                <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No coins</div>
-              )}
-            </div>
+                  <div className="loot-coin-row">
+                    <span style={{ color: 'var(--text-dim)' }}>Black Market Fence (30%)</span>
+                    <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{fence.toLocaleString()} gp</span>
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginTop: 4 }}>
+                    True value: {trueGp.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 1})} gp
+                  </div>
+                </div>
+              );
+            })()}
             {result.magicItems && result.magicItems.length > 0 && (
               <div style={{ marginBottom: 16 }}>
                 <div style={{ fontSize: '0.95rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>Magic Items</div>
@@ -5392,6 +5800,25 @@ function LootCalculatorTool() {
             </div>
           </>
         )}
+
+        <div style={{ marginTop: 20, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <div style={{ fontSize: '0.95rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Relic / Art Object</div>
+            <button
+              onClick={generateRelic}
+              style={{ padding: '4px 12px', background: 'none', border: '1px solid var(--border)', borderRadius: 4, color: 'var(--text-dim)', cursor: 'pointer', fontSize: '0.9rem' }}>
+              Generate ✦
+            </button>
+          </div>
+          {relic ? (
+            <div style={{ fontSize: '1rem', color: 'var(--text)', lineHeight: 1.6, padding: '10px 12px', background: 'var(--bg-card)', borderRadius: 5, border: '1px solid var(--border)' }}>
+              <div style={{ marginBottom: 6 }}>{relic.desc}</div>
+              <div style={{ fontSize: '0.9rem', color: 'var(--gold)' }}>Value: {relic.value.toLocaleString()} gp</div>
+            </div>
+          ) : (
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-dim)' }}>Generate a flavorful art object or gem.</div>
+          )}
+        </div>
       </div>
 
       {/* RIGHT — Session Log */}
