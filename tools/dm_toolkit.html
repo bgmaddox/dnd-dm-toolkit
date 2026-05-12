@@ -6283,17 +6283,10 @@ const ATMOSPHERIC_LOOPS = [
   { id:"heartbeat",     ext:"mp3", icon:"💓", label:"Tense Heartbeat" },
 ];
 
-function playSfx(type, volume = 0.5) {
-  const sfx = SFX_LIST.find(s => s.id === type);
-  if (!sfx) return;
-  const audio = new Audio(`/tools/sfx/${type}.${sfx.ext}`);
-  audio.volume = volume;
-  audio.play().catch(() => {});
-}
-
 function AmbianceTool() {
   const audioRef = useRef(null);
   const layerRefs = useRef({}); // { id: Audio }
+  const oneShotRefs = useRef(new Set()); 
   
   const [activePreset, setActivePreset] = useState(null);
   const [activeTrack, setActiveTrack] = useState(null);
@@ -6313,6 +6306,7 @@ function AmbianceTool() {
     return () => { 
       audioRef.current?.pause(); 
       Object.values(layerRefs.current).forEach(a => a.pause());
+      oneShotRefs.current.forEach(a => a.pause());
     };
   }, []);
 
@@ -6325,6 +6319,19 @@ function AmbianceTool() {
       a.volume = sfxVolume / 100;
     });
   }, [sfxVolume]);
+
+  function playSfx(id, volume = 0.5) {
+    const sfx = SFX_LIST.find(s => s.id === id);
+    if (!sfx) return;
+    const audio = new Audio(`/tools/sfx/${id}.${sfx.ext}`);
+    audio.volume = volume;
+    oneShotRefs.current.add(audio);
+    audio.onended = () => oneShotRefs.current.delete(audio);
+    audio.play().catch(err => {
+      console.error("SFX play failed:", err);
+      oneShotRefs.current.delete(audio);
+    });
+  }
 
   function fadeAudio(audio, targetVolume, duration = 1500) {
     if (!audio) return;
@@ -6483,6 +6490,14 @@ function AmbianceTool() {
       }
     });
     setActiveLayers([]);
+
+    oneShotRefs.current.forEach(a => {
+      if (a) {
+        a.pause();
+        a.volume = 0;
+      }
+    });
+    oneShotRefs.current.clear();
 
     // Reset visual mood
     document.documentElement.style.setProperty('--mood-c1', '#c9a84c08');
