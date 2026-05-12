@@ -5094,6 +5094,7 @@ function EncounterHelperTool() {
     "Environmental Hazards (lava, fire, spells)",
     "Party split / can't regroup",
     "Enemies alerted, not surprised",
+    "Neutral Bystanders (civilians in danger)",
   ];
   function toggleHazard(h) {
     setHazards(prev => prev.includes(h) ? prev.filter(x => x !== h) : [...prev, h]);
@@ -6682,6 +6683,156 @@ function RandomTablesTool() {
                 <div className="tables-result-card">
                   {result.entry.cat && <div className="tables-result-section">{result.entry.cat}</div>}
                   <div className="tables-result-text">{result.entry.text}</div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="tables-result-roll">Rolled <span>{result.mRoll}</span> / <span>{result.qRoll}</span></div>
+                <div className="tables-result-card">
+                  <div className="tables-result-section">Mood</div>
+                  <div className="tables-result-text">{result.mood}</div>
+                  <hr className="tables-result-divider" />
+                  <div className="tables-result-section">Quirk</div>
+                  <div className="tables-result-text">{result.quirk}</div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {history.length > 0 && (
+        <div className="tables-history-wrap">
+          <div className="tables-history-label">Recent Rolls</div>
+          {history.map((h, i) => (
+            <div key={i} className="tables-history-item">{h}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const TABS = [
+  { id: 'session', label: '📜 Session' },
+  { id: 'npc',     label: '🎭 NPC Forge' },
+  { id: 'scene',   label: '🎨 Scene' },
+  { id: 'lore',    label: '🏰 Lore' },
+  { id: 'combat',    label: '⚔️ Combat' },
+  { id: 'encounter', label: '⚔ Encounter' },
+  { id: 'loot',      label: '💰 Loot' },
+  { id: 'calendar',  label: '📅 Calendar' },
+  { id: 'ambiance',  label: '🎵 Ambiance' },
+  { id: 'tables',    label: '🎲 Tables' },
+  { id: 'guide',     label: '📚 Guide' },
+];
+
+function App() {
+  const saved = loadSettings();
+  const getTabFromHash = () => {
+    const h = window.location.hash.slice(1);
+    return TABS.find(t => t.id === h) ? h : (saved.activeTab || 'session');
+  };
+  const [activeTab, setActiveTabState] = useState(getTabFromHash);
+  const [aiProvider, setAiProvider] = useState(saved.aiProvider || 'claude');
+  const [activeCampaign, setActiveCampaign] = useState(saved.activeCampaign || '');
+  const [campaigns, setCampaigns] = useState([]);
+  const [handoffData, setHandoffData] = useState(null);
+  const [resetKeys, setResetKeys] = useState({ session:0, npc:0, scene:0, lore:0, combat:0, encounter:0, loot:0, calendar:0, ambiance:0, guide:0 });
+  const resetTool = useCallback((id) => setResetKeys(p => ({ ...p, [id]: p[id] + 1 })), []);
+  const setActiveTab = useCallback((id) => {
+    setActiveTabState(id);
+    window.location.hash = id;
+  }, []);
+
+  useEffect(() => {
+    const onHash = () => {
+      const h = window.location.hash.slice(1);
+      if (TABS.find(t => t.id === h)) setActiveTabState(h);
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/campaigns').then(r => r.json()).then(d => {
+      const list = d.campaigns || [];
+      setCampaigns(list);
+      setActiveCampaign(prev => prev || (list[0] || ''));
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(APP_SETTINGS_KEY, JSON.stringify({ activeTab, aiProvider, activeCampaign }));
+  }, [activeTab, aiProvider, activeCampaign]);
+
+  const ctx = {
+    activeTab, setActiveTab, aiProvider, setAiProvider,
+    campaigns, activeCampaign, setActiveCampaign,
+    handoffData, setHandoffData, resetTool
+  };
+
+  return (
+    <AppContext.Provider value={ctx}>
+      <div id="app">
+        <header className="app-header">
+          <span className="header-logo">DM Toolkit</span>
+          <nav className="header-nav">
+            {TABS.map(t => (
+              <button key={t.id}
+                className={`nav-tab${activeTab === t.id ? ' active' : ''}`}
+                onClick={() => setActiveTab(t.id)}>
+                {t.label}
+              </button>
+            ))}
+          </nav>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 12 }}>
+            <select value={activeCampaign} onChange={e => setActiveCampaign(e.target.value)}
+              style={{ background: '#13161c', border: '1px solid #2a2f3d', color: activeCampaign ? 'var(--gold)' : '#8a92a8', fontSize: 11, padding: '3px 8px', borderRadius: 4, outline: 'none', cursor: 'pointer', fontFamily: 'var(--serif)', letterSpacing: '0.06em', height: 26 }}>
+              <option value="">No Campaign</option>
+              {campaigns.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <button className="clear-btn" style={{ height: 26, fontSize: 10 }} onClick={() => resetTool(activeTab)}>↺ Clear</button>
+          </div>
+          <div className="ai-toggle">
+            {['claude','gemini'].map(v => (
+              <button key={v}
+                className={`ai-btn${aiProvider === v ? ' active' : ''}`}
+                onClick={() => setAiProvider(v)}>
+                {v === 'claude' ? 'Claude' : 'Gemini'}
+              </button>
+            ))}
+          </div>
+        </header>
+        <div className="tool-area">
+          {TABS.map(t => (
+            <DeferredMount key={t.id} active={activeTab === t.id} resetKey={resetKeys[t.id]}>
+              <ToolErrorBoundary>
+                {t.id === 'session' && <SessionTool />}
+                {t.id === 'npc'     && <NPCForgeTool />}
+                {t.id === 'scene'   && <ScenePainterTool />}
+                {t.id === 'lore'    && <LoreBuilderTool />}
+                {t.id === 'combat'    && <CombatTool />}
+                {t.id === 'encounter' && <EncounterHelperTool />}
+                {t.id === 'loot'      && <LootCalculatorTool />}
+                {t.id === 'calendar'  && <CampaignCalendarTool />}
+                {t.id === 'ambiance'  && <AmbianceTool />}
+                {t.id === 'tables'    && <RandomTablesTool />}
+                {t.id === 'guide'     && <DMGuideTool />}
+              </ToolErrorBoundary>
+            </DeferredMount>
+          ))}
+        </div>
+      </div>
+    </AppContext.Provider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
+>
                 </div>
               </>
             ) : (
