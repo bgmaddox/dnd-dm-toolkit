@@ -6327,18 +6327,27 @@ function AmbianceTool() {
   }, [sfxVolume]);
 
   function fadeAudio(audio, targetVolume, duration = 1500) {
+    if (!audio) return;
+    if (audio._fadeTimer) clearInterval(audio._fadeTimer);
+    
     const startVolume = audio.volume;
     const steps = 30;
     const interval = duration / steps;
     const delta = (targetVolume - startVolume) / steps;
     
     let currentStep = 0;
-    const timer = setInterval(() => {
+    audio._fadeTimer = setInterval(() => {
       currentStep++;
-      audio.volume = Math.max(0, Math.min(1, startVolume + (delta * currentStep)));
+      const nextVol = Math.max(0, Math.min(1, startVolume + (delta * currentStep)));
+      audio.volume = nextVol;
+      
       if (currentStep >= steps) {
-        clearInterval(timer);
-        if (targetVolume === 0) audio.pause();
+        clearInterval(audio._fadeTimer);
+        audio._fadeTimer = null;
+        if (targetVolume === 0) {
+          audio.pause();
+          audio.volume = 0;
+        }
       }
     }, interval);
   }
@@ -6428,19 +6437,40 @@ function AmbianceTool() {
   async function generateMoodDescription() {
     if (!activePreset) return;
     setMoodLoading(true);
+    setMoodDescription(""); 
     try {
       const resp = await fetch("/api/ai/describe_mood", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ preset: activePreset.label })
       });
+      if (!resp.ok) throw new Error("Server error");
       const data = await resp.json();
-      setMoodDescription(data.description);
+      setMoodDescription(data.description || "The air is thick with anticipation...");
     } catch (e) {
-      setMoodDescription("The air is thick with anticipation, and every shadow seems to hold a secret.");
+      console.error("Mood generation failed:", e);
+      const fallbacks = {
+        "Tavern": "Warm light spills across the room, smelling of roasted meat and stale ale as laughter fills the air.",
+        "Dungeon": "The air is cold and damp, smelling of ancient stone and the distant copper tang of blood.",
+        "Forest": "Dappled sunlight filters through the canopy, accompanied by the scent of pine and the rustle of leaves.",
+        "Combat": "The metallic scent of ozone and sweat hangs heavy as the sounds of clashing steel ring out.",
+        "Mystical": "A faint static charge hums in the air, smelling of old parchment and ethereal energy.",
+        "Town": "The bustle of market calls and the smell of fresh bread create a lively, energetic atmosphere.",
+        "Storm": "The smell of wet earth and ozone precedes the thunderous roar of a darkening sky."
+      };
+      setMoodDescription(fallbacks[activePreset.label] || "The air is thick with anticipation, and every shadow seems to hold a secret.");
     } finally {
       setMoodLoading(false);
     }
+  }
+
+  function silenceAll() {
+    if (audioRef.current) fadeAudio(audioRef.current, 0, 400);
+    setPlaying(false);
+    Object.values(layerRefs.current).forEach(a => {
+      if (a) fadeAudio(a, 0, 400);
+    });
+    setActiveLayers([]);
   }
 
   return (
@@ -6521,7 +6551,7 @@ function AmbianceTool() {
             <div style={{width:'100%',maxWidth:400,background:'var(--bg-card)',borderRadius:12,padding:16,border:'1px solid var(--border)',marginBottom:24}}>
                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
                  <span style={{fontSize:'0.75rem',textTransform:'uppercase',letterSpacing:'0.1em',color:'var(--text-dim)'}}>✨ Sensory Mood</span>
-                 <button onClick={generateMoodDescription} disabled={moodLoading}
+                 <button onClick={(e) => { e.stopPropagation(); generateMoodDescription(); }} disabled={moodLoading}
                    style={{background:'none',border:'1px solid var(--gold-dim)',color:'var(--gold)',borderRadius:4,padding:'2px 8px',fontSize:'0.8rem',cursor:'pointer'}}>
                    {moodLoading ? 'Thinking...' : 'Refresh'}
                  </button>
@@ -6600,12 +6630,7 @@ function AmbianceTool() {
         ))}
         
         <button 
-          onClick={() => {
-            Object.values(layerRefs.current).forEach(a => fadeAudio(a, 0, 500));
-            if (audioRef.current) fadeAudio(audioRef.current, 0, 500);
-            setPlaying(false);
-            setActiveLayers([]);
-          }}
+          onClick={silenceAll}
           style={{
             width:'100%',padding:'12px',background:'rgba(160,64,64,0.15)',border:'1px solid var(--danger)',
             color:'var(--red-text)',borderRadius:8,cursor:'pointer',fontFamily:'var(--serif)',
