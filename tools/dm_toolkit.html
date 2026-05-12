@@ -553,6 +553,31 @@ input:focus, select:focus { border-color: var(--gold-dim); outline: none; }
 .amb-volume-row { display: flex; align-items: center; gap: 10px; margin: 12px 0; font-size: 1.2rem; color: var(--text-muted); width: 100%; }
 .amb-volume-row input[type=range] { flex: 1; }
 
+/* ─── Random Tables Tool ─── */
+.tables-tool { display: flex; flex-direction: column; gap: 1.5rem; max-width: 760px; margin: 0 auto; }
+.tables-selector { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.tables-selector button { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-dim); padding: 0.45rem 1rem; border-radius: 20px; cursor: pointer; font-size: 0.85rem; font-family: inherit; transition: all 0.15s; }
+.tables-selector button:hover { border-color: var(--gold-dim); color: var(--text); }
+.tables-selector button.active { background: rgba(212,175,55,0.15); border-color: var(--gold); color: var(--gold); }
+.tables-header { display: flex; flex-direction: column; gap: 0.25rem; }
+.tables-header h3 { font-size: 1.1rem; color: var(--text); margin: 0; }
+.tables-header p { font-size: 0.82rem; color: var(--text-dim); margin: 0; }
+.tables-die-badge { display: inline-flex; align-items: center; font-size: 0.75rem; color: var(--teal); background: rgba(61,168,148,0.12); border: 1px solid rgba(61,168,148,0.3); padding: 0.2rem 0.65rem; border-radius: 12px; margin-top: 0.3rem; width: fit-content; }
+.tables-roll-area { display: flex; flex-direction: column; align-items: center; gap: 1.25rem; padding: 1.5rem 1.5rem 1.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; }
+.tables-roll-btn { background: linear-gradient(135deg, #2a1f0a, #3d2e0e); border: 1px solid var(--gold-dim); color: var(--gold); padding: 0.7rem 2.5rem; border-radius: 6px; cursor: pointer; font-size: 1rem; font-family: inherit; letter-spacing: 0.05em; transition: all 0.15s; }
+.tables-roll-btn:hover { background: linear-gradient(135deg, #3d2e0e, #4d3a10); border-color: var(--gold); box-shadow: 0 0 14px rgba(212,175,55,0.2); }
+.tables-roll-btn:active { transform: scale(0.97); }
+.tables-result { width: 100%; }
+.tables-result-roll { font-size: 0.75rem; color: var(--text-dim); margin-bottom: 0.5rem; text-align: center; letter-spacing: 0.03em; }
+.tables-result-roll span { color: var(--gold); font-weight: 600; }
+.tables-result-card { background: rgba(212,175,55,0.06); border: 1px solid rgba(212,175,55,0.25); border-radius: 6px; padding: 1rem 1.25rem; }
+.tables-result-section { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--teal); margin-bottom: 0.35rem; }
+.tables-result-text { color: var(--text); line-height: 1.65; font-size: 0.9rem; }
+.tables-result-divider { border: none; border-top: 1px solid var(--border); margin: 0.8rem 0; }
+.tables-history-wrap { display: flex; flex-direction: column; gap: 0.4rem; }
+.tables-history-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+.tables-history-item { font-size: 0.78rem; color: var(--text-dim); padding: 0.35rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
 </style>
 </head>
 <body>
@@ -6380,6 +6405,313 @@ function AmbianceTool() {
   );
 }
 
+const TABLES_DATA = [
+  {
+    id: 'encounters', label: 'Travel Encounters', icon: '🗺️', die: 100,
+    description: 'Roll when the party has a non-combat encounter during travel.',
+    type: 'simple',
+    entries: [
+      { n: 1,   cat: '',         text: "The players encounter a group of more experienced adventurers heading in the other direction. If the players are polite, they are given some healing potions." },
+      { n: 2,   cat: '',         text: "A naked gnome runs across the path, gasps at the party, then runs back. Cannot be pursued." },
+      { n: 3,   cat: 'Omen',    text: "A roll of thunder." },
+      { n: 4,   cat: 'Omen',    text: "A black dog runs across the path." },
+      { n: 5,   cat: 'Omen',    text: "A lone yellow flower is growing in the middle of the path." },
+      { n: 6,   cat: 'Omen',    text: "A shadow drifts over the party." },
+      { n: 7,   cat: 'Omen',    text: "A pool of blood." },
+      { n: 8,   cat: 'Omen',    text: "The earth shakes briefly." },
+      { n: 9,   cat: 'Omen',    text: "The sun bursts through an overclouded sky." },
+      { n: 10,  cat: 'Omen',    text: "A beautiful white horse dashes past the party and disappears." },
+      { n: 11,  cat: '',         text: "The players find an encampment of well-armed, friendly humans. They may stay the night here and avoid a random encounter for the night." },
+      { n: 12,  cat: '',         text: "A dwarf falls out of the sky and splatters in front of the party. No logical source of the dwarf can be seen." },
+      { n: 13,  cat: '',         text: "A player (whoever did the roll) trips over, takes 1D4 bludgeoning damage." },
+      { n: 14,  cat: '',         text: "A stranger asks to be escorted to a town, but gives the party nothing for doing it." },
+      { n: 15,  cat: '',         text: "The party finds the tracks of wolves going across the path (DC10 Nature/Survival)." },
+      { n: 16,  cat: '',         text: "A local ranger gives the party directions to their next destination, but he's an ******* that sends them the wrong way. Increase the journey length." },
+      { n: 17,  cat: '',         text: 'An arrow strikes a nearby tree, with a note attached to it. The note reads "You are a fool for looking!" No source of the arrow can be found.' },
+      { n: 18,  cat: '',         text: "A dung beetle pushes a ball across the road. If disturbed, it bursts into a smog, doing 1D4 poison damage and leaving the party member poisoned." },
+      { n: 19,  cat: '',         text: "A mystery key is found laying in the road. If used on a locked door, roll a D20. A 20 will unlock the door, after which the key is lost." },
+      { n: 20,  cat: '',         text: "A thick fog prevents travel for the rest of the day." },
+      { n: 21,  cat: '',         text: "You were travelling in the wrong direction. Add a day of travel to your journey." },
+      { n: 22,  cat: 'Bard',    text: "A song of rest. Lose any debuffs." },
+      { n: 23,  cat: 'Bard',    text: "A song of good health. Gain 1D8 temporary hitpoints." },
+      { n: 24,  cat: 'Bard',    text: "A song of heroics. 1D6 party members gain inspiration." },
+      { n: 25,  cat: 'Bard',    text: "A song of misery. All party members with inspiration lose it." },
+      { n: 26,  cat: 'Bard',    text: "A song of battle. The next combat encounter grants double XP reward." },
+      { n: 27,  cat: 'Bard',    text: "A song of healing. Regain up to half your max HP." },
+      { n: 28,  cat: 'Bard',    text: "A song of pain. Lose 1D8 HP (after the bard has long since passed)." },
+      { n: 29,  cat: 'Bard',    text: "A song of storms. A storm starts and forces the party to stop for the rest of the day." },
+      { n: 30,  cat: 'Bard',    text: "A song. Nothing special happens." },
+      { n: 31,  cat: 'Merchant', text: "Only useful item for sale is a potion of vitality, 25gp." },
+      { n: 32,  cat: 'Merchant', text: "Studded leather armour and basic weapons." },
+      { n: 33,  cat: 'Merchant', text: "Five healing potions, 30gp each." },
+      { n: 34,  cat: 'Merchant', text: "Basic adventuring equipment." },
+      { n: 35,  cat: 'Merchant', text: "A lumber merchant — cart piled high with timber. He knows these roads well and can describe the terrain ahead." },
+      { n: 36,  cat: 'Merchant', text: "Hunter's bounty. Fresh meat, some herbs." },
+      { n: 37,  cat: 'Merchant', text: "Herbalist (can give directions)." },
+      { n: 38,  cat: 'Merchant', text: "A fisherman returning from a nearby river. He'll trade fresh catch for coin, and knows the area's waterways." },
+      { n: 39,  cat: 'Merchant', text: "Gem & Jewellery merchant (500gp worth of loot)." },
+      { n: 40,  cat: 'Merchant', text: "Bug catcher. A DC15 Nature check reveals a cartomoth, that will show them a shortcut if released. 10gp." },
+      { n: 41,  cat: '',         text: "The party catches up with and overtakes a slow travelling farmer, bickering with his wife. They know nothing useful." },
+      { n: 42,  cat: '',         text: "There is an unusually vocal chorus of birdsong. Druids, Hunters, and Clerics gain inspiration." },
+      { n: 43,  cat: '',         text: "A stranger asks for directions back to the last town the party left. If they help him, he gives them 1D6×10 gold when they next appear in town, if ever." },
+      { n: 44,  cat: '',         text: 'A line of Goblin heads on spikes lines the road. A sign written in Goblin next to them reads "Traitors of Yeemik".' },
+      { n: 45,  cat: '',         text: "A man is trapped under a log. If the party helps him, he disappears — it was an illusion." },
+      { n: 46,  cat: '',         text: "The party finds a sword in a stone. A DC15 Strength check pulls it out. It is a +1 Longsword." },
+      { n: 47,  cat: '',         text: "A flower girl skips down the path towards the party, but disappears before she reaches them." },
+      { n: 48,  cat: 'Shrine',  text: "The party meets an old priest and a young priest, who offer them a blessing. The party has advantage on attacks against undead until they next take a long rest." },
+      { n: 49,  cat: 'Shrine',  text: "A temple is found on the road. Use a D6 to determine which god (of the six below) it is dedicated to." },
+      { n: 50,  cat: 'Shrine',  text: "Shrine to Tymora — If the party makes an offering, they all gain inspiration." },
+      { n: 51,  cat: 'Shrine',  text: "Shrine to Chauntea — If the party makes an offering, the rest of the day has no violent encounters." },
+      { n: 52,  cat: 'Shrine',  text: "Shrine to Mask — If the party makes an offering, they get a surprise round in their next encounter." },
+      { n: 53,  cat: 'Shrine',  text: "Shrine to Mystra — If the party makes an offering, all spell slots are recovered." },
+      { n: 54,  cat: 'Shrine',  text: "Shrine to Oghma — If the party makes an offering, they find a shortcut that reduces their journey by 1D4 encounters." },
+      { n: 55,  cat: 'Shrine',  text: "Shrine to Waukeen — If the party makes an offering, they later find the amount they offered in each of their pockets." },
+      { n: 56,  cat: 'Shrine',  text: "Abandoned, unidentifiable Shrine — If the party doesn't make an offering, they trigger a combat encounter." },
+      { n: 57,  cat: 'Shrine',  text: "Shrine to nature spirits — If the party doesn't make an offering, a great storm prevents them from travelling any further that day." },
+      { n: 58,  cat: 'Shrine',  text: "Demon Shrine, covered in blood — If the party makes an offering, they trigger a combat encounter." },
+      { n: 59,  cat: 'Shrine',  text: "Shrine to Bhaal, destroyed — Nothing happens." },
+      { n: 60,  cat: '',         text: "A roadside cairn — a pile of stones with a sword driven into it. A name is scratched into the blade, worn beyond reading. No other clue to the story behind it." },
+      { n: 61,  cat: 'Trap',   text: "DC10 Dex check or 1D6 bludgeoning damage, pit fall." },
+      { n: 62,  cat: 'Trap',   text: "DC15 Dex check or 1D8 bludgeoning damage, pit fall." },
+      { n: 63,  cat: 'Trap',   text: "DC20 Dex check or 1D12 bludgeoning damage, pit fall." },
+      { n: 64,  cat: 'Trap',   text: "DC10 Perception check or snared; 1D6 bludgeoning damage if cut loose without landing." },
+      { n: 65,  cat: 'Trap',   text: "DC15 Perception check or snared; 1D6 bludgeoning damage if cut loose without landing." },
+      { n: 66,  cat: 'Trap',   text: "DC20 Perception check or snared; 1D6 bludgeoning damage if cut loose without landing." },
+      { n: 67,  cat: 'Trap',   text: "DC15 Perception check or the whole party is snared by a net. Roll a combat encounter." },
+      { n: 68,  cat: 'Trap',   text: "A cupcake lays in the middle of the road. If the party approaches, they trigger a pitfall into spikes. 3D6 piercing damage." },
+      { n: 69,  cat: 'Trap',   text: "Magic rune (DC15 Perception to detect) triggers, paralyzing the party. Roll for a combat encounter." },
+      { n: 70,  cat: 'Trap',   text: "A door stands in the middle of the path. If opened, a Hobgoblin is on the other side and gets a surprise attack. If walked around, the Hobgoblin flees." },
+      { n: 71,  cat: 'Riddle', text: 'Old Man: "I have a tail, but no body. I have a head, but no brain. What am I?" (Answer: coins — 50gp reward)' },
+      { n: 72,  cat: 'Riddle', text: 'Old Man: "What is running around Waterdeep, yet never truly moving?" (Answer: the wall — healing potion reward per player)' },
+      { n: 73,  cat: 'Riddle', text: 'Old Man: "My rivers are dry, my forests have no trees, my towns are flat and empty, and my roads cannot be walked on. What am I?" (Answer: a map — the party\'s journey is shortened)' },
+      { n: 74,  cat: 'Riddle', text: 'Old Man: "Two bodies have I, though both joined in one. The more still I stand, the quicker I run. What am I?" (Answer: an hourglass — time slows if correct, skips to night if not)' },
+      { n: 75,  cat: 'Riddle', text: 'Old Man: "What kind of ear cannot hear?" (Answer: an ear of corn — Potion of Cure Silence; everyone deafened if they don\'t get it)' },
+      { n: 76,  cat: 'Riddle', text: 'Old Man: "What has four wheels and flies?" (Answer: a garbage wagon — Potion of flight if correct; attacked by Stirges if not)' },
+      { n: 77,  cat: '',         text: "A DC10 Perception check spots a small chest hidden in a tree. It contains a gold ring worth 20gp." },
+      { n: 78,  cat: '',         text: "A DC15 Perception check spots a small chest hidden in a tree. It contains 44gp." },
+      { n: 79,  cat: '',         text: "A DC20 Perception check spots a chest hidden in a tree. It contains a +1 Short Sword." },
+      { n: 80,  cat: '',         text: "A DC10 Perception check spots a small chest hidden in a tree. It contains a dead mouse." },
+      { n: 81,  cat: '',         text: "A strong storm picks up." },
+      { n: 82,  cat: '',         text: "The party finds a random cow. No amount of investigation reveals anything of significance about the cow or where it came from." },
+      { n: 83,  cat: '',         text: "A stranger asks to be escorted to the nearest town. If the party agrees, the stranger gives them 100gp upon delivery." },
+      { n: 84,  cat: '',         text: "A group of excited gnomes bounce past the party. If the party is polite to them, one gives them a useless gizmo that makes a chirping noise when wound up." },
+      { n: 85,  cat: '',         text: "A man is trapped under a log. If the party helps him, make a DC15 check. A failure drops the log and crushes the man. Nothing of value on him, but the saviour gets inspiration on a success." },
+      { n: 86,  cat: '',         text: "A man is buried in the road up to his neck, the ground around him undisturbed. If helped, the head pops out and crawls off on spider legs, cackling. DC14 Wisdom save or 1D10 psychic damage." },
+      { n: 87,  cat: '',         text: "An enormous dragon flies overhead." },
+      { n: 88,  cat: '',         text: "A DC10 Perception check spots caltrops on the floor — 1D4 piercing damage to the party if missed." },
+      { n: 89,  cat: '',         text: "A drunken dwarf challenges the strongest-looking party member to a wrestling match. DC15 Strength check beats her for 5gp. Failure earns a level of exhaustion." },
+      { n: 90,  cat: '',         text: "A road sign points back to wherever the party came from, but is otherwise useless." },
+      { n: 91,  cat: '',         text: "A vagrant asks for food. Nothing happens if they give him some." },
+      { n: 92,  cat: '',         text: "A vagrant asks for money. Nothing happens if they give him some." },
+      { n: 93,  cat: '',         text: "A vagrant asks for money. They get triple what they give back if they give him some." },
+      { n: 94,  cat: '',         text: "The party finds the tracks of an Owlbear going across the road (DC10 Nature/Survival)." },
+      { n: 95,  cat: '',         text: "A local ranger gives the party directions to their next destination, shortening their journey." },
+      { n: 96,  cat: '',         text: "A mirror image of the party walks towards them, but disappears before reaching them." },
+      { n: 97,  cat: '',         text: "The party notices they are being followed by a bush, which runs into the forest when investigated. If pursued, they find a goblin that throws a gold coin at them to make them go away." },
+      { n: 98,  cat: '',         text: "A stranger on the road tells each PC to repent of their sins. He knows details." },
+      { n: 99,  cat: '',         text: "A door stands in the middle of the road. If opened, the frame bursts with confetti, then disappears." },
+      { n: 100, cat: '',         text: "The party finds 100gp in a chest in the middle of the road." },
+    ]
+  },
+  {
+    id: 'tavern', label: 'Tavern Events', icon: '🍺', die: 20,
+    description: "What's happening when the party enters a tavern or inn.",
+    type: 'simple',
+    entries: [
+      { n: 1,  cat: '', text: "A bard plays in the corner — the crowd is loose and generous tonight." },
+      { n: 2,  cat: '', text: "Two merchants argue loudly over a deal gone sour. Half the tavern is watching." },
+      { n: 3,  cat: '', text: "A traveling entertainer does card tricks at a table of impressed locals." },
+      { n: 4,  cat: '', text: "A group of off-duty guards are deep into their cups and getting rowdy." },
+      { n: 5,  cat: '', text: "A cloaked figure in the far corner watches the door and no one else." },
+      { n: 6,  cat: '', text: "A wedding party has taken over half the common room — music, dancing, free cake." },
+      { n: 7,  cat: '', text: "A dog has stolen someone's boot and refuses to surrender it." },
+      { n: 8,  cat: '', text: "A drunken philosopher holds court on the nature of the gods. He makes a few good points." },
+      { n: 9,  cat: '', text: "A serious dice game runs in the back — real money involved." },
+      { n: 10, cat: '', text: "The barkeep's hands are shaking. Something upset him recently." },
+      { n: 11, cat: '', text: "A fistfight is about to start between two farmers over something trivial." },
+      { n: 12, cat: '', text: "The tavern cat drops a dead rat on the table next to the party and waits for praise." },
+      { n: 13, cat: '', text: "An arm-wrestling contest draws a crowd and loud betting." },
+      { n: 14, cat: '', text: "A halfling bard does spot-on impersonations of local nobles. The nobles are present." },
+      { n: 15, cat: '', text: "A message board near the door holds several interesting notices." },
+      { n: 16, cat: '', text: "The place is nearly empty. The barkeep looks relieved to see someone." },
+      { n: 17, cat: '', text: "Someone is crying softly in a corner booth. Nobody is asking why." },
+      { n: 18, cat: '', text: "A trader just returned from somewhere clearly dangerous — wild stories, possibly true." },
+      { n: 19, cat: '', text: "A religious pilgrim works the room asking for donations. Surprisingly persistent." },
+      { n: 20, cat: '', text: "It's the innkeeper's birthday. First round is on the house." },
+    ]
+  },
+  {
+    id: 'npc', label: 'NPC Quick Traits', icon: '👤', die: 12,
+    description: 'Roll twice — once for mood, once for quirk.',
+    type: 'dual',
+    sections: {
+      mood: [
+        "Cheerful and openly helpful.",
+        "Distracted — keeps forgetting what they were saying.",
+        "Nervous, eyes darting. Watching for something.",
+        "Gruff but honest.",
+        "Curious, asks too many questions.",
+        "Tired and short-tempered — not their best day.",
+        "Boastful. Every sentence circles back to themselves.",
+        "Secretive, weighing every word.",
+        "Friendly and gossipy — tells you more than they should.",
+        "Formal and businesslike. No small talk.",
+        "Quietly melancholy.",
+        "Openly suspicious of strangers.",
+      ],
+      quirk: [
+        "Touches their nose before saying anything important.",
+        'Refers to themselves by name. ("Marta doesn\'t think so.")',
+        "Speaks significantly louder than the situation requires.",
+        "Ends most sentences with a rising inflection, like a question?",
+        "Repeats the last thing said to them before responding.",
+        "Hums quietly while thinking.",
+        "Never makes eye contact — always looks just past you.",
+        "Interrupts, apologizes, then interrupts again.",
+        "Laughs at their own jokes before finishing them.",
+        "Fidgets constantly with a ring, coin, or small object.",
+        "Pauses dramatically before key words.",
+        "Leans uncomfortably close when speaking quietly.",
+      ]
+    }
+  },
+  {
+    id: 'weather', label: 'Weather', icon: '🌤️', die: 12,
+    description: 'Roll at the start of a travel day.',
+    type: 'simple',
+    entries: [
+      { n: 1,  cat: '', text: "Clear and bright — excellent visibility, no complications." },
+      { n: 2,  cat: '', text: "Overcast — gray and flat. No rain, but gloomy." },
+      { n: 3,  cat: '', text: "Morning fog — burns off by midday, but early travel is slow." },
+      { n: 4,  cat: '', text: "Light rain — muddy paths, damp camps." },
+      { n: 5,  cat: '', text: "Heavy rain — travel slowed by half. Open fires are impossible." },
+      { n: 6,  cat: '', text: "Thick fog — visibility 30ft. DC 12 Survival or add 2 hours to travel." },
+      { n: 7,  cat: '', text: "High winds — thrown weapons and ranged attacks at disadvantage." },
+      { n: 8,  cat: '', text: "Hot and humid — after 4 hours of travel, DC 10 CON save or gain 1 level of exhaustion." },
+      { n: 9,  cat: '', text: "Unseasonably cold — those without cold-weather gear must make DC 10 CON saves each hour." },
+      { n: 10, cat: '', text: "Thunderstorm — travel stops, shelter required, exposed metal attracts lightning." },
+      { n: 11, cat: '', text: "Light snow — travel is fine, but all tracks are visible and Stealth checks are +2 DC." },
+      { n: 12, cat: '', text: "Blizzard — travel is impossible. The party must find or make shelter immediately." },
+    ]
+  },
+  {
+    id: 'dungeon', label: 'Dungeon Dressing', icon: '🕯️', die: 20,
+    description: 'Flavor detail for sparse or empty rooms.',
+    type: 'simple',
+    entries: [
+      { n: 1,  cat: '', text: "A cobweb-covered skeleton slumped in the corner — ordinary clothes, nothing of value." },
+      { n: 2,  cat: '', text: "Water drips steadily from a crack above, pooling on the floor." },
+      { n: 3,  cat: '', text: "Names and initials carved into the stonework — decades old, at least." },
+      { n: 4,  cat: '', text: "A rusted iron hook in the wall, empty." },
+      { n: 5,  cat: '', text: "Scattered animal bones. Not human." },
+      { n: 6,  cat: '', text: "A cold draft from somewhere unseen in the stonework." },
+      { n: 7,  cat: '', text: "Faded paint on the walls — the ghost of a mural." },
+      { n: 8,  cat: '', text: "A broken torch bracket, the wood long rotted." },
+      { n: 9,  cat: '', text: "A faint smell of sulfur. No visible source." },
+      { n: 10, cat: '', text: "Old, compressed straw in a corner — someone slept here, long ago." },
+      { n: 11, cat: '', text: "An empty barrel, staved in from the inside." },
+      { n: 12, cat: '', text: "Crude tally marks scratched into the stone floor. Someone was counting days." },
+      { n: 13, cat: '', text: "A child's wooden toy, worn smooth with handling." },
+      { n: 14, cat: '', text: "Footprints in the dust, heading away from the party." },
+      { n: 15, cat: '', text: "A faint echo suggests a larger space somewhere nearby." },
+      { n: 16, cat: '', text: "Mineral deposits on the walls — harmless crystals that catch the light faintly." },
+      { n: 17, cat: '', text: "A completely burned-down torch in a bracket. Used within the week." },
+      { n: 18, cat: '', text: "The cold remains of a campfire — not ancient." },
+      { n: 19, cat: '', text: "A door leading into solid stone — bricked up from the other side." },
+      { n: 20, cat: '', text: "Total silence. The ambient sounds of the dungeon stop entirely for a moment." },
+    ]
+  },
+];
+
+function RandomTablesTool() {
+  const [selectedId, setSelectedId] = useState('encounters');
+  const [result, setResult] = useState(null);
+  const [history, setHistory] = useState([]);
+
+  const table = TABLES_DATA.find(t => t.id === selectedId);
+
+  function handleRoll() {
+    let res;
+    if (table.type === 'dual') {
+      const mRoll = Math.floor(Math.random() * 12) + 1;
+      const qRoll = Math.floor(Math.random() * 12) + 1;
+      res = { type: 'dual', mRoll, mood: table.sections.mood[mRoll - 1], qRoll, quirk: table.sections.quirk[qRoll - 1] };
+      const snippet = `${table.icon} d12 ${mRoll}/${qRoll} — ${res.mood.slice(0, 45)}`;
+      setHistory(h => [snippet, ...h].slice(0, 5));
+    } else {
+      const roll = Math.floor(Math.random() * table.die) + 1;
+      const entry = table.entries.find(e => e.n === roll);
+      res = { type: 'simple', roll, entry };
+      const snippet = `${table.icon} d${table.die} ${roll} — ${entry.text.slice(0, 50)}`;
+      setHistory(h => [snippet, ...h].slice(0, 5));
+    }
+    setResult(res);
+  }
+
+  function handleSelect(id) {
+    setSelectedId(id);
+    setResult(null);
+  }
+
+  return (
+    <div className="tool-content tables-tool">
+      <div className="tables-selector">
+        {TABLES_DATA.map(t => (
+          <button key={t.id} className={selectedId === t.id ? 'active' : ''} onClick={() => handleSelect(t.id)}>
+            {t.icon} {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="tables-header">
+        <h3>{table.icon} {table.label}</h3>
+        <p>{table.description}</p>
+        <div className="tables-die-badge">{table.type === 'dual' ? '2 × d12' : `d${table.die}`}</div>
+      </div>
+
+      <div className="tables-roll-area">
+        <button className="tables-roll-btn" onClick={handleRoll}>
+          Roll {table.type === 'dual' ? '2d12' : `d${table.die}`}
+        </button>
+
+        {result && (
+          <div className="tables-result">
+            {result.type === 'simple' ? (
+              <>
+                <div className="tables-result-roll">Rolled <span>{result.entry.n}</span></div>
+                <div className="tables-result-card">
+                  {result.entry.cat && <div className="tables-result-section">{result.entry.cat}</div>}
+                  <div className="tables-result-text">{result.entry.text}</div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="tables-result-roll">Rolled <span>{result.mRoll}</span> / <span>{result.qRoll}</span></div>
+                <div className="tables-result-card">
+                  <div className="tables-result-section">Mood</div>
+                  <div className="tables-result-text">{result.mood}</div>
+                  <hr className="tables-result-divider" />
+                  <div className="tables-result-section">Quirk</div>
+                  <div className="tables-result-text">{result.quirk}</div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {history.length > 0 && (
+        <div className="tables-history-wrap">
+          <div className="tables-history-label">Recent Rolls</div>
+          {history.map((h, i) => (
+            <div key={i} className="tables-history-item">{h}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const TABS = [
   { id: 'session', label: '📜 Session' },
   { id: 'npc',     label: '🎭 NPC Forge' },
@@ -6390,6 +6722,7 @@ const TABS = [
   { id: 'loot',      label: '💰 Loot' },
   { id: 'calendar',  label: '📅 Calendar' },
   { id: 'ambiance',  label: '🎵 Ambiance' },
+  { id: 'tables',    label: '🎲 Tables' },
   { id: 'guide',     label: '📚 Guide' },
 ];
 
@@ -6483,6 +6816,7 @@ function App() {
                 {t.id === 'loot'      && <LootCalculatorTool />}
                 {t.id === 'calendar'  && <CampaignCalendarTool />}
                 {t.id === 'ambiance'  && <AmbianceTool />}
+                {t.id === 'tables'    && <RandomTablesTool />}
                 {t.id === 'guide'     && <DMGuideTool />}
               </ToolErrorBoundary>
             </DeferredMount>

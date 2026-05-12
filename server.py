@@ -16,7 +16,7 @@ from campaign_loader import load_campaign_context, list_campaigns
 from setup_wizard import setup_wizard
 
 # Versioning
-VERSION = "1.3.0"
+VERSION = "1.4.0"
 
 # PORTABLE=1 activates desktop-launcher mode: dynamic port, browser auto-open, setup wizard.
 # On Pi, this env var is never set — server starts on PORT (default 8502) with no wizard.
