@@ -6465,12 +6465,28 @@ function AmbianceTool() {
   }
 
   function silenceAll() {
-    if (audioRef.current) fadeAudio(audioRef.current, 0, 400);
+    if (audioRef.current) {
+      if (audioRef.current._fadeTimer) clearInterval(audioRef.current._fadeTimer);
+      audioRef.current.pause();
+      audioRef.current.volume = 0;
+    }
     setPlaying(false);
+    setActivePreset(null);
+    setActiveTrack(null);
+    setMoodDescription("");
+
     Object.values(layerRefs.current).forEach(a => {
-      if (a) fadeAudio(a, 0, 400);
+      if (a) {
+        if (a._fadeTimer) clearInterval(a._fadeTimer);
+        a.pause();
+        a.volume = 0;
+      }
     });
     setActiveLayers([]);
+
+    // Reset visual mood
+    document.documentElement.style.setProperty('--mood-c1', '#c9a84c08');
+    document.documentElement.style.setProperty('--mood-c2', '#6b4fa808');
   }
 
   return (
