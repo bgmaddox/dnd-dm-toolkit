@@ -40,6 +40,36 @@ Create your own campaigns and lore without ever opening a text editor.
 - **Form-Based Entry:** Fill out fields for NPCs and Locations, and hit "Save" to automatically generate the Markdown files in the right place.
 - **Markdown Powered:** Everything you save is stored as a simple `.md` file, so it's easy to back up or edit manually later if you want.
 
+### ⚖️ Encounter Helper
+A tactical tool for balancing combat on the fly.
+- **XP Budgeting:** Add monsters to see the encounter difficulty for your party size.
+- **Battlefield Conditions:** Toggle hazards like "Neutral Bystanders" or "Difficult Terrain" to see how they impact the narrative challenge.
+- **Action Economy:** Tracks the ratio of party actions vs. monster actions to warn you if an encounter might be a "slugfest" or a "stomp."
+
+### 💰 Loot Calculator
+Generate treasure that fits the moment.
+- **Thematic Loot:** Select a monster type (Elemental, Aberration, Undead, etc.) to convert gold values into flavor-rich items like *Crystallized elemental cores* or *Corrupted mind-shards*.
+- **Hoard Generator:** Quickly roll for CR-appropriate treasure hoards, including magic items filtered by party role.
+
+### 📅 Campaign Calendar
+Track the passage of time and weather in your world.
+- **Weather Tracking:** Roll for random weather or manually set conditions for any day.
+- **Session Notes:** Keep brief notes on what happened each day to ensure your timeline stays consistent.
+- **Dynamic Portrayal:** The calendar helps you narrate the changing seasons and environment as the party travels.
+
+### 🎲 Random Tables
+Quick-roll tables for those "I search the room" moments.
+- **Variety:** Includes tables for Travel Encounters, Dungeon Rooms, City Street Events, Local Rumors, and Random Trinkets.
+- **Traps:** Use the "Random Traps" table to instantly generate mechanical or magical hazards for a secure area.
+
+### 🎭 Ambiance Tool
+Set the mood with a complete sensory experience.
+- **Visual Moods:** The toolkit's background glow shifts colors to match your active mood (e.g., warm amber for Tavern, cold blue for Dungeon).
+- **Scene Layers:** Toggle environmental loops like *Rain, Wind, or Fire* independently of the music tracks.
+- **✨ Sensory Mood:** Click "Refresh" to get an AI-generated sensory description to help you narrate the environment's smells, sounds, and feel.
+- **Soundboard:** A compact SFX grid categorized by Tactical, Utility, and Scene effects.
+- **Silence All:** A global emergency mute button to instantly stop all music and SFX.
+
 ---
 
 ## 🌳 Trying the Example Campaign
